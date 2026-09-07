@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const prisma = require('../config/prisma');
 const generateId = require('../utils/generateId');
 const sendMail = require('../utils/sendMail');
+const { renderEmail } = require('../utils/emailTemplate');
 
 const sendInvitation = async (req, res) => {
   try {
@@ -30,18 +31,14 @@ const sendInvitation = async (req, res) => {
     await sendMail({
       to: email,
       subject: 'Vaultix Registration Invitation',
-      html: `
-        <div style="font-family:Arial,sans-serif">
-          <h2>You are invited to Vaultix</h2>
-          <p>Please click the button below to register your account.</p>
-          <a href="${registerLink}" style="display:inline-block;background:#4f46e5;color:white;padding:12px 18px;border-radius:8px;text-decoration:none">
-            Register Now
-          </a>
-          <p style="margin-top:16px">Or copy this link:</p>
-          <p>${registerLink}</p>
-          <p>This invitation expires in 7 days.</p>
-        </div>
-      `,
+      html: renderEmail({
+        title: 'You are invited to Vaultix',
+        body: 'Your team is using Vaultix to keep shared credentials safe. Click the button below to create your account and set up your encrypted vault.',
+        buttonText: 'Register Now',
+        buttonUrl: registerLink,
+        accent: 'purple',
+        footerNote: `This invitation was sent to ${email} and expires in 7 days.`,
+      }),
     });
 
     const invitation = await prisma.invitation.create({

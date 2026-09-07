@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const prisma = require('../config/prisma');
 const generateId = require('../utils/generateId');
 const sendMail = require('../utils/sendMail');
+const { renderEmail } = require('../utils/emailTemplate');
 const {
   encryptEnvelope,
   decryptEnvelope,
@@ -397,22 +398,18 @@ const register = async (req, res) => {
     // Send verification email for non-invited users
     if (!emailVerified && verificationToken) {
       const verifyLink = `${process.env.CLIENT_URL}/verify-email?token=${verificationToken}`;
-      sendMail({
+sendMail({
         to: user.email,
         subject: 'Verify your Vaultix email',
-        html: `
-          <div style="font-family:Arial,sans-serif">
-            <h2>Verify your email address</h2>
-            <p>Click the button below to verify your email and activate your account.</p>
-            <a href="${verifyLink}" style="display:inline-block;background:#2563eb;color:white;padding:12px 18px;border-radius:8px;text-decoration:none">
-              Verify Email
-            </a>
-            <p style="margin-top:16px">Or copy this link:</p>
-            <p>${verifyLink}</p>
-            <p>This link expires in 24 hours.</p>
-            <p>If you did not create this account, you can safely ignore this email.</p>
-          </div>
-        `,
+        html: renderEmail({
+          title: 'Verify your email address',
+          body: 'Welcome to Vaultix! Click the button below to verify your email and activate your account.',
+          buttonText: 'Verify Email',
+          buttonUrl: verifyLink,
+          accent: 'blue',
+          footerNote:
+            'This link expires in 24 hours. If you did not create this account, you can safely ignore this email.',
+        }),
       }).catch(() => {
         // Email sending is best-effort
       });
@@ -831,18 +828,15 @@ const requestPasswordReset = async (req, res) => {
     await sendMail({
       to: user.email,
       subject: 'Vaultix Password Reset',
-      html: `
-        <div style="font-family:Arial,sans-serif">
-          <h2>Reset your Vaultix password</h2>
-          <p>Click the button below to set a new password. This link expires in 10 minutes.</p>
-          <a href="${resetLink}" style="display:inline-block;background:#2563eb;color:white;padding:12px 18px;border-radius:8px;text-decoration:none">
-            Reset Password
-          </a>
-          <p style="margin-top:16px">Or copy this link:</p>
-          <p>${resetLink}</p>
-          <p>If you did not request this, you can safely ignore this email.</p>
-        </div>
-      `,
+      html: renderEmail({
+        title: 'Reset your Vaultix password',
+        body: 'We received a request to reset the password for your Vaultix account. Click the button below to choose a new one.',
+        buttonText: 'Reset Password',
+        buttonUrl: resetLink,
+        accent: 'indigo',
+        footerNote:
+          'This link expires in 10 minutes. If you did not request this, you can safely ignore this email.',
+      }),
     });
 
     res.json({ message: genericMessage });
@@ -1100,17 +1094,22 @@ const requestMasterRecoveryKey = async (req, res) => {
     await sendMail({
       to: user.email,
       subject: 'Vaultix Master Password Recovery Key',
-      html: `
-        <div style="font-family:Arial,sans-serif">
-          <h2>Your Vaultix recovery key</h2>
-          <p>Use the recovery key below to reset your master password and recover your vault data.</p>
-          <div style="font-size:22px;font-weight:bold;letter-spacing:2px;background:#f1f5f9;padding:16px;border-radius:8px;text-align:center">
-            ${user.recoveryKey}
-          </div>
-          <p style="margin-top:16px">Keep this key private. It grants full access to your encrypted vault.</p>
-          <p>If you did not request this, please change your password immediately and contact your administrator.</p>
-        </div>
-      `,
+      html: renderEmail({
+        title: 'Your Vaultix recovery key',
+        body: 'Use the recovery key below to reset your master password and recover your vault data.',
+        accent: 'emerald',
+        extraHtml: `
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:24px 0">
+            <tr>
+              <td align="center" style="padding:20px 24px;background-color:#ecfdf5;border:1px dashed #10b981;border-radius:10px">
+                <span style="font-family:Consolas,Menlo,monospace;font-size:22px;font-weight:700;letter-spacing:3px;color:#047857">${user.recoveryKey}</span>
+              </td>
+            </tr>
+          </table>
+        `,
+        footerNote:
+          'Keep this key private. It grants full access to your encrypted vault. If you did not request this, please change your password immediately and contact your administrator.',
+      }),
     });
 
     res.json({ message: genericMessage });
@@ -1373,19 +1372,15 @@ const requestEmailVerification = async (req, res) => {
     await sendMail({
       to: user.email,
       subject: 'Verify your Vaultix email',
-      html: `
-        <div style="font-family:Arial,sans-serif">
-          <h2>Verify your email address</h2>
-          <p>Click the button below to verify your email and activate your account.</p>
-          <a href="${verifyLink}" style="display:inline-block;background:#2563eb;color:white;padding:12px 18px;border-radius:8px;text-decoration:none">
-            Verify Email
-          </a>
-          <p style="margin-top:16px">Or copy this link:</p>
-          <p>${verifyLink}</p>
-          <p>This link expires in 24 hours.</p>
-          <p>If you did not create this account, you can safely ignore this email.</p>
-        </div>
-      `,
+      html: renderEmail({
+        title: 'Verify your email address',
+        body: 'Welcome to Vaultix! Click the button below to verify your email and activate your account.',
+        buttonText: 'Verify Email',
+        buttonUrl: verifyLink,
+        accent: 'blue',
+        footerNote:
+          'This link expires in 24 hours. If you did not create this account, you can safely ignore this email.',
+      }),
     });
 
     res.json({ message: 'Verification email sent' });
