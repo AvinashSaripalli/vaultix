@@ -39,14 +39,17 @@ export async function parseImportFile(file) {
 
     // Normalize KeePass CSV columns (Title, Username, Password, URL, Notes,
     // Group) and any other common aliases into our canonical Name/Login/etc.
+    // Extra columns are preserved (spread) so typed items (SSH_KEY, CARD, ...)
+    // carry their field columns through to the encryption step.
     const normalized = rawRows.map((r) => ({
+      ...r,
       Name: r.Name || r.name || r.Title || r.title || '',
       Login: r.Login || r.login || r.Username || r.username || r.UserName || '',
       Password: r.Password || r.password || '',
       URL: r.URL || r.Url || r.url || r.URI || r.uri || '',
       Note: r.Note || r.note || r.Notes || r.notes || '',
       Tags: r.Tags || r.tags || r.Group || r.group || '',
-      Type: 'LOGIN',
+      Type: r.Type || r.type || 'LOGIN',
     }));
 
     return {
@@ -62,17 +65,48 @@ export async function parseImportFile(file) {
 
     // Bitwarden format
     if (data && (Array.isArray(data.items) || data.encrypted !== undefined || data.items)) {
+      // Bitwarden item types: 1=Login, 2=SecureNote, 3=Card, 4=Identity.
+      const BITWARDEN_TYPE_MAP = {
+        1: 'LOGIN',
+        2: 'SECURE_NOTE',
+        3: 'CARD',
+        4: 'IDENTITY',
+      };
+
       const bitwardenRows = (data.items || [])
-        .filter((item) => item.login?.password || item.secureNote)
-        .map((item) => ({
-          Name: item.name || '',
-          Login: item.login?.username || item.username || '',
-          Password: item.login?.password || '',
-          URL: item.login?.uris?.[0]?.uri || item.login?.uri || item.uri || '',
-          Note: item.notes || item.secureNote?.notes || '',
-          Tags: (item.collectionIds || []).join(', ') || '',
-          Type: 'LOGIN',
-        }));
+        .map((item) => {
+          const itemType = BITWARDEN_TYPE_MAP[item.type] || (item.login?.password ? 'LOGIN' : item.secureNote ? 'SECURE_NOTE' : 'LOGIN');
+          const typed = { ...(item.fields || []) };
+          if (itemType === 'CARD' && item.card) {
+            if (item.card.cardholderName) typed.cardholderName = item.card.cardholderName;
+            if (item.card.number) typed.cardNumber = item.card.number;
+            if (item.card.brand) typed.brand = item.card.brand;
+            if (item.card.expMonth && item.card.expYear) typed.expiry = `${String(item.card.expMonth).padStart(2, '0')}/${String(item.card.expYear).slice(-2)}`;
+            if (item.card.code) typed.cvv = item.card.code;
+          }
+          if (itemType === 'IDENTITY' && item.identity) {
+            if (item.identity.firstName) typed.firstName = item.identity.firstName;
+            if (item.identity.lastName) typed.lastName = item.identity.lastName;
+            if (item.identity.email) typed.email = item.identity.email;
+            if (item.identity.phone) typed.phone = item.identity.phone;
+            if (item.identity.address1) typed.address1 = item.identity.address1;
+            if (item.identity.city) typed.city = item.identity.city;
+            if (item.identity.state) typed.state = item.identity.state;
+            if (item.identity.postalCode) typed.postalCode = item.identity.postalCode;
+            if (item.identity.country) typed.country = item.identity.country;
+          }
+          return {
+            ...typed,
+            Name: item.name || '',
+            Login: item.login?.username || item.username || '',
+            Password: item.login?.password || '',
+            URL: item.login?.uris?.[0]?.uri || item.login?.uri || item.uri || '',
+            Note: item.notes || item.secureNote?.notes || '',
+            Tags: (item.collectionIds || []).join(', ') || '',
+            Type: itemType,
+          };
+        })
+        .filter((item) => item.Name || item.Password || Object.keys(item).length > 7);
       return { rows: bitwardenRows, format: 'bitwarden' };
     }
 
@@ -80,13 +114,14 @@ export async function parseImportFile(file) {
     if (Array.isArray(data)) {
       return {
         rows: data.map((r) => ({
+          ...r,
           Name: r.name || r.Name || '',
           Login: r.login || r.Login || r.username || r.Username || '',
           Password: r.password || r.Password || '',
           URL: r.url || r.URL || r.Url || '',
           Note: r.note || r.Note || r.notes || r.Notes || '',
           Tags: r.tags || r.Tags || '',
-          Type: 'LOGIN',
+          Type: r.Type || r.type || 'LOGIN',
         })),
         format: 'json',
       };

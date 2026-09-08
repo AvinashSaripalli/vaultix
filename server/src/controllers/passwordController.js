@@ -272,14 +272,31 @@ const importPasswordsFromExcel = async (req, res) => {
     const vaultTypeForGuard = await getVaultType(vaultId);
 
     for (const row of rows) {
-      if (!row.name || !row.encryptedPassword) continue;
-
       const rowType = row.type || 'LOGIN';
 
       if (!VALID_ITEM_TYPES.includes(rowType)) continue;
 
+      if (!row.name) continue;
+      if (rowType === 'LOGIN' && !row.encryptedPassword) continue;
+      if (rowType !== 'LOGIN' && rowType !== 'SECURE_NOTE' && !row.encryptedFields) continue;
+
       const rowLoginCheck = validateLoginForType(rowType, row.login);
       if (!rowLoginCheck.valid) continue;
+
+      if (row.encryptedFields && rowType !== 'LOGIN' && rowType !== 'SECURE_NOTE') {
+        let parsedFields;
+        try {
+          parsedFields = typeof row.encryptedFields === 'string'
+            ? JSON.parse(row.encryptedFields)
+            : row.encryptedFields;
+        } catch {
+          return res.status(400).json({ message: `Row "${row.name}" has invalid encryptedFields` });
+        }
+        const fieldCheck = validateItemFields(rowType, parsedFields);
+        if (!fieldCheck.valid) {
+          return res.status(400).json({ message: `Row "${row.name}": ${fieldCheck.message}` });
+        }
+      }
 
       if (
         vaultTypeForGuard &&
@@ -306,10 +323,12 @@ const importPasswordsFromExcel = async (req, res) => {
     const createdPasswords = [];
 
     for (const row of rows) {
-      if (!row.name || !row.encryptedPassword) continue;
-
       const rowType = row.type || 'LOGIN';
       if (!VALID_ITEM_TYPES.includes(rowType)) continue;
+
+      if (!row.name) continue;
+      if (rowType === 'LOGIN' && !row.encryptedPassword) continue;
+      if (rowType !== 'LOGIN' && rowType !== 'SECURE_NOTE' && !row.encryptedFields) continue;
 
       const created = await prisma.passwordEntry.create({
         data: {
@@ -317,8 +336,9 @@ const importPasswordsFromExcel = async (req, res) => {
           name: row.name,
           login: row.login || '',
           type: rowType,
-          encryptedPassword: row.encryptedPassword,
+          encryptedPassword: row.encryptedPassword || '',
           encryptedNote: row.encryptedNote || '',
+          encryptedFields: row.encryptedFields || null,
           url: row.url || '',
           vaultId,
           folderId,

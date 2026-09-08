@@ -9,7 +9,7 @@ const makeSlug = (name, userId) =>
     .replace(/\s+/g, '-')
     .replace(/[^a-z0-9-]/g, '');
 
-const ITEM_TYPES = ['LOGIN', 'CARD', 'BANK_ACCOUNT', 'IDENTITY', 'SECURE_NOTE'];
+const ITEM_TYPES = VALID_ITEM_TYPES;
 
 const getOrCreateMyVault = async (req, res) => {
   try {

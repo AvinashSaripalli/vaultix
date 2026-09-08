@@ -3,6 +3,7 @@ import { KeyRound, Lock, X, Eye, EyeOff, FolderDown } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import TagInput from '../common/TagInput';
 import ItemFields from './ItemFields';
+import CustomFieldsInput from '../common/CustomFieldsInput';
 import { encryptText, encryptFields } from '../../utils/crypto';
 import { estimateStrength, checkBreachedPassword } from '../../utils/breachCheck';
 import { isPasswordAtRisk } from '../../utils/passwordRisk';
@@ -11,6 +12,8 @@ import {
   emptyTypeFields,
   isSensitiveDefault,
   getTypePlaceholder,
+  serializeCustomFields,
+  CUSTOM_FIELDS_KEY,
 } from '../../utils/itemTypes';
 
 function AddMyVaultPasswordModal({
@@ -36,6 +39,7 @@ function AddMyVaultPasswordModal({
     tags: [],
     isSensitive: isSensitiveDefault(initialType),
     fields: emptyTypeFields(initialType),
+    customFields: [],
   });
   const [showPassword, setShowPassword] = useState(false);
   const [encrypting, setEncrypting] = useState(false);
@@ -60,6 +64,7 @@ function AddMyVaultPasswordModal({
       tags: [],
       isSensitive: isSensitiveDefault(type),
       fields: emptyTypeFields(type),
+      customFields: [],
     });
     setShowPassword(false);
     setMasterError('');
@@ -99,6 +104,7 @@ function AddMyVaultPasswordModal({
       type,
       fields: emptyTypeFields(type),
       isSensitive: isSensitiveDefault(type),
+      customFields: [],
     }));
   };
 
@@ -155,8 +161,13 @@ function AddMyVaultPasswordModal({
         ? await encryptText(formData.encryptedNote, sessionMasterPassword, user?.encryptionSalt)
         : '';
 
+      const fieldsPayload = { ...formData.fields };
+      if (formData.customFields?.length) {
+        fieldsPayload[CUSTOM_FIELDS_KEY] = serializeCustomFields(formData.customFields);
+      }
+
       const encryptedFields = await encryptFields(
-        formData.fields,
+        fieldsPayload,
         sessionMasterPassword,
         user?.encryptionSalt
       );
@@ -319,6 +330,12 @@ function AddMyVaultPasswordModal({
               inputClass={inputClass}
             />
           )}
+
+          <CustomFieldsInput
+            fields={formData.customFields}
+            onChange={(newFields) => updateField('customFields', newFields)}
+            inputClass={inputClass}
+          />
 
           <TagInput
             tags={formData.tags}

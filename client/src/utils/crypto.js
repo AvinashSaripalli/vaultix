@@ -105,7 +105,7 @@ async function importAesKey(jwkStr) {
     jwk,
     { name: 'AES-GCM' },
     false,
-    ['decrypt']
+    ['encrypt', 'decrypt']
   );
 }
 
@@ -124,6 +124,96 @@ export async function encryptTextWithAesKey(text) {
     content: Array.from(new Uint8Array(encrypted)),
   });
   return { encryptedData, aesKeyJwk };
+}
+
+// Generate a brand-new AES item key and return its exported JWK. Used for
+// company/typed items where a single item key wraps password, note AND typed
+// fields so any authorized user can decrypt them all.
+export async function generateItemAesKey() {
+  const key = await generateAesKey();
+  const aesKeyJwk = await exportAesKey(key);
+  return { aesKeyJwk };
+}
+
+// Encrypt an arbitrary text value using a *provided* AES item key (the same
+// key that is RSA-wrapped and distributed to authorized users). Used so typed
+// fields share a single item key with the password/note.
+export async function encryptValueWithAesKey(value, aesKeyJwk) {
+  if (value === undefined || value === null || value === '') return '';
+  if (!aesKeyJwk) return '';
+  const key = await importAesKey(aesKeyJwk);
+  const toEncrypt = Array.isArray(value) ? JSON.stringify(value) : String(value);
+  const iv = window.crypto.getRandomValues(new Uint8Array(12));
+  const encrypted = await window.crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    encoder.encode(toEncrypt)
+  );
+  return JSON.stringify({
+    iv: Array.from(iv),
+    content: Array.from(new Uint8Array(encrypted)),
+  });
+}
+
+export async function encryptFieldsWithAesKey(fields, aesKeyJwk) {
+  if (!fields || !aesKeyJwk) return '';
+  const keys = Object.keys(fields).filter(
+    (key) => fields[key] !== '' && fields[key] != null
+  );
+  if (keys.length === 0) return '';
+  const encrypted = {};
+  for (const key of keys) {
+    const cipher = await encryptValueWithAesKey(fields[key], aesKeyJwk);
+    if (cipher) encrypted[key] = cipher;
+  }
+  return Object.keys(encrypted).length ? JSON.stringify(encrypted) : '';
+}
+
+export async function decryptFieldsWithAesKey(encryptedFields, aesKeyJwk) {
+  if (!encryptedFields || !aesKeyJwk) return null;
+  try {
+    const key = await importAesKey(aesKeyJwk);
+    const parsed = typeof encryptedFields === 'string'
+      ? JSON.parse(encryptedFields)
+      : encryptedFields;
+
+    if (!parsed || typeof parsed !== 'object') return null;
+
+    if (Array.isArray(parsed.iv) && Array.isArray(parsed.content)) {
+      const decrypted = await window.crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: new Uint8Array(parsed.iv) },
+        key,
+        new Uint8Array(parsed.content)
+      );
+      const text = decoder.decode(decrypted);
+      try {
+        const obj = JSON.parse(text);
+        if (obj && typeof obj === 'object') return obj;
+      } catch {
+        return { _value: text };
+      }
+    }
+
+    const result = {};
+    for (const [fieldKey, value] of Object.entries(parsed)) {
+      if (typeof value !== 'string') continue;
+      try {
+        const env = JSON.parse(value);
+        if (!env || typeof env !== 'object' || !env.iv || !env.content) continue;
+        const plain = await window.crypto.subtle.decrypt(
+          { name: 'AES-GCM', iv: new Uint8Array(env.iv) },
+          key,
+          new Uint8Array(env.content)
+        );
+        result[fieldKey] = decoder.decode(plain);
+      } catch {
+        result[fieldKey] = '';
+      }
+    }
+    return Object.keys(result).length ? result : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function decryptTextWithAesKey(encryptedData, aesKeyJwk) {

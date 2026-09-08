@@ -3,6 +3,7 @@ import { Eye, EyeOff, KeyRound, X } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import TagInput from '../common/TagInput';
 import ItemFields from './ItemFields';
+import CustomFieldsInput from '../common/CustomFieldsInput';
 import {
   decryptText,
   encryptText,
@@ -12,7 +13,14 @@ import {
 } from '../../utils/crypto';
 import { estimateStrength, checkBreachedPassword } from '../../utils/breachCheck';
 import { isPasswordOld, isPasswordAtRisk } from '../../utils/passwordRisk';
-import { ITEM_TYPES, getTypePlaceholder } from '../../utils/itemTypes';
+import {
+  ITEM_TYPES,
+  getTypePlaceholder,
+  emptyTypeFields,
+  serializeCustomFields,
+  parseCustomFields,
+  CUSTOM_FIELDS_KEY,
+} from '../../utils/itemTypes';
 
 function EditMyVaultPasswordModal({
   open,
@@ -35,6 +43,7 @@ function EditMyVaultPasswordModal({
     tags: [],
     isSensitive: false,
     fields: {},
+    customFields: [],
   });
 
   const [showPassword, setShowPassword] = useState(false);
@@ -55,6 +64,7 @@ function EditMyVaultPasswordModal({
       url: password.url || '',
       tags: password.tags?.map((item) => item.tag?.name).filter(Boolean) || [],
       isSensitive: password.isSensitive || false,
+      customFields: [],
     };
 
     if (!sessionMasterPassword) {
@@ -85,11 +95,14 @@ function EditMyVaultPasswordModal({
           ? (await decryptFields(password.encryptedFields, sessionMasterPassword, user?.encryptionSalt)) || {}
           : {};
 
+        const { [CUSTOM_FIELDS_KEY]: customRaw, ...typedFields } = plainFields;
+
         setFormData({
           ...base,
           encryptedPassword: plainPassword,
           encryptedNote: plainNote,
-          fields: plainFields,
+          fields: typedFields,
+          customFields: parseCustomFields(customRaw),
         });
       } catch {
         setFormData({
@@ -97,6 +110,7 @@ function EditMyVaultPasswordModal({
           encryptedPassword: '',
           encryptedNote: '',
           fields: {},
+          customFields: [],
         });
         setDecryptError('Could not decrypt. Your session may have expired. Type new values below.');
       } finally {
@@ -125,6 +139,16 @@ function EditMyVaultPasswordModal({
     setFormData((prev) => ({
       ...prev,
       fields: { ...prev.fields, [key]: value },
+    }));
+  };
+
+  const handleTypeChange = (e) => {
+    const nextType = e.target.value;
+    setFormData((prev) => ({
+      ...prev,
+      type: nextType,
+      fields: emptyTypeFields(nextType),
+      customFields: [],
     }));
   };
 
@@ -162,8 +186,13 @@ function EditMyVaultPasswordModal({
         ? await encryptText(formData.encryptedNote, sessionMasterPassword, user?.encryptionSalt)
         : '';
 
+      const fieldsPayload = { ...formData.fields };
+      if (formData.customFields?.length) {
+        fieldsPayload[CUSTOM_FIELDS_KEY] = serializeCustomFields(formData.customFields);
+      }
+
       const encryptedFields = await encryptFields(
-        formData.fields,
+        fieldsPayload,
         sessionMasterPassword,
         user?.encryptionSalt
       );
@@ -237,7 +266,7 @@ function EditMyVaultPasswordModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <select
               value={formData.type}
-              onChange={(e) => updateField('type', e.target.value)}
+              onChange={handleTypeChange}
               className={inputClass}
             >
               {ITEM_TYPES.map((item) => (
@@ -318,6 +347,12 @@ function EditMyVaultPasswordModal({
               inputClass={inputClass}
             />
           )}
+
+          <CustomFieldsInput
+            fields={formData.customFields}
+            onChange={(newFields) => updateField('customFields', newFields)}
+            inputClass={inputClass}
+          />
 
           <TagInput
             tags={formData.tags}

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { showToast } from '../../utils/toast';
 import {
   Copy,
@@ -20,10 +20,12 @@ import {
 } from '../../features/vault/vaultSlice';
 import ConfirmModal from '../common/ConfirmModal';
 import VerifyMasterPasswordModal from '../security/VerifyMasterPasswordModal';
-import { unwrapItemKey, decryptTextWithAesKey, decryptText, safeDecryptText, decryptPrivateKey } from '../../utils/crypto';
+import { unwrapItemKey, decryptTextWithAesKey, decryptText, safeDecryptText, decryptPrivateKey, decryptFieldsWithAesKey } from '../../utils/crypto';
 import { secureCopyText } from '../../utils/clipboard';
 import { setCompanyPasswordEditCache } from '../../utils/companyPasswordEditCache';
 import { setSessionRsaPrivateKey, setSessionRsaPublicKey } from '../../features/auth/authSlice';
+import { TYPE_FIELDS, parseCustomFields, CUSTOM_FIELDS_KEY, getItemTypeMeta } from '../../utils/itemTypes';
+import { detectCardNetwork } from '../../utils/cardValidation';
 
 function PasswordDetailsPanel({ onShareVault, onAddLogin }) {
   const dispatch = useDispatch();
@@ -86,11 +88,34 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin }) {
     ['ADMINISTRATOR', 'FULL_ACCESS'].includes(selectedFolderAccess);
 
   const [visiblePasswords, setVisiblePasswords] = useState({});
+  const [revealedFields, setRevealedFields] = useState({});
   const [decryptedPasswords, setDecryptedPasswords] = useState({});
   const [decryptedNotes, setDecryptedNotes] = useState({});
+  const [decryptedFieldsMap, setDecryptedFieldsMap] = useState({});
   const [confirmDelete, setConfirmDelete] = useState({ open: false, name: '', passwordId: null });
   const [reVerifyOpen, setReVerifyOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
+
+  // Pre-decrypt typed (fields) items as soon as they are selected so masked
+  // values are shown instead of '-' and the copy buttons work on first click.
+  // Values stay masked; revealing/copying still goes through handleAction.
+  useEffect(() => {
+    if (!selectedPasswordId) return;
+    const activeItem = passwords.find((item) => item.id === selectedPasswordId);
+    if (!activeItem || !activeItem.encryptedFields || decryptedFieldsMap[activeItem.id]) return;
+
+    decryptWithRefreshRetry(activeItem.id)
+      .then(({ originalPassword, originalNote, originalFields }) => {
+        setDecryptedPasswords((prev) => ({ ...prev, [activeItem.id]: originalPassword }));
+        setDecryptedNotes((prev) => ({ ...prev, [activeItem.id]: originalNote }));
+        setDecryptedFieldsMap((prev) => ({
+          ...prev,
+          [activeItem.id]: originalFields || {},
+        }));
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPasswordId]);
 
   const sameNamePasswords = useMemo(() => {
     if (!selectedPassword) return [];
@@ -206,9 +231,18 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin }) {
         const originalNote = item.encryptedNote
           ? await decryptTextWithAesKey(item.encryptedNote, aesKeyJwk)
           : '';
-        return { originalPassword, originalNote };
+        const originalFields = item.encryptedFields
+          ? await decryptFieldsWithAesKey(item.encryptedFields, aesKeyJwk)
+          : {};
+        return { originalPassword, originalNote, originalFields };
       } catch {
-        // fall through to master password fallback
+        // Typed items store their fields encrypted with the shared item AES key
+        // (NOT the master password), so we cannot silently produce empty fields
+        // here — surface the failure so the caller can refresh + retry.
+        if (item.encryptedFields) {
+          throw new Error('Failed to decrypt typed fields via item key');
+        }
+        // fall through to master password fallback (legacy LOGIN items)
       }
     }
 
@@ -226,7 +260,7 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin }) {
               item.createdBy.encryptionSalt
             )
           : '';
-        return { originalPassword, originalNote };
+        return { originalPassword, originalNote, originalFields: {} };
       } catch {
         // fall through to error
       }
@@ -274,7 +308,7 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin }) {
         return;
       }
 
-      const { originalPassword, originalNote } = await decryptWithRefreshRetry(passwordId);
+      const { originalPassword, originalNote, originalFields } = await decryptWithRefreshRetry(passwordId);
 
       if (actionName === 'view' && canView) {
         setDecryptedPasswords((prev) => ({
@@ -285,6 +319,11 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin }) {
         setDecryptedNotes((prev) => ({
           ...prev,
           [activePassword.id]: originalNote,
+        }));
+
+        setDecryptedFieldsMap((prev) => ({
+          ...prev,
+          [activePassword.id]: originalFields || {},
         }));
 
         setVisiblePasswords((prev) => ({
@@ -321,6 +360,7 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin }) {
         setCompanyPasswordEditCache(activePassword.id, {
           password: originalPassword,
           note: originalNote,
+          fields: originalFields,
         });
 
         dispatch(selectPassword(activePassword.id));
@@ -389,6 +429,25 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin }) {
         {sameNamePasswords.map((item, index) => {
           const isVisible = !!visiblePasswords[item.id];
           const tagNames = getTagNames(item);
+          const isLoginItem = !item.type || item.type === 'LOGIN';
+          const decryptedFields = decryptedFieldsMap[item.id] || {};
+          const typeFields = TYPE_FIELDS[item.type] || [];
+          // The card network is auto-detected from the card number, so derive
+          // it when the stored data doesn't include it explicitly.
+          const displayFields = (() => {
+            if (
+              item.type !== 'CARD' ||
+              !decryptedFields.cardNumber ||
+              decryptedFields.brand
+            ) {
+              return decryptedFields;
+            }
+            const network = detectCardNetwork(decryptedFields.cardNumber);
+            return network
+              ? { ...decryptedFields, brand: network.name }
+              : decryptedFields;
+          })();
+          const customFields = parseCustomFields(decryptedFields[CUSTOM_FIELDS_KEY]);
 
           return (
             <div
@@ -398,7 +457,8 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin }) {
               <div className="flex items-start justify-between gap-5 mb-5">
                 <div className="flex items-center gap-2">
                   <h3 className="text-lg font-bold text-slate-900 tracking-tight dark:text-slate-100">
-                    Account {index + 1}
+                    {getItemTypeMeta(item.type).label}
+                    {sameNamePasswords.length > 1 ? ` #${index + 1}` : ''}
                   </h3>
                   {item.isSensitive && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2.5 py-0.5 text-[11px] font-semibold dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
@@ -433,88 +493,221 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin }) {
               </div>
 
               <div className="rounded-2xl border border-slate-200 overflow-hidden dark:border-slate-700">
-                <DetailRow
-                  label="Login"
-                  value={item.login || '-'}
-                  action={
-                    <button
-                      onClick={() =>
-                        handleAction('copy-login', item)
+                {isLoginItem ? (
+                  <>
+                    <DetailRow
+                      label="Login"
+                      value={item.login || '-'}
+                      action={
+                        <button
+                          onClick={() =>
+                            handleAction('copy-login', item)
+                          }
+                          className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+                        >
+                          <Copy size={16} />
+                        </button>
                       }
-                      className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
-                    >
-                      <Copy size={16} />
-                    </button>
-                  }
-                />
+                    />
 
-                <DetailRow
-                  label="Password"
-                  value={
-                    isVisible
-                      ? decryptedPasswords[item.id] || ''
-                      : '••••••••••••'
-                  }
-                  action={
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() =>
-                          handleAction('view', item)
-                        }
-                        className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
-                      >
-                        {isVisible ? <EyeOff size={17} /> : <Eye size={17} />}
-                      </button>
+                    <DetailRow
+                      label="Password"
+                      value={
+                        isVisible
+                          ? decryptedPasswords[item.id] || ''
+                          : '••••••••••••'
+                      }
+                      action={
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() =>
+                              handleAction('view', item)
+                            }
+                            className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+                          >
+                            {isVisible ? <EyeOff size={17} /> : <Eye size={17} />}
+                          </button>
 
-                      <button
-                        onClick={() =>
-                          handleAction('copy-password', item)
-                        }
-                        className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
-                      >
-                        <Copy size={16} />
-                      </button>
-                    </div>
-                  }
-                />
+                          <button
+                            onClick={() =>
+                              handleAction('copy-password', item)
+                            }
+                            className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+                          >
+                            <Copy size={16} />
+                          </button>
+                        </div>
+                      }
+                    />
 
-                <DetailRow
-                  label="URL"
-                  value={
-                    item.url ? (
-                      <a
-                        href={
-                          item.url.startsWith('http')
-                            ? item.url
-                            : `https://${item.url}`
+                    <DetailRow
+                      label="URL"
+                      value={
+                        item.url ? (
+                          <a
+                            href={
+                              item.url.startsWith('http')
+                                ? item.url
+                                : `https://${item.url}`
+                            }
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-blue-600 hover:text-blue-800 hover:underline break-all dark:text-blue-400 dark:hover:text-blue-400"
+                          >
+                            {item.url}
+                          </a>
+                        ) : (
+                          'No URL'
+                        )
+                      }
+                      action={
+                        item.url ? (
+                          <a
+                            href={
+                              item.url.startsWith('http')
+                                ? item.url
+                                : `https://${item.url}`
+                            }
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+                          >
+                            <ExternalLink size={16} />
+                          </a>
+                        ) : null
+                      }
+                    />
+                  </>
+                ) : (
+                  <>
+                    {typeFields.map((field) => {
+                      const rawValue = displayFields[field.key];
+                      const fieldVisible = !!revealedFields[item.id]?.[field.key];
+                      const value =
+                        rawValue !== undefined && rawValue !== null && rawValue !== ''
+                          ? field.copy && !fieldVisible
+                            ? '••••••••••••'
+                            : String(rawValue)
+                          : '-';
+
+                      const handleSecretField = (action) => {
+                        // Sensitive items created by others require re-verification
+                        // before any field can be revealed or copied.
+                        if (
+                          item.isSensitive &&
+                          item.createdById !== user?.id
+                        ) {
+                          setPendingAction({ actionName: action, item, fieldKey: field.key });
+                          setReVerifyOpen(true);
+                          return;
                         }
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-blue-600 hover:text-blue-800 hover:underline break-all dark:text-blue-400 dark:hover:text-blue-400"
-                      >
-                        {item.url}
-                      </a>
-                    ) : (
-                      'No URL'
-                    )
-                  }
-                  action={
-                    item.url ? (
-                      <a
-                        href={
-                          item.url.startsWith('http')
-                            ? item.url
-                            : `https://${item.url}`
+                        if (action === 'view-field') {
+                          setRevealedFields((prev) => ({
+                            ...prev,
+                            [item.id]: {
+                              ...(prev[item.id] || {}),
+                              [field.key]: !fieldVisible,
+                            },
+                          }));
+                        } else if (action === 'copy-field') {
+                          if (rawValue !== undefined && rawValue !== null && rawValue !== '') {
+                            secureCopyText(String(rawValue), `${field.label} copied`);
+                          }
                         }
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
-                      >
-                        <ExternalLink size={16} />
-                      </a>
-                    ) : null
-                  }
-                />
+                      };
+
+                      return (
+                        <DetailRow
+                          key={field.key}
+                          label={field.label}
+                          value={value}
+                          action={
+                            field.copy ? (
+                              <div className="flex items-center gap-3">
+                                <button
+                                  onClick={() => handleSecretField('view-field')}
+                                  className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+                                  title={fieldVisible ? 'Hide' : 'Reveal'}
+                                >
+                                  {fieldVisible ? <EyeOff size={17} /> : <Eye size={17} />}
+                                </button>
+                                <button
+                                  onClick={() => handleSecretField('copy-field')}
+                                  className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+                                  title="Copy"
+                                >
+                                  <Copy size={16} />
+                                </button>
+                              </div>
+                            ) : null
+                          }
+                        />
+                      );
+                    })}
+                    {customFields.map((custom, idx) => {
+                      const cfKey = `__custom_${idx}`;
+                      const cfVisible = !!revealedFields[item.id]?.[cfKey];
+                      const cfSensitive = !!custom.sensitive;
+                      const cfValue = custom.value
+                        ? cfSensitive && !cfVisible
+                          ? '••••••••••••'
+                          : String(custom.value)
+                        : '-';
+
+                      const handleCustomField = (action) => {
+                        if (item.isSensitive && item.createdById !== user?.id) {
+                          setPendingAction({ actionName: action, item, fieldKey: cfKey });
+                          setReVerifyOpen(true);
+                          return;
+                        }
+                        if (action === 'view-field') {
+                          setRevealedFields((prev) => ({
+                            ...prev,
+                            [item.id]: {
+                              ...(prev[item.id] || {}),
+                              [cfKey]: !cfVisible,
+                            },
+                          }));
+                        } else if (action === 'copy-field') {
+                          if (custom.value) {
+                            secureCopyText(
+                              String(custom.value),
+                              `${custom.name || 'Field'} copied`
+                            );
+                          }
+                        }
+                      };
+
+                      return (
+                        <DetailRow
+                          key={cfKey}
+                          label={custom.name || 'Custom Field'}
+                          value={cfValue}
+                          action={
+                            <div className="flex items-center gap-3">
+                              {cfSensitive && (
+                                <button
+                                  onClick={() => handleCustomField('view-field')}
+                                  className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+                                  title={cfVisible ? 'Hide' : 'Reveal'}
+                                >
+                                  {cfVisible ? <EyeOff size={17} /> : <Eye size={17} />}
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleCustomField('copy-field')}
+                                className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+                                title="Copy"
+                              >
+                                <Copy size={16} />
+                              </button>
+                            </div>
+                          }
+                        />
+                      );
+                    })}
+                  </>
+                )}
 
                 <DetailRow
                   label="Note"
@@ -597,9 +790,44 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin }) {
           setReVerifyOpen(false);
           const action = pendingAction;
           setPendingAction(null);
-          if (action) {
-            executeAction(action.actionName, action.item.id);
+          if (!action) return;
+
+          if (action.actionName === 'view-field') {
+            setRevealedFields((prev) => ({
+              ...prev,
+              [action.item.id]: {
+                ...(prev[action.item.id] || {}),
+                [action.fieldKey]: true,
+              },
+            }));
+            return;
           }
+
+          if (action.actionName === 'copy-field') {
+            if (action.fieldKey.startsWith('__custom_')) {
+              const customList = parseCustomFields(
+                decryptedFieldsMap[action.item.id]?.[CUSTOM_FIELDS_KEY]
+              );
+              const customEntry = customList[Number(action.fieldKey.replace('__custom_', ''))];
+              if (customEntry?.value) {
+                secureCopyText(
+                  String(customEntry.value),
+                  `${customEntry.name || 'Field'} copied`
+                );
+              }
+              return;
+            }
+            const fieldMeta = (TYPE_FIELDS[action.item.type] || []).find(
+              (f) => f.key === action.fieldKey
+            );
+            const fieldValue = decryptedFieldsMap[action.item.id]?.[action.fieldKey];
+            if (fieldMeta && fieldValue !== undefined && fieldValue !== null && fieldValue !== '') {
+              secureCopyText(String(fieldValue), `${fieldMeta.label} copied`);
+            }
+            return;
+          }
+
+          executeAction(action.actionName, action.item.id);
         }}
       />
     </div>

@@ -361,6 +361,12 @@ enum ItemType {
   BANK_ACCOUNT
   IDENTITY
   SECURE_NOTE
+  SSH_KEY
+  API_TOKEN
+  DATABASE
+  WIFI
+  LICENSE
+  RECOVERY_CODE
 }
 
 enum ActivityAction {

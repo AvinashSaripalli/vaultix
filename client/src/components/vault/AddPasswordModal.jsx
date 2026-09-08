@@ -6,7 +6,15 @@ import {
   createPassword,
 } from '../../features/vault/vaultSlice';
 import TagInput from '../common/TagInput';
-import { encryptTextWithAesKey, wrapItemKey, decryptPrivateKey } from '../../utils/crypto';
+import ItemFields from '../myVault/ItemFields';
+import CustomFieldsInput from '../common/CustomFieldsInput';
+import {
+  encryptValueWithAesKey,
+  encryptFieldsWithAesKey,
+  generateItemAesKey,
+  wrapItemKey,
+  decryptPrivateKey,
+} from '../../utils/crypto';
 import { generatePassword } from '../../utils/passwordGenerator';
 import { getWrapRecipients, wrapItemKeysForUsers } from '../../utils/keyWrapping';
 import { checkBreachedPassword, estimateStrength } from '../../utils/breachCheck';
@@ -16,6 +24,13 @@ import {
   setSessionRsaPrivateKey,
   setSessionRsaPublicKey,
 } from '../../features/auth/authSlice';
+import {
+  ITEM_TYPES,
+  emptyTypeFields,
+  isSensitiveDefault,
+  serializeCustomFields,
+  CUSTOM_FIELDS_KEY,
+} from '../../utils/itemTypes';
 
 const SUGGESTED_TAGS = [
   'Production',
@@ -53,6 +68,7 @@ function AddPasswordModal({ prefill, prefillName, onPrefillConsumed }) {
 
   const [formData, setFormData] = useState({
     name: '',
+    type: 'LOGIN',
     login: '',
     encryptedPassword: '',
     encryptedNote: '',
@@ -60,11 +76,16 @@ function AddPasswordModal({ prefill, prefillName, onPrefillConsumed }) {
     url: '',
     tags: [],
     isSensitive: false,
+    fields: emptyTypeFields('LOGIN'),
+    customFields: [],
   });
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [localError, setLocalError] = useState('');
+
+  const inputClass =
+    'w-full border border-slate-300 rounded-xl px-4 py-3 outline-none dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600';
 
   const effectivePrefill = prefill || (prefillName ? (typeof prefillName === 'string' ? { name: prefillName } : prefillName) : null);
 
@@ -92,6 +113,7 @@ function AddPasswordModal({ prefill, prefillName, onPrefillConsumed }) {
   const resetForm = () => {
     setFormData({
       name: '',
+      type: 'LOGIN',
       login: '',
       encryptedPassword: '',
       encryptedNote: '',
@@ -99,6 +121,8 @@ function AddPasswordModal({ prefill, prefillName, onPrefillConsumed }) {
       url: '',
       tags: [],
       isSensitive: false,
+      fields: emptyTypeFields('LOGIN'),
+      customFields: [],
     });
 
     setShowPassword(false);
@@ -120,6 +144,30 @@ function AddPasswordModal({ prefill, prefillName, onPrefillConsumed }) {
     }));
   };
 
+  const handleTypeChange = (e) => {
+    const type = e.target.value;
+    setLocalError('');
+    setFormData((prev) => ({
+      ...prev,
+      type,
+      login: '',
+      encryptedPassword: '',
+      confirmPassword: '',
+      url: '',
+      fields: emptyTypeFields(type),
+      customFields: [],
+      isSensitive: prev.isSensitive || isSensitiveDefault(type),
+    }));
+  };
+
+  const handleFieldChange = (key, value) => {
+    setLocalError('');
+    setFormData((prev) => ({
+      ...prev,
+      fields: { ...prev.fields, [key]: value },
+    }));
+  };
+
   const handleGenerate = () => {
     const pwd = generatePassword({ length: 16, useUppercase: true, useLowercase: true, useNumbers: true, useSymbols: true });
     setFormData((prev) => ({ ...prev, encryptedPassword: pwd, confirmPassword: pwd }));
@@ -132,17 +180,17 @@ function AddPasswordModal({ prefill, prefillName, onPrefillConsumed }) {
     if (!selectedVault?.id) return 'Vault is required';
     if (!selectedFolderId) return 'Please select a folder first';
     if (!formData.name.trim()) return 'Password name is required';
-    if (!formData.login.trim()) return 'Login / Email is required';
-    if (!formData.encryptedPassword) return 'Password is required';
 
-    if (formData.encryptedPassword.length < 6) {
-      return 'Password must be at least 6 characters';
-    }
-
-    if (!formData.confirmPassword) return 'Confirm password is required';
-
-    if (formData.encryptedPassword !== formData.confirmPassword) {
-      return 'Password and confirm password do not match';
+    if (formData.type === 'LOGIN') {
+      if (!formData.login.trim()) return 'Login / Email is required';
+      if (!formData.encryptedPassword) return 'Password is required';
+      if (formData.encryptedPassword.length < 6) {
+        return 'Password must be at least 6 characters';
+      }
+      if (!formData.confirmPassword) return 'Confirm password is required';
+      if (formData.encryptedPassword !== formData.confirmPassword) {
+        return 'Password and confirm password do not match';
+      }
     }
 
     return '';
@@ -160,14 +208,17 @@ function AddPasswordModal({ prefill, prefillName, onPrefillConsumed }) {
 
     const payload = {
       name: formData.name.trim(),
-      login: formData.login.trim(),
-      password: formData.encryptedPassword,
+      type: formData.type,
+      login: formData.type === 'LOGIN' ? formData.login.trim() : '',
+      password: formData.type === 'LOGIN' ? formData.encryptedPassword : '',
       note: formData.encryptedNote || '',
-      url: formData.url.trim(),
+      url: formData.type === 'LOGIN' ? formData.url.trim() : '',
       vaultId: selectedVault?.id,
       folderId: selectedFolderId,
       tags: formData.tags,
       isSensitive: formData.isSensitive,
+      fields: formData.fields,
+      customFields: formData.customFields,
     };
 
     await handleAdminVerified(payload);
@@ -209,13 +260,24 @@ function AddPasswordModal({ prefill, prefillName, onPrefillConsumed }) {
         return;
       }
 
-      const { encryptedData: encryptedPassword, aesKeyJwk } = await encryptTextWithAesKey(
-        payload.password
-      );
+      // A single item AES key encrypts the password (+ typed fields + note)
+      // so every authorized user who unwraps their copy can decrypt all parts.
+      const { aesKeyJwk } = await generateItemAesKey();
 
-      const { encryptedData: encryptedNote } = payload.note
-        ? await encryptTextWithAesKey(payload.note)
-        : { encryptedData: '' };
+      const encryptedPassword = payload.password
+        ? await encryptValueWithAesKey(payload.password, aesKeyJwk)
+        : '';
+
+      const encryptedNote = payload.note
+        ? await encryptValueWithAesKey(payload.note, aesKeyJwk)
+        : '';
+
+      const fieldsPayload = { ...payload.fields };
+      if (payload.customFields?.length) {
+        fieldsPayload[CUSTOM_FIELDS_KEY] = serializeCustomFields(payload.customFields);
+      }
+
+      const encryptedFields = await encryptFieldsWithAesKey(fieldsPayload, aesKeyJwk);
 
       const wrappedKeys = {};
       if (aesKeyJwk) {
@@ -240,17 +302,19 @@ function AddPasswordModal({ prefill, prefillName, onPrefillConsumed }) {
         }
       }
 
-      const strengthScore = estimateStrength(payload.password);
-
-      const breach = await checkBreachedPassword(payload.password);
-      const atRisk = breach.breached || isPasswordAtRisk(payload.password);
+      const isLogin = payload.type === 'LOGIN';
+      const strengthScore = isLogin ? estimateStrength(payload.password) : 5;
+      const breach = isLogin ? await checkBreachedPassword(payload.password) : { breached: false };
+      const atRisk = isLogin ? (breach.breached || isPasswordAtRisk(payload.password)) : false;
 
       const result = await dispatch(
         createPassword({
           name: payload.name,
+          type: payload.type,
           login: payload.login,
           encryptedPassword,
           encryptedNote,
+          encryptedFields,
           wrappedKeys: Object.keys(wrappedKeys).length > 0 ? wrappedKeys : null,
           url: payload.url,
           vaultId: payload.vaultId,
@@ -306,81 +370,127 @@ function AddPasswordModal({ prefill, prefillName, onPrefillConsumed }) {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <input
-                name="name"
-                type="text"
-                placeholder="Website / Service name"
-                value={formData.name}
-                onChange={handleChange}
-                className="w-full border border-slate-300 rounded-xl px-4 py-3 outline-none dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600"
-                required
-              />
-
-              <input
-                name="login"
-                type="text"
-                placeholder="Login / Email"
-                value={formData.login}
-                onChange={handleChange}
-                className="w-full border border-slate-300 rounded-xl px-4 py-3 outline-none dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600"
-                required
-              />
-
-              <div className="relative">
-                <input
-                  name="encryptedPassword"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Password"
-                  value={formData.encryptedPassword}
-                  onChange={handleChange}
-                  className="w-full border border-slate-300 rounded-xl px-4 pr-20 py-3 outline-none dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={handleGenerate}
-                  title="Generate strong password"
-                  className="absolute right-10 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50 flex items-center justify-center"
+<div>
+                <label className="block text-xs font-medium text-slate-500 mb-1 dark:text-slate-400">
+                  Item type
+                </label>
+                <select
+                  name="type"
+                  value={formData.type}
+                  onChange={handleTypeChange}
+                  className="w-full border border-slate-300 rounded-xl px-4 py-3 outline-none dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600"
                 >
-                  <Sparkles size={14} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
+                  {ITEM_TYPES.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              <div className="relative">
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1 dark:text-slate-400">
+                  Name
+                </label>
                 <input
-                  name="confirmPassword"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  placeholder="Confirm password"
-                  value={formData.confirmPassword}
+                  name="name"
+                  type="text"
+                  placeholder="Item name"
+                  value={formData.name}
                   onChange={handleChange}
-                  className="w-full border border-slate-300 rounded-xl px-4 pr-12 py-3 outline-none dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600"
+                  className="w-full border border-slate-300 rounded-xl px-4 py-3 outline-none dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600"
                   required
                 />
-
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword((prev) => !prev)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"
-                >
-                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
               </div>
 
-              <input
-                name="url"
-                type="text"
-                placeholder="URL"
-                value={formData.url}
-                onChange={handleChange}
-                className="w-full border border-slate-300 rounded-xl px-4 py-3 outline-none dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 sm:col-span-2"
-              />
+              {formData.type === 'LOGIN' ? (
+                <>
+                  <input
+                    name="login"
+                    type="text"
+                    placeholder="Login / Email"
+                    value={formData.login}
+                    onChange={handleChange}
+                    className="w-full border border-slate-300 rounded-xl px-4 py-3 outline-none dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600"
+                    required
+                  />
+
+                  <div className="relative">
+                    <input
+                      name="encryptedPassword"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Password"
+                      value={formData.encryptedPassword}
+                      onChange={handleChange}
+                      className="w-full border border-slate-300 rounded-xl px-4 pr-20 py-3 outline-none dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={handleGenerate}
+                      title="Generate strong password"
+                      className="absolute right-10 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50 flex items-center justify-center"
+                    >
+                      <Sparkles size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+
+                  <div className="relative">
+                    <input
+                      name="confirmPassword"
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      placeholder="Confirm password"
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      className="w-full border border-slate-300 rounded-xl px-4 pr-12 py-3 outline-none dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600"
+                      required
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword((prev) => !prev)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"
+                    >
+                      {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+
+                  <input
+                    name="url"
+                    type="text"
+                    placeholder="URL"
+                    value={formData.url}
+                    onChange={handleChange}
+                    className="w-full border border-slate-300 rounded-xl px-4 py-3 outline-none dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 sm:col-span-2"
+                  />
+                </>
+              ) : (
+                <div className="sm:col-span-2">
+                  <ItemFields
+                    type={formData.type}
+                    values={formData.fields}
+                    onChange={handleFieldChange}
+                    inputClass={inputClass}
+                  />
+                </div>
+              )}
+
+              <div className="sm:col-span-2">
+                <CustomFieldsInput
+                  fields={formData.customFields}
+                  onChange={(newFields) =>
+                    setFormData((prev) => ({ ...prev, customFields: newFields }))
+                  }
+                  inputClass={inputClass}
+                />
+              </div>
 
               <textarea
                 name="encryptedNote"

@@ -25,7 +25,44 @@ const ITEM_FIELD_SCHEMAS = {
     required: [],
     optional: [],
   },
+  SSH_KEY: {
+    required: ['username', 'privateKey'],
+    optional: ['passphrase', 'publicKey', 'host', 'port', 'keyType', 'fingerprint'],
+  },
+  API_TOKEN: {
+    required: ['token', 'issuer'],
+    optional: ['username', 'scopes', 'expiry', 'baseUrl'],
+  },
+  DATABASE: {
+    required: ['dbName', 'username', 'password'],
+    optional: ['host', 'port', 'database', 'driver', 'connectionString'],
+  },
+  WIFI: {
+    required: ['ssid', 'password'],
+    optional: ['security', 'isHidden', 'band'],
+  },
+  LICENSE: {
+    required: ['licenseKey'],
+    optional: ['product', 'vendor', 'email', 'purchasedAt', 'expiry', 'seats', 'url'],
+  },
+  RECOVERY_CODE: {
+    required: ['code'],
+    optional: ['service', 'username', 'used'],
+  },
 };
+
+// `__customFields__` is a reserved key accepted for every item type. It carries
+// an array of user-defined custom fields (each { key, value, sensitive }) so any
+// item can be extended without schema changes.
+const CUSTOM_FIELDS_KEY = '__customFields__';
+
+function isAllowedKey(schema, key) {
+  return (
+    key === CUSTOM_FIELDS_KEY ||
+    schema.required.includes(key) ||
+    schema.optional.includes(key)
+  );
+}
 
 const VALID_ITEM_TYPES = Object.keys(ITEM_FIELD_SCHEMAS);
 
@@ -44,26 +81,26 @@ function validateItemFields(type, fields) {
     return { valid: false, message: `Invalid item type: ${type}` };
   }
 
-  const schema = ITEM_FIELD_SCHEMAS[type];
-  const allAllowed = new Set([...schema.required, ...schema.optional]);
+const schema = ITEM_FIELD_SCHEMAS[type];
+    const allAllowed = new Set([...schema.required, ...schema.optional]);
 
-  if (fields && typeof fields === 'object' && !Array.isArray(fields)) {
-    const hasEncryptionEnvelope = 'iv' in fields && 'content' in fields;
+    if (fields && typeof fields === 'object' && !Array.isArray(fields)) {
+      const hasEncryptionEnvelope = 'iv' in fields && 'content' in fields;
 
-    if (hasEncryptionEnvelope) {
-      return { valid: true };
+      if (hasEncryptionEnvelope) {
+        return { valid: true };
+      }
+
+      const providedKeys = Object.keys(fields);
+      const disallowed = providedKeys.filter((k) => !isAllowedKey(schema, k));
+
+      if (disallowed.length > 0) {
+        return {
+          valid: false,
+          message: `Unexpected fields for ${type}: ${disallowed.join(', ')}`,
+        };
+      }
     }
-
-    const providedKeys = Object.keys(fields);
-    const disallowed = providedKeys.filter((k) => !allAllowed.has(k));
-
-    if (disallowed.length > 0) {
-      return {
-        valid: false,
-        message: `Unexpected fields for ${type}: ${disallowed.join(', ')}`,
-      };
-    }
-  }
 
   if (schema.required.length > 0) {
     if (!fields || typeof fields !== 'object') {
@@ -107,6 +144,7 @@ function validateLoginForType(type, login) {
 module.exports = {
   ITEM_FIELD_SCHEMAS,
   VALID_ITEM_TYPES,
+  CUSTOM_FIELDS_KEY,
   validateItemFields,
   validateLoginForType,
 };

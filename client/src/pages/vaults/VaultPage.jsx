@@ -14,8 +14,11 @@ import FolderHistoryPanel from '../../components/folder/FolderHistoryPanel';
 import FolderMembersSummary from '../../components/folder/FolderMembersSummary';
 import FolderUsersModal from '../../components/folder/FolderUsersModal';
 import ConfirmModal from '../../components/common/ConfirmModal';
-import { safeDecryptText, unwrapItemKey, decryptTextWithAesKey, decryptPrivateKey, encryptTextWithAesKey, wrapItemKey, isEncryptedFormat } from '../../utils/crypto';
+import { safeDecryptText, unwrapItemKey, decryptTextWithAesKey, decryptPrivateKey, encryptTextWithAesKey, encryptValueWithAesKey, generateItemAesKey, encryptFieldsWithAesKey, wrapItemKey, isEncryptedFormat } from '../../utils/crypto';
 import { getWrapRecipients, wrapItemKeysForUsers } from '../../utils/keyWrapping';
+import { ITEM_TYPES, serializeCustomFields, CUSTOM_FIELDS_KEY } from '../../utils/itemTypes';
+
+const TYPE_MAP = Object.fromEntries(ITEM_TYPES.map((item) => [item.value, true]));
 import { showToast } from '../../utils/toast';
 import { setSessionRsaPrivateKey, setSessionRsaPublicKey } from '../../features/auth/authSlice';
 import { parseImportFile, downloadExport, detectFileFormat } from '../../utils/vaultImportExport';
@@ -310,6 +313,7 @@ function VaultPage() {
 
         rows.push({
           Name: item.name || '',
+          Type: item.type || 'LOGIN',
           Login: item.login || '',
           Password: originalPassword || '[Encrypted]',
           URL: item.url || '',
@@ -406,16 +410,6 @@ function VaultPage() {
         const note = row.Note || row.note || '';
         const tagsText = row.Tags || row.tags || '';
 
-        if (!name || !login || !password) continue;
-
-        const { encryptedData: encryptedPassword, aesKeyJwk } = await encryptTextWithAesKey(
-          String(password)
-        );
-
-        const { encryptedData: encryptedNote } = note
-          ? await encryptTextWithAesKey(String(note))
-          : { encryptedData: '' };
-
         const tags = tagsText
           ? String(tagsText)
               .split(',')
@@ -423,13 +417,86 @@ function VaultPage() {
               .filter(Boolean)
           : [];
 
+        let type = String(row.Type || row.type || 'LOGIN').toUpperCase();
+        if (!TYPE_MAP[type]) type = 'LOGIN';
+
+        if (!name) continue;
+        if (!row.encryptedFields) {
+          if (type === 'LOGIN' && (!login || !password)) continue;
+        }
+
         const wrappedKeys = {};
-        if (aesKeyJwk) {
+
+        if (type === 'LOGIN') {
+          const { encryptedData: encryptedPassword, aesKeyJwk } = await encryptTextWithAesKey(
+            String(password)
+          );
+
+          const { encryptedData: encryptedNote } = note
+            ? await encryptTextWithAesKey(String(note))
+            : { encryptedData: '' };
+
+          const fieldsPayload = {};
+          const customFields = row.Fields || row.customFields;
+          if (customFields?.length) {
+            fieldsPayload[CUSTOM_FIELDS_KEY] = serializeCustomFields(customFields);
+          }
+          const encryptedFields = await encryptFieldsWithAesKey(fieldsPayload, aesKeyJwk);
+
+          if (aesKeyJwk) {
+            for (const uid of folderMemberIds) {
+              const pubKey = await getPublicKeyForUser(uid);
+              if (pubKey) {
+                try {
+                  wrappedKeys[uid] = await wrapItemKey(aesKeyJwk, pubKey);
+                } catch {
+                  // skip
+                }
+              }
+            }
+          }
+
+          encryptedRows.push({
+            name: String(name).trim(),
+            type,
+            login: String(login).trim(),
+            encryptedPassword,
+            encryptedNote,
+            encryptedFields,
+            url: String(url).trim(),
+            tags,
+            wrappedKeys: Object.keys(wrappedKeys).length > 0 ? wrappedKeys : null,
+          });
+          continue;
+        }
+
+        // Typed items (CARD, SSH_KEY, API_TOKEN, ...) — single item AES key
+        // encrypts note + typed fields so shared users can decrypt.
+        const { aesKeyJwk: itemAesKeyJwk } = await generateItemAesKey();
+
+        const encryptedNote = note
+          ? await encryptValueWithAesKey(String(note), itemAesKeyJwk)
+          : '';
+
+        const fieldsPayload = {};
+        const seen = new Set(['Name', 'Type', 'Login', 'Password', 'URL', 'Note', 'Tags', 'Fields']);
+        for (const [key, value] of Object.entries(row)) {
+          if (seen.has(key)) continue;
+          if (value === '' || value === undefined || value === null) continue;
+          fieldsPayload[key] = String(value);
+        }
+        const customFields = row.Fields || row.customFields;
+        if (customFields?.length) {
+          fieldsPayload[CUSTOM_FIELDS_KEY] = serializeCustomFields(customFields);
+        }
+        const encryptedFields = await encryptFieldsWithAesKey(fieldsPayload, itemAesKeyJwk);
+
+        if (itemAesKeyJwk) {
           for (const uid of folderMemberIds) {
             const pubKey = await getPublicKeyForUser(uid);
             if (pubKey) {
               try {
-                wrappedKeys[uid] = await wrapItemKey(aesKeyJwk, pubKey);
+                wrappedKeys[uid] = await wrapItemKey(itemAesKeyJwk, pubKey);
               } catch {
                 // skip
               }
@@ -439,9 +506,11 @@ function VaultPage() {
 
         encryptedRows.push({
           name: String(name).trim(),
-          login: String(login).trim(),
-          encryptedPassword,
+          type,
+          login: login ? String(login).trim() : '',
+          encryptedPassword: '',
           encryptedNote,
+          encryptedFields,
           url: String(url).trim(),
           tags,
           wrappedKeys: Object.keys(wrappedKeys).length > 0 ? wrappedKeys : null,
@@ -449,7 +518,7 @@ function VaultPage() {
       }
 
       if (!encryptedRows.length) {
-        showToast('No valid rows found. Required columns: Name/Title, Login/Username, Password', 'error');
+        showToast('No valid rows found. Required columns: Name/Title and either Login/Password or typed fields', 'error');
         setImportFile(null);
         return;
       }

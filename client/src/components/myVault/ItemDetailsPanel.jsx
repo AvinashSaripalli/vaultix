@@ -23,6 +23,8 @@ import {
   TYPE_FIELDS,
   getItemTypeMeta,
   maskFieldValue,
+  parseCustomFields,
+  CUSTOM_FIELDS_KEY,
 } from '../../utils/itemTypes';
 import ItemTypeBadge from './ItemTypeBadge';
 import TotpField from './TotpField';
@@ -213,6 +215,43 @@ function ItemDetailsPanel({
     }
   };
 
+  const handleCustomValue = (mode, custom, index) => {
+    const run = (fields) => {
+      const customList = parseCustomFields(fields[CUSTOM_FIELDS_KEY]);
+      const target = customList[index];
+      if (!target) return;
+      if (mode === 'copy') {
+        copyText(target.value, target.name || 'Custom field');
+      } else {
+        setRevealed((prev) => ({ ...prev, [`__custom_${index}`]: true }));
+      }
+    };
+
+    if (mode === 'copy' && custom?.value) {
+      copyText(custom.value, custom.name || 'Custom field');
+      return;
+    }
+
+    if (!sessionMasterPassword) {
+      setShowDecryptDialog(true);
+      return;
+    }
+
+    setDecrypting(true);
+    decryptAll(sessionMasterPassword)
+      .then((decrypted) => {
+        applySessionDecrypt(decrypted);
+        run(decrypted.fields || {});
+      })
+      .catch(() => {
+        setShowDecryptDialog(true);
+      })
+      .finally(() => setDecrypting(false));
+  };
+
+  const handleCustomReveal = (custom, index) => handleCustomValue('reveal', custom, index);
+  const handleCustomCopy = (custom, index) => handleCustomValue('copy', custom, index);
+
   const totpSecret = (decryptedFields || {}).totpSecret;
 
   const handleTotpReveal = () => {
@@ -295,6 +334,48 @@ function ItemDetailsPanel({
                 <Copy size={17} />
               </button>
             )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const customFields = parseCustomFields((decryptedFields || {})[CUSTOM_FIELDS_KEY]);
+
+  const renderCustomField = (custom, index) => {
+    const isRevealed = revealed[`__custom_${index}`];
+    const display = custom.sensitive
+      ? isRevealed
+        ? custom.value
+        : '••••••••••••'
+      : custom.value || '';
+
+    return (
+      <div key={`__custom_${index}`} className="border-b border-slate-200 py-5 dark:border-slate-700">
+        <div className="grid grid-cols-[140px_1fr_80px] items-center">
+          <p className="text-slate-500 dark:text-slate-400">{custom.name || 'Custom Field'}</p>
+          <p className="text-slate-900 truncate dark:text-slate-100">{display || '—'}</p>
+          <div className="flex justify-end items-center gap-3">
+            {custom.sensitive && (
+              <button
+                onClick={() => {
+                  if (isRevealed) {
+                    setRevealed((prev) => ({ ...prev, [`__custom_${index}`]: false }));
+                  } else {
+                    handleCustomReveal(custom, index);
+                  }
+                }}
+                className="text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400"
+              >
+                {isRevealed ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            )}
+            <button
+              onClick={() => handleCustomCopy(custom, index)}
+              className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+            >
+              <Copy size={17} />
+            </button>
           </div>
         </div>
       </div>
@@ -464,6 +545,8 @@ function ItemDetailsPanel({
           )}
 
           {!hasLogin && typeFields.length > 0 && typeFields.map(renderField)}
+
+          {customFields.length > 0 && customFields.map(renderCustomField)}
 
           {(item.encryptedNote || item.type === 'SECURE_NOTE') && (
             <div className="border-b border-slate-200 py-5 dark:border-slate-700">

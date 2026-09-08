@@ -2,14 +2,9 @@ import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import api from '../../services/api';
 import { showToast } from '../../utils/toast';
+import { ITEM_TYPES } from '../../utils/itemTypes';
 
-const ALLOWED_TYPES_OPTIONS = [
-  'LOGIN',
-  'SECURE_NOTE',
-  'CREDIT_CARD',
-  'IDENTITY',
-  'PAYMENT',
-];
+const ALLOWED_TYPES_OPTIONS = ITEM_TYPES.map((item) => item.value);
 
 function VaultPolicyModal({ open, onClose, vaultId }) {
   const [minStrengthScore, setMinStrengthScore] = useState('');
@@ -163,16 +158,16 @@ function VaultPolicyModal({ open, onClose, vaultId }) {
                 Allowed Types (leave all unchecked to allow all)
               </label>
               <div className="space-y-2">
-                {ALLOWED_TYPES_OPTIONS.map((type) => (
-                  <label key={type} className="flex items-center gap-3 cursor-pointer">
+                {ITEM_TYPES.map((item) => (
+                  <label key={item.value} className="flex items-center gap-3 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={allowedTypes.includes(type)}
-                      onChange={() => toggleType(type)}
+                      checked={allowedTypes.includes(item.value)}
+                      onChange={() => toggleType(item.value)}
                       className="h-4 w-4 accent-indigo-600"
                     />
                     <span className="text-sm text-slate-700 dark:text-slate-200">
-                      {type.replace(/_/g, ' ')}
+                      {item.label}
                     </span>
                   </label>
                 ))}
