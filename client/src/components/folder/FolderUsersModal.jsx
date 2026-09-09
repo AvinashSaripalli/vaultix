@@ -273,22 +273,6 @@ function FolderUsersModal({ open, onClose, folderId, folderName, onSaved }) {
             )}
           </div>
 
-          <div className="space-y-1">
-            {ACCESS_OPTIONS.map((opt) => {
-              const count = members.filter((m) => m.accessLevel === opt.value).length;
-              if (count === 0) return null;
-              const Icon = opt.icon;
-              return (
-                <div key={opt.value} className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 py-1">
-                  <Icon size={13} className="text-slate-400 dark:text-slate-500" />
-                  <span>{opt.label}</span>
-                  <span className="text-slate-400 dark:text-slate-500">·</span>
-                  <span className="font-medium">{count}</span>
-                </div>
-              );
-            })}
-          </div>
-
           <div className="border-t border-slate-100 dark:border-slate-700 mt-3 pt-3">
             {loading && (
               <div className="py-6 text-xs text-slate-500 dark:text-slate-400 text-center">Loading members...</div>
