@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import api from '../../services/api';
@@ -6,19 +6,13 @@ import { showToast } from '../../utils/toast';
 
 function ShareVaultModal({ open, onClose, vaultId }) {
   const { user } = useSelector((state) => state.auth);
-  const [activeTab, setActiveTab] = useState('USERS');
   const [users, setUsers] = useState([]);
   const [userEmail, setUserEmail] = useState('');
   const [accessLevel, setAccessLevel] = useState('READ_ONLY');
   const [fetchingUsers, setFetchingUsers] = useState(false);
   const [error, setError] = useState('');
   const [sharing, setSharing] = useState(false);
-  const [departments, setDepartments] = useState([]);
-  const [loadingDepts, setLoadingDepts] = useState(false);
-  const [deptsError, setDeptsError] = useState('');
-const [existingGrants, setExistingGrants] = useState({});
-  const [selectedDepts, setSelectedDepts] = useState({});
-  const [savingDepts, setSavingDepts] = useState(false);
+  const [memberIds, setMemberIds] = useState([]);
 
   useEffect(() => {
     if (!open) return;
@@ -38,43 +32,26 @@ const [existingGrants, setExistingGrants] = useState({});
   }, [open, user?.id]);
 
   useEffect(() => {
-    if (!open || !vaultId || activeTab !== 'DEPARTMENTS') return;
-    const fetchDepartments = async () => {
+    if (!open || !vaultId) return;
+    const fetchVaultMembers = async () => {
       try {
-        setLoadingDepts(true);
-        setDeptsError('');
-        const res = await api.get('/departments');
-        const list = res.data || [];
-        setDepartments(list);
-const grants = {};
-        const selected = {};
-        list.forEach((dept) => {
-          const grant = dept.permissions.find((p) => p.vaultId === vaultId);
-          if (grant) {
-            grants[dept.id] = grant;
-            selected[dept.id] = true;
-          }
-        });
-        setExistingGrants(grants);
-        setSelectedDepts(selected);
-      } catch (err) {
-        setDeptsError(err.response?.status === 403
-          ? 'Only admins can manage department access'
-          : err.response?.data?.message || 'Failed to fetch departments');
-      } finally {
-        setLoadingDepts(false);
+        const res = await api.get('/vaults');
+        const vault = (res.data || []).find((v) => v.id === vaultId);
+        const perms = vault?.permissions || [];
+        setMemberIds(perms.map((p) => p.user?.id).filter(Boolean));
+      } catch {
+        setMemberIds([]);
       }
     };
-    fetchDepartments();
-  }, [open, vaultId, activeTab]);
+    fetchVaultMembers();
+  }, [open, vaultId]);
+
+  const shareableUsers = users.filter((item) => !memberIds.includes(item.id));
 
   const resetForm = () => {
     setUserEmail('');
     setAccessLevel('READ_ONLY');
     setError('');
-setActiveTab('USERS');
-    setSelectedDepts({});
-    setExistingGrants({});
   };
 
   const handleClose = () => { resetForm(); onClose(); };
@@ -96,45 +73,6 @@ setActiveTab('USERS');
     }
   };
 
-const toggleDept = (deptId) => setSelectedDepts((prev) => ({ ...prev, [deptId]: !prev[deptId] }));
-
-  const buildDeptLabel = (dept, byId) => {
-    if (!dept.parentId || !byId.has(dept.parentId)) return dept.name;
-    return `${buildDeptLabel(byId.get(dept.parentId), byId)} / ${dept.name}`;
-  };
-
-  const sortedDepartments = useMemo(() => {
-    const byId = new Map(departments.map((d) => [d.id, d]));
-    return [...departments].sort((a, b) => buildDeptLabel(a, byId).localeCompare(buildDeptLabel(b, byId)));
-  }, [departments]);
-
-  const handleSaveDepartmentAccess = async () => {
-    try {
-      setSavingDepts(true);
-let created = 0, revoked = 0;
-      for (const dept of departments) {
-        const isSelected = !!selectedDepts[dept.id];
-        const existing = existingGrants[dept.id];
-        if (isSelected && !existing) {
-          await api.post(`/departments/${dept.id}/grants`, { vaultId });
-          created += 1;
-        } else if (!isSelected && existing) {
-          await api.delete(`/departments/${dept.id}/grants/${existing.id}`);
-          revoked += 1;
-        }
-      }
-      const parts = [];
-      if (created) parts.push(`${created} granted`);
-      if (revoked) parts.push(`${revoked} revoked`);
-      showToast(parts.length ? `Department access saved (${parts.join(', ')})` : 'No changes');
-      handleClose();
-    } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to save department access', 'error');
-    } finally {
-      setSavingDepts(false);
-    }
-  };
-
   if (!open) return null;
 
   return (
@@ -147,94 +85,67 @@ let created = 0, revoked = 0;
           </button>
         </div>
 
-        <div className="flex gap-1 mb-5 rounded-xl bg-slate-100 p-1 dark:bg-slate-700/50">
-          {[{ key: 'USERS', label: 'Users' }, { key: 'DEPARTMENTS', label: 'Departments' }].map((tab) => (
-            <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-              className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                activeTab === tab.key
-                  ? 'bg-white text-indigo-600 shadow-sm dark:bg-slate-600 dark:text-white'
-                  : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-              }`}>
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {activeTab === 'USERS' ? (
-          <>
-            {error && <div className="mb-4 bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 text-sm px-3 py-2 rounded-md">{error}</div>}
-            <form onSubmit={handleShare} className="space-y-4">
-              <div>
-                <label className="text-sm text-slate-600 dark:text-slate-300 mb-1 block">Select user</label>
-                <select value={userEmail} onChange={(e) => setUserEmail(e.target.value)}
-                  className="w-full border border-slate-300 dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 rounded-lg px-3 py-2 text-sm">
-                  <option value="">{fetchingUsers ? 'Loading...' : 'Choose user'}</option>
-                  {users.map((item) => (<option key={item.id} value={item.email}>{item.fullName}</option>))}
-                </select>
-              </div>
-              <div>
-                <label className="text-sm text-slate-600 dark:text-slate-300 mb-1 block">Access level</label>
-                <select value={accessLevel} onChange={(e) => setAccessLevel(e.target.value)}
-                  className="w-full border border-slate-300 dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 rounded-lg px-3 py-2 text-sm">
-<option value="READ_ONLY">Read only</option>
-                  <option value="READ_WRITE">Read and write</option>
-                  <option value="FULL_ACCESS">Full access</option>
-                  <option value="ADMINISTRATOR">Administrator</option>
-                </select>
-              </div>
-              <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={handleClose} className="px-4 py-2 rounded-lg border text-sm">Cancel</button>
-                <button type="submit" disabled={sharing} className="px-5 py-2 rounded-lg bg-indigo-600 text-white text-sm">
-                  {sharing ? 'Sharing...' : 'Share'}
-                </button>
-              </div>
-            </form>
-          </>
-        ) : (
-          <>
-            {deptsError && <div className="mb-4 bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 text-sm px-3 py-2 rounded-md">{deptsError}</div>}
-            {loadingDepts && <p className="py-6 text-center text-sm text-slate-500 dark:text-slate-400">Loading departments...</p>}
-            {!loadingDepts && !deptsError && !sortedDepartments.length && (
-              <p className="py-6 text-center text-sm text-slate-500 dark:text-slate-400">No departments yet.</p>
-            )}
-            {!loadingDepts && !deptsError && sortedDepartments.length > 0 && (
-              <>
-                <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">Tick departments to give them access to this vault. Untick to revoke.</p>
-                <div className="space-y-2 mb-4 max-h-72 overflow-y-auto pr-1">
-                  {sortedDepartments.map((dept) => {
-                    const checked = !!selectedDepts[dept.id];
-                    const byId = new Map(departments.map((d) => [d.id, d]));
-                    return (
-                      <div key={dept.id} className={`rounded-xl border px-3 py-2.5 transition-colors ${
-                        checked ? 'border-indigo-300 bg-indigo-50/60 dark:border-indigo-700 dark:bg-indigo-900/20' : 'border-slate-200 dark:border-slate-700'
-                      }`}>
-                        <div className="flex items-center gap-3">
-                          <label className="flex items-center gap-3 cursor-pointer flex-1 min-w-0">
-                            <input type="checkbox" checked={checked} onChange={() => toggleDept(dept.id)} className="h-4 w-4 accent-indigo-600 shrink-0" />
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">{buildDeptLabel(dept, byId)}</p>
-                              <p className="text-xs text-slate-500 dark:text-slate-400">
-                                {dept.members.length} member{dept.members.length === 1 ? '' : 's'}
-                                {existingGrants[dept.id] ? ' - currently has access' : ''}
-                              </p>
-                            </div>
-</label>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="flex justify-end gap-2">
-                  <button type="button" onClick={handleClose} className="px-4 py-2 rounded-lg border text-sm">Cancel</button>
-                  <button type="button" onClick={handleSaveDepartmentAccess} disabled={savingDepts}
-                    className="px-5 py-2 rounded-lg bg-indigo-600 text-white text-sm disabled:opacity-50">
-                    {savingDepts ? 'Saving...' : 'Save Department Access'}
-                  </button>
-                </div>
-              </>
-            )}
-          </>
+        {error && (
+          <div className="mb-4 bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 text-sm px-3 py-2 rounded-md">
+            {error}
+          </div>
         )}
+
+        <form onSubmit={handleShare} className="space-y-4">
+          <div>
+            <label className="text-sm text-slate-600 dark:text-slate-300 mb-1 block">
+              Select user
+            </label>
+            <select
+              value={userEmail}
+              onChange={(e) => setUserEmail(e.target.value)}
+              className="w-full border border-slate-300 dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 rounded-lg px-3 py-2 text-sm"
+            >
+              <option value="">
+                {fetchingUsers ? 'Loading...' : 'Choose user'}
+              </option>
+              {shareableUsers.map((item) => (
+                <option key={item.id} value={item.email}>
+                  {item.fullName}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="text-sm text-slate-600 dark:text-slate-300 mb-1 block">
+              Access level
+            </label>
+            <select
+              value={accessLevel}
+              onChange={(e) => setAccessLevel(e.target.value)}
+              className="w-full border border-slate-300 dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 rounded-lg px-3 py-2 text-sm"
+            >
+              <option value="READ_ONLY">Read only</option>
+              <option value="READ_WRITE">Read and write</option>
+              <option value="FULL_ACCESS">Full access</option>
+              <option value="ADMINISTRATOR">Administrator</option>
+            </select>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="px-4 py-2 rounded-lg border text-sm"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="submit"
+              disabled={sharing}
+              className="px-5 py-2 rounded-lg bg-indigo-600 text-white text-sm"
+            >
+              {sharing ? 'Sharing...' : 'Share'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
