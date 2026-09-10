@@ -82,6 +82,15 @@
         margin-bottom: 8px;
       }
       #siteLabel b { color: #e2e8f0; word-break: break-all; }
+      #siteLabel .spacer { flex: 1; }
+      #lnkAll {
+        color: #818cf8;
+        text-decoration: none;
+        cursor: pointer;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      #lnkAll:hover { text-decoration: underline; }
 
       .search-wrap { position: relative; margin-bottom: 8px; }
       .search-wrap input { margin-bottom: 0; padding-left: 30px; }
@@ -131,7 +140,37 @@
         white-space: nowrap;
         margin-bottom: 7px;
       }
-      .actions { display: flex; gap: 6px; }
+      .passfield { position: relative; }
+      .passfield input { padding-right: 48px; }
+      .passfield button {
+        position: absolute;
+        right: 4px;
+        top: 5px;
+        border: none;
+        background: transparent;
+        color: #64748b;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+        padding: 2px 6px;
+      }
+      .passfield button:hover { color: #cbd5e1; }
+
+      .item .pass {
+        font-family: ui-monospace, monospace;
+        font-size: 12px;
+        color: #c4b5fd;
+        background: #0b1222;
+        border: 1px solid #334155;
+        border-radius: 7px;
+        padding: 6px 8px;
+        margin-bottom: 7px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .actions { display: flex; flex-wrap: wrap; gap: 6px; }
       .actions button {
         flex: 1;
         padding: 6px 4px;
@@ -175,14 +214,20 @@
         <div class="error" id="loginError"></div>
         <input id="loginEmail" type="email" placeholder="Email" autocomplete="off" />
         <input id="loginPassword" type="password" placeholder="Account password" />
-        <input id="loginMaster" type="password" placeholder="Master password (vault)" />
+        <div class="passfield">
+          <input id="loginMaster" type="password" placeholder="Master password (vault)" />
+          <button type="button" id="toggleLoginMaster">Show</button>
+        </div>
         <button class="primary" id="btnLogin">Sign in</button>
         <p class="hint">Server: <span id="loginServer"></span> · <a id="lnkSettings">change</a></p>
       </div>
 
       <div id="viewUnlock" style="display:none">
         <div class="error" id="unlockError"></div>
-        <input id="unlockMaster" type="password" placeholder="Master password" />
+        <div class="passfield">
+          <input id="unlockMaster" type="password" placeholder="Master password" />
+          <button type="button" id="toggleUnlockMaster">Show</button>
+        </div>
         <button class="primary" id="btnUnlock">Unlock vault</button>
         <p class="hint">Signed in as <span id="unlockUser"></span></p>
       </div>
@@ -194,12 +239,17 @@
           <input id="search" type="text" placeholder="Search vault..." />
         </div>
         <div class="status" id="listStatus" style="display:none">Decrypting vault…</div>
+        <details id="diag" style="display:none;margin:0 0 8px;background:#0b1222;border:1px solid #334155;border-radius:8px;padding:6px 9px;font-size:11px;">
+          <summary style="color:#f87171;cursor:pointer;font-weight:600;">Decrypt diagnostics</summary>
+          <pre id="diagText" style="white-space:pre-wrap;word-break:break-all;color:#94a3b8;margin:6px 0 0;"></pre>
+        </details>
         <div id="list"></div>
       </div>
     </main>
 
     <footer id="footerBar" style="display:none">
       <a id="lnkOpenVault">Open web vault</a>
+      <span id="lockTimer"></span>
       <a id="lnkRefresh">Refresh</a>
     </footer>
 

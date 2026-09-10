@@ -1,5 +1,15 @@
 const DEFAULT_URL = 'https://knbitrix.duckdns.org';
-const LOCK_MS = 15 * 60 * 1000;
+const DEFAULT_LOCK_MS = 15 * 60 * 1000;
+
+async function lockMs() {
+  try {
+    const { user } = await chrome.storage.local.get('user');
+    const minutes = Number(user?.vaultTimeoutMinutes) || 15;
+    return minutes * 60 * 1000;
+  } catch {
+    return DEFAULT_LOCK_MS;
+  }
+}
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!msg || !msg.type) return;
@@ -15,7 +25,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         const data = await chrome.storage.session.get('cache');
         const cache = data.cache;
 
-        if (!cache || Date.now() - cache.ts >= LOCK_MS) {
+        if (!cache || Date.now() - cache.ts >= (await lockMs())) {
           sendResponse({ ok: true, creds: [] });
           return;
         }

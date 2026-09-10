@@ -13,7 +13,6 @@ import {
   reWrapItemKey,
   rsaDecrypt,
   rsaEncrypt,
-  isEncryptedFormat,
 } from '../../utils/crypto';
 import {
   clearSecureSession,
@@ -235,12 +234,23 @@ export const changeMasterPassword = createAsyncThunk(
       const ownedRes = await api.get('/passwords/owned');
       const ownedPasswords = ownedRes.data;
 
+      // A master-encrypted envelope carries v2/PBKDF2 markers. Items using the
+      // per-item AES-key (wrapped-keys) scheme store a bare {iv, content}
+      // envelope with no KDF markers and are NOT derived from the master
+      // password — their wrapped keys are re-wrapped separately below.
+      const isMasterEncrypted = (value) => {
+        if (!value || typeof value !== 'string') return false;
+        try {
+          const parsed = JSON.parse(value);
+          return parsed.kdf === 'PBKDF2' && parsed.v === 2;
+        } catch {
+          return false;
+        }
+      };
+
       const reencrypted = [];
       for (const pw of ownedPasswords) {
-        // Items encrypted with per-item AES keys (wrapped-keys scheme) are
-        // not derived from the master password — skip them; their wrapped
-        // keys are re-wrapped separately below.
-        if (!pw.encryptedPassword || isEncryptedFormat(pw.encryptedPassword)) {
+        if (!isMasterEncrypted(pw.encryptedPassword)) {
           continue;
         }
 
@@ -260,7 +270,7 @@ export const changeMasterPassword = createAsyncThunk(
 
         const update = { id: pw.id, encryptedPassword: newEncrypted };
 
-        if (pw.encryptedNote && isEncryptedFormat(pw.encryptedNote)) {
+        if (pw.encryptedNote && isMasterEncrypted(pw.encryptedNote)) {
           try {
             const decryptedNote = await decryptText(
               pw.encryptedNote,
@@ -278,17 +288,41 @@ export const changeMasterPassword = createAsyncThunk(
         }
 
         if (pw.encryptedFields) {
-          const decryptedFields = await decryptFields(
-            pw.encryptedFields,
-            currentMasterPassword,
-            salt
-          );
-          if (decryptedFields) {
-            update.encryptedFields = await encryptFields(
-              decryptedFields,
-              newMasterPassword,
+          // Personal vault items store per-field master-encrypted envelopes
+          // (a dict of v2 strings). Wrapped-key items store bare {iv, content}
+          // AES envelopes that must NOT be re-encrypted here — their item key
+          // is re-wrapped separately below.
+          let parsedFields = null;
+          try {
+            parsedFields = JSON.parse(pw.encryptedFields);
+          } catch {
+            parsedFields = null;
+          }
+          const fieldValues =
+            parsedFields &&
+            typeof parsedFields === 'object' &&
+            !Array.isArray(parsedFields)
+              ? Object.values(parsedFields).filter(
+                  (v) => typeof v === 'string' && v.length > 0
+                )
+              : [];
+
+          if (
+            fieldValues.length > 0 &&
+            fieldValues.every((v) => isMasterEncrypted(v))
+          ) {
+            const decryptedFields = await decryptFields(
+              pw.encryptedFields,
+              currentMasterPassword,
               salt
             );
+            if (decryptedFields) {
+              update.encryptedFields = await encryptFields(
+                decryptedFields,
+                newMasterPassword,
+                salt
+              );
+            }
           }
         }
 

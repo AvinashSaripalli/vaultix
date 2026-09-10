@@ -149,7 +149,11 @@ export async function encryptPrivateKey(privateKeyJwk, masterPassword, salt) {
 }
 
 export async function decryptPrivateKey(encryptedPrivateKeyStr, masterPassword, salt) {
-  const parsed = JSON.parse(encryptedPrivateKeyStr);
+  // Prisma returns Json columns already parsed — accept object or string.
+  const parsed =
+    typeof encryptedPrivateKeyStr === 'string'
+      ? JSON.parse(encryptedPrivateKeyStr)
+      : encryptedPrivateKeyStr;
   const { iterations, salt: kdfSalt } = resolveKdfParams(parsed, salt || 'vault-salt');
   const keySalt = isVersion2(parsed) && kdfSalt ? new Uint8Array(kdfSalt) : getSaltBytes(kdfSalt);
   const aesKey = await getDeriveKeyForPrivateKey(masterPassword, iterations, keySalt);
@@ -205,6 +209,90 @@ export async function rsaDecrypt(ciphertextStr, privateKeyJwk) {
 export async function reWrapItemKey(encryptedItemKeyStr, oldPrivateKeyJwk, newPublicKeyJwk) {
   const aesKeyJson = await rsaDecrypt(encryptedItemKeyStr, oldPrivateKeyJwk);
   return rsaEncrypt(aesKeyJson, newPublicKeyJwk);
+}
+
+// Unwrap an item AES key that was RSA-wrapped for this user (company/shared items).
+export async function unwrapItemKey(wrappedKeyStr, privateKeyJwk) {
+  return rsaDecrypt(wrappedKeyStr, privateKeyJwk);
+}
+
+async function importAesKey(jwkStr) {
+  const jwk = JSON.parse(jwkStr);
+  return crypto.subtle.importKey(
+    'jwk',
+    jwk,
+    { name: 'AES-GCM' },
+    false,
+    ['encrypt', 'decrypt']
+  );
+}
+
+// Decrypt a value that was AES-GCM-encrypted with a shared item AES key.
+export async function decryptValueWithAesKey(encryptedData, aesKeyJwk) {
+  if (!encryptedData || !aesKeyJwk) return '';
+  try {
+    const key = await importAesKey(aesKeyJwk);
+    const parsed = JSON.parse(encryptedData);
+    if (!parsed || !Array.isArray(parsed.iv) || !Array.isArray(parsed.content)) return '';
+    const plain = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: new Uint8Array(parsed.iv) },
+      key,
+      new Uint8Array(parsed.content)
+    );
+    return decoder.decode(plain);
+  } catch {
+    return '';
+  }
+}
+
+// Decrypt typed fields that were encrypted with a shared item AES key.
+// Accepts both a single-envelope (JSON blob) and per-field envelope encoding.
+export async function decryptFieldsWithAesKey(encryptedFields, aesKeyJwk) {
+  if (!encryptedFields || !aesKeyJwk) return null;
+  try {
+    const key = await importAesKey(aesKeyJwk);
+    const parsed =
+      typeof encryptedFields === 'string'
+        ? JSON.parse(encryptedFields)
+        : encryptedFields;
+    if (!parsed || typeof parsed !== 'object') return null;
+
+    // Single envelope wrapping the whole JSON blob.
+    if (Array.isArray(parsed.iv) && Array.isArray(parsed.content)) {
+      const decrypted = await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: new Uint8Array(parsed.iv) },
+        key,
+        new Uint8Array(parsed.content)
+      );
+      try {
+        const obj = JSON.parse(decoder.decode(decrypted));
+        return obj && typeof obj === 'object' ? obj : null;
+      } catch {
+        return null;
+      }
+    }
+
+    // Map of field name -> envelope.
+    const result = {};
+    for (const [fieldKey, value] of Object.entries(parsed)) {
+      if (typeof value !== 'string') continue;
+      try {
+        const env = JSON.parse(value);
+        if (!env || !Array.isArray(env.iv) || !Array.isArray(env.content)) continue;
+        const plain = await crypto.subtle.decrypt(
+          { name: 'AES-GCM', iv: new Uint8Array(env.iv) },
+          key,
+          new Uint8Array(env.content)
+        );
+        result[fieldKey] = decoder.decode(plain);
+      } catch {
+        result[fieldKey] = '';
+      }
+    }
+    return Object.keys(result).length ? result : null;
+  } catch {
+    return null;
+  }
 }
 
 function base32ToBytes(base32) {
