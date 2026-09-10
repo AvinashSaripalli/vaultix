@@ -25,6 +25,7 @@ import {
   getRsaPrivateKey as loadRsaPrivateKey,
   getRsaPublicKey as loadRsaPublicKey,
   getSessionMasterPassword as loadSessionMasterPassword,
+  setSessionMasterPassword as storeSessionMasterPassword,
 } from '../../utils/secureSession';
 
 const saveVerifier = (verifier) => {
@@ -541,6 +542,7 @@ const authSlice = createSlice({
     setSessionMasterPassword: (state, action) => {
       state.sessionMasterPassword = action.payload || null;
       storeMasterPassword(action.payload || null);
+      storeSessionMasterPassword(action.payload || null);
     },
 
     setSessionAdminMasterPassword: (state, action) => {
@@ -791,6 +793,7 @@ const authSlice = createSlice({
         state.sessionRsaPublicKey = action.payload.publicKeyJwk;
         state.sessionRsaPrivateKey = action.payload.privateKeyJwk;
         storeMasterPassword(action.payload.masterPassword);
+        storeSessionMasterPassword(action.payload.masterPassword);
         storeRsaPrivateKey(action.payload.privateKeyJwk);
         storeRsaPublicKeyPersist(action.payload.publicKeyJwk);
         setMasterVerifiedFlag(true);

@@ -1,12 +1,13 @@
 /**
  * In-memory store for sensitive session data.
- * Master password is never persisted. RSA private key and verified flag
- * are persisted in sessionStorage so they survive page refresh.
+ * RSA private key, verified flag, and session master password are persisted
+ * in sessionStorage so they survive page refresh (cleared on tab close).
  */
 
 const MASTER_VERIFIED_KEY = 'vaultix-master-verified';
 const RSA_PRIVATE_KEY_KEY = 'vaultix-rsa-private-key';
 const RSA_PUBLIC_KEY_KEY = 'vaultix-rsa-public-key';
+const SESSION_MASTER_PASSWORD_KEY = 'vaultix-session-master-password';
 
 const store = {
   masterPassword: null,
@@ -23,8 +24,7 @@ const store = {
   })(),
 };
 
-// Restore RSA keys from sessionStorage on load.
-// Master password is NOT persisted — it must be re-entered each session.
+// Restore RSA keys and session master password from sessionStorage on load.
 try {
   const storedPrivateKey = sessionStorage.getItem(RSA_PRIVATE_KEY_KEY);
   if (storedPrivateKey) {
@@ -33,6 +33,10 @@ try {
   const storedPublicKey = sessionStorage.getItem(RSA_PUBLIC_KEY_KEY);
   if (storedPublicKey) {
     store.rsaPublicKey = JSON.parse(storedPublicKey);
+  }
+  const storedSessionMp = sessionStorage.getItem(SESSION_MASTER_PASSWORD_KEY);
+  if (storedSessionMp) {
+    store.sessionMasterPassword = storedSessionMp;
   }
 } catch {
   // ignore
@@ -94,6 +98,15 @@ export function getSessionMasterPassword() {
 
 export function setSessionMasterPassword(value) {
   store.sessionMasterPassword = value || null;
+  try {
+    if (value) {
+      sessionStorage.setItem(SESSION_MASTER_PASSWORD_KEY, value);
+    } else {
+      sessionStorage.removeItem(SESSION_MASTER_PASSWORD_KEY);
+    }
+  } catch {
+    // ignore
+  }
 }
 
 export function isMasterVerified() {
@@ -124,6 +137,7 @@ export function clearSecureSession() {
     sessionStorage.removeItem(MASTER_VERIFIED_KEY);
     sessionStorage.removeItem(RSA_PRIVATE_KEY_KEY);
     sessionStorage.removeItem(RSA_PUBLIC_KEY_KEY);
+    sessionStorage.removeItem(SESSION_MASTER_PASSWORD_KEY);
   } catch {
     // ignore
   }
