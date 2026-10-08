@@ -9,6 +9,7 @@ import {
 import { verifyMasterPassword } from '../../utils/verifyMasterPassword';
 import { decryptPrivateKey } from '../../utils/crypto';
 import api from '../../services/api';
+import ModalPortal from '../common/ModalPortal';
 
 function VerifyMasterPasswordModal({
   open,
@@ -90,8 +91,15 @@ function VerifyMasterPasswordModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-[60] px-4">
-      <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-6">
+    <ModalPortal open={open} onClose={handleClose}>
+      <div
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 overflow-y-auto"
+        onClick={handleClose}
+      >
+        <div
+          className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 my-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
         <div className="mb-5">
           <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
             Verify Master Password
@@ -157,7 +165,8 @@ function VerifyMasterPasswordModal({
           </div>
         </form>
       </div>
-    </div>
+      </div>
+    </ModalPortal>
   );
 }
 

@@ -3,6 +3,7 @@ import { X, Copy, RefreshCw, Check, Sparkles, Eye, EyeOff } from 'lucide-react';
 import { generatePassword } from '../../utils/passwordGenerator';
 import { getPasswordStrength } from '../../utils/passwordStrength';
 import { secureCopyText } from '../../utils/clipboard';
+import ModalPortal from '../common/ModalPortal';
 
 const MIN_LENGTH = 8;
 const MAX_LENGTH = 64;
@@ -60,8 +61,15 @@ function PasswordGeneratorModal({ open, onClose }) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-      <div className="w-full max-w-lg bg-white rounded-2xl p-6 shadow-xl border border-slate-200 dark:bg-slate-800 dark:border-slate-700">
+    <ModalPortal open={open} onClose={onClose}>
+      <div
+        className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+        onClick={onClose}
+      >
+        <div
+          className="w-full max-w-lg bg-white rounded-2xl p-6 shadow-2xl border border-slate-200 dark:bg-slate-800 dark:border-slate-700 my-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-indigo-100 flex items-center justify-center dark:bg-indigo-900/50">
@@ -206,7 +214,8 @@ function PasswordGeneratorModal({ open, onClose }) {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </ModalPortal>
   );
 }
 

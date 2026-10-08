@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import api from '../../services/api';
 import { showToast } from '../../utils/toast';
 import { ITEM_TYPES } from '../../utils/itemTypes';
+import ModalPortal from '../common/ModalPortal';
 
 const ALLOWED_TYPES_OPTIONS = ITEM_TYPES.map((item) => item.value);
 
@@ -90,8 +91,15 @@ function VaultPolicyModal({ open, onClose, vaultId }) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 px-4">
-      <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-6 max-h-[85vh] overflow-y-auto">
+    <ModalPortal open={open} onClose={onClose}>
+      <div
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 overflow-y-auto"
+        onClick={onClose}
+      >
+        <div
+          className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 max-h-[85vh] overflow-y-auto my-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold">Vault Policy</h2>
           <button onClick={onClose} className="text-slate-400 dark:text-slate-500">
@@ -194,7 +202,8 @@ function VaultPolicyModal({ open, onClose, vaultId }) {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </ModalPortal>
   );
 }
 

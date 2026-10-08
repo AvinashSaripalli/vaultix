@@ -1,11 +1,19 @@
 import { AlertTriangle, X } from 'lucide-react';
+import ModalPortal from './ModalPortal';
 
 function ConfirmModal({ open, title, message, confirmLabel = 'Delete', cancelLabel = 'Cancel', onConfirm, onCancel, loading }) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-xl">
+    <ModalPortal open={open} onClose={onCancel}>
+      <div
+        className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+        onClick={onCancel}
+      >
+        <div
+          className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-2xl my-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center shrink-0">
@@ -42,7 +50,8 @@ function ConfirmModal({ open, title, message, confirmLabel = 'Delete', cancelLab
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </ModalPortal>
   );
 }
 

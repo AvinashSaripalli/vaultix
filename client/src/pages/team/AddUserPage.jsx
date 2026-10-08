@@ -4,6 +4,7 @@ import { useNavigate, Navigate } from 'react-router-dom';
 import AppLayout from '../../components/layout/AppLayout';
 import api from '../../services/api';
 import ConfirmModal from '../../components/common/ConfirmModal';
+import ModalPortal from '../../components/common/ModalPortal';
 import { showToast } from '../../utils/toast';
 
 function AddUserPage() {
@@ -234,8 +235,15 @@ function AddUserPage() {
           )}
         </div>
 
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 px-4">
-          <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 p-6 shadow-xl dark:bg-slate-800 dark:border-slate-700">
+        <ModalPortal open onClose={() => navigate('/team-management')}>
+          <div
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 overflow-y-auto"
+            onClick={() => navigate('/team-management')}
+          >
+            <div
+              className="w-full max-w-md bg-white rounded-2xl border border-slate-200 p-6 shadow-2xl dark:bg-slate-800 dark:border-slate-700 my-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Add User</h2>
@@ -337,7 +345,8 @@ function AddUserPage() {
               </div>
             </form>
           </div>
-        </div>
+          </div>
+        </ModalPortal>
 
         <ConfirmModal
           open={!!deleteUser}

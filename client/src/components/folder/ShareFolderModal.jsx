@@ -152,8 +152,15 @@ function ShareFolderModal({ open, onClose, folderId, vaultId }) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 px-4">
-      <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-6 max-h-[85vh] overflow-y-auto">
+    <ModalPortal open={open} onClose={handleClose}>
+      <div
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 overflow-y-auto"
+        onClick={handleClose}
+      >
+        <div
+          className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 max-h-[85vh] overflow-y-auto my-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold">Share Folder</h2>
           <button onClick={handleClose} className="text-slate-400 dark:text-slate-500">
@@ -224,7 +231,8 @@ function ShareFolderModal({ open, onClose, folderId, vaultId }) {
           </div>
         </form>
       </div>
-    </div>
+      </div>
+    </ModalPortal>
   );
 }
 

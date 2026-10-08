@@ -2,6 +2,7 @@ import { Copy, ExternalLink, X, Eye, EyeOff, Globe, User, Folder, KeyRound } fro
 import { useState } from 'react';
 import api from '../../services/api';
 import { secureCopyText } from '../../utils/clipboard';
+import ModalPortal from '../../components/common/ModalPortal';
 
 function ViewSharedPasswordModal({ open, item, decryptedData, onClose }) {
   const [showPw, setShowPw] = useState(false);
@@ -19,8 +20,15 @@ function ViewSharedPasswordModal({ open, item, decryptedData, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden dark:bg-slate-800">
+    <ModalPortal open={open} onClose={onClose}>
+      <div
+        className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+        onClick={onClose}
+      >
+        <div
+          className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden dark:bg-slate-800 my-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
         <div className="px-6 pt-5 pb-4 border-b border-slate-100 dark:border-slate-700">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-4">
@@ -80,7 +88,8 @@ function ViewSharedPasswordModal({ open, item, decryptedData, onClose }) {
           <button onClick={onClose} className="h-9 px-4 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-white transition-colors dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700">Close</button>
         </div>
       </div>
-    </div>
+      </div>
+    </ModalPortal>
   );
 }
 

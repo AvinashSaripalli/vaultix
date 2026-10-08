@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import api from '../../services/api';
+import ModalPortal from '../../components/common/ModalPortal';
 
 function PendingInvitationsModal({ open, onClose }) {
   const { token } = useSelector((state) => state.auth);
@@ -66,8 +67,15 @@ function PendingInvitationsModal({ open, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-[80] px-4">
-      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-xl overflow-hidden dark:bg-slate-800">
+    <ModalPortal open={open} onClose={onClose}>
+      <div
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 overflow-y-auto"
+        onClick={onClose}
+      >
+        <div
+          className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden dark:bg-slate-800 my-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-200 dark:border-slate-700">
           <div>
             <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
@@ -232,7 +240,8 @@ function PendingInvitationsModal({ open, onClose }) {
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </ModalPortal>
   );
 }
 

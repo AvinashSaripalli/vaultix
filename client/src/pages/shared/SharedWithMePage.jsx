@@ -3,6 +3,7 @@ import { Eye, ExternalLink, Globe, KeyRound, Search, Share2, User, Folder, Chevr
 import { useDispatch, useSelector } from 'react-redux';
 import AppLayout from '../../components/layout/AppLayout';
 import ViewSharedPasswordModal from './ViewSharedPasswordModal';
+import ModalPortal from '../../components/common/ModalPortal';
 import VerifyMasterPasswordModal from '../../components/security/VerifyMasterPasswordModal';
 import { fetchSharedWithMe } from '../../features/sharedPasswords/sharedPasswordsSlice';
 import { decryptText, isEncryptedFormat, rsaDecrypt, decryptTextWithAesKey, decryptPrivateKey } from '../../utils/crypto';
@@ -252,8 +253,15 @@ function SharedWithMePage() {
         </div>
 
         {decryptError && (
-          <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl dark:bg-slate-800">
+          <ModalPortal open={!!decryptError} onClose={() => setDecryptError('')}>
+            <div
+              className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+              onClick={() => setDecryptError('')}
+            >
+              <div
+                className="w-full max-w-md bg-white rounded-2xl shadow-2xl dark:bg-slate-800 my-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
               <div className="px-6 pt-5 pb-4 border-b border-slate-100 dark:border-slate-700">
                 <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Decryption Error</h2>
               </div>
@@ -272,7 +280,8 @@ function SharedWithMePage() {
                 </button>
               </div>
             </div>
-          </div>
+            </div>
+          </ModalPortal>
         )}
 
         <ViewSharedPasswordModal

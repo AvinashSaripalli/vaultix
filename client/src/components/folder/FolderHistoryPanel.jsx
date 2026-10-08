@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import api from '../../services/api';
+import ModalPortal from '../common/ModalPortal';
 
 function getActionConfig(action) {
   switch (action) {
@@ -162,8 +163,15 @@ function FolderHistoryPanel({ open, onClose, folderId }) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[80] bg-black/40 flex items-center justify-center p-4">
-      <div className="w-full max-w-3xl bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden max-h-[85vh] flex flex-col">
+    <ModalPortal open={open} onClose={onClose}>
+      <div
+        className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+        onClick={onClose}
+      >
+        <div
+          className="w-full max-w-3xl bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden max-h-[85vh] flex flex-col my-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
@@ -314,7 +322,8 @@ function FolderHistoryPanel({ open, onClose, folderId }) {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </ModalPortal>
   );
 }
 

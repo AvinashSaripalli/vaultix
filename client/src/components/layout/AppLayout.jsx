@@ -13,7 +13,7 @@ function AppLayout({ children }) {
         <VerifyEmailBanner />
 
         {/* Main content */}
-        <main className="p-6 flex-1 animate-slide-up">{children}</main>
+        <main className="p-6 flex-1">{children}</main>
 
         {/* Footer */}
         <Footer />

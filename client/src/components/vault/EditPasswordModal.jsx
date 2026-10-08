@@ -5,6 +5,7 @@ import {
   closeEditPasswordModal,
   updatePassword,
 } from '../../features/vault/vaultSlice';
+import ModalPortal from '../common/ModalPortal';
 import TagInput from '../common/TagInput';
 import ItemFields from '../myVault/ItemFields';
 import CustomFieldsInput from '../common/CustomFieldsInput';
@@ -356,9 +357,15 @@ function EditPasswordModal() {
   };
 
   return (
-    <>
-      <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 px-4">
-        <div className="w-full max-w-2xl bg-white rounded-2xl shadow-xl p-6 dark:bg-slate-800 max-h-[90vh] overflow-y-auto">
+    <ModalPortal open={isEditPasswordModalOpen} onClose={handleClose}>
+      <div
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 overflow-y-auto"
+        onClick={handleClose}
+      >
+        <div
+          className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl p-6 dark:bg-slate-800 max-h-[90vh] overflow-y-auto my-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
@@ -578,7 +585,7 @@ function EditPasswordModal() {
           </form>
         </div>
       </div>
-    </>
+    </ModalPortal>
   );
 }
 

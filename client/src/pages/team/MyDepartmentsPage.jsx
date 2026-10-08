@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout';
 import api from '../../services/api';
+import ModalPortal from '../../components/common/ModalPortal';
 
 const DEPT_ACCESS_LABELS = {
   NOT_SET: 'Not set',

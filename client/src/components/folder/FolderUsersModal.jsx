@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import api from '../../services/api';
+import ModalPortal from '../common/ModalPortal';
 
 const ACCESS_OPTIONS = [
   { value: 'ADMINISTRATOR', label: 'Administrator', icon: Crown },
@@ -220,8 +221,15 @@ function FolderUsersModal({ open, onClose, folderId, folderName, onSaved }) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[90] bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center px-4">
-      <div className="w-full max-w-2xl bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden max-h-[90vh] flex flex-col">
+    <ModalPortal open={open} onClose={onClose}>
+      <div
+        className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+        onClick={onClose}
+      >
+        <div
+          className="w-full max-w-2xl bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden max-h-[90vh] flex flex-col my-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-800 shrink-0">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
@@ -387,7 +395,8 @@ function FolderUsersModal({ open, onClose, folderId, folderName, onSaved }) {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </ModalPortal>
   );
 }
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
+import ModalPortal from '../common/ModalPortal';
 
 function EditFolderModal({ open, folder, onClose, onSubmit }) {
   const [name, setName] = useState('');
@@ -18,8 +19,15 @@ function EditFolderModal({ open, folder, onClose, onSubmit }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm bg-white rounded-2xl p-5 dark:bg-slate-800">
+    <ModalPortal open={open} onClose={onClose}>
+      <div
+        className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+        onClick={onClose}
+      >
+        <div
+          className="w-full max-w-sm bg-white rounded-2xl shadow-2xl p-5 dark:bg-slate-800 my-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Edit Folder</h2>
           <button onClick={onClose} className="text-slate-500 dark:text-slate-400">
@@ -49,7 +57,8 @@ function EditFolderModal({ open, folder, onClose, onSubmit }) {
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </ModalPortal>
   );
 }
 

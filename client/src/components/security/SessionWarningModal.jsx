@@ -1,4 +1,5 @@
 import { Clock, ShieldAlert } from 'lucide-react';
+import ModalPortal from '../common/ModalPortal';
 
 function SessionWarningModal({ open, secondsLeft, onExtend, onLock }) {
   if (!open) return null;
@@ -9,7 +10,8 @@ function SessionWarningModal({ open, secondsLeft, onExtend, onLock }) {
     mins > 0 ? `${mins}:${String(secs).padStart(2, '0')}` : `${secs}s`;
 
   return (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <ModalPortal open={open}>
+      <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 overflow-y-auto">
       <div
         className="w-full max-w-md rounded-2xl border border-amber-200 dark:border-amber-800 bg-white dark:bg-slate-800 shadow-2xl overflow-hidden animate-slide-up"
         role="alertdialog"
@@ -60,7 +62,8 @@ function SessionWarningModal({ open, secondsLeft, onExtend, onLock }) {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </ModalPortal>
   );
 }
 

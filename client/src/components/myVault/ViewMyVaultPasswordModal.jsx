@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux';
 import { decryptText, isEncryptedFormat } from '../../utils/crypto';
 import { secureCopyText } from '../../utils/clipboard';
 import VerifyMasterPasswordModal from '../security/VerifyMasterPasswordModal';
+import ModalPortal from '../common/ModalPortal';
 
 function ViewMyVaultPasswordModal({ open, password, onClose }) {
   const { user, sessionMasterPassword } = useSelector((state) => state.auth);
@@ -83,8 +84,15 @@ function ViewMyVaultPasswordModal({ open, password, onClose }) {
   const displayNote = decryptedNote ?? (password.encryptedNote || 'No note');
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl p-6 shadow-xl dark:bg-slate-800">
+    <ModalPortal open={open} onClose={handleClose}>
+      <div
+        className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+        onClick={handleClose}
+      >
+        <div
+          className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 dark:bg-slate-800 my-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">View Password</h2>
           <button onClick={handleClose} className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">
@@ -206,7 +214,8 @@ function ViewMyVaultPasswordModal({ open, password, onClose }) {
           setReVerifyOpen(false);
         }}
       />
-    </div>
+      </div>
+    </ModalPortal>
   );
 }
 

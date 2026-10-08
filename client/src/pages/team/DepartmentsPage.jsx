@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout';
 import ConfirmModal from '../../components/common/ConfirmModal';
+import ModalPortal from '../../components/common/ModalPortal';
 import api from '../../services/api';
 import { showToast } from '../../utils/toast';
 
@@ -174,8 +175,15 @@ function AddMemberModal({ open, onClose, users, existingMemberIds, onAdd }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 px-4">
-      <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-xl dark:bg-slate-800 max-h-[85vh] flex flex-col">
+    <ModalPortal open={open} onClose={onClose}>
+      <div
+        className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto"
+        onClick={onClose}
+      >
+        <div
+          className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-800 max-h-[85vh] flex flex-col my-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Add Members</h3>
@@ -251,7 +259,8 @@ function AddMemberModal({ open, onClose, users, existingMemberIds, onAdd }) {
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </ModalPortal>
   );
 }
 
@@ -632,13 +641,13 @@ function DepartmentsPage() {
 
       {/* Department drawer */}
       {selectedDept && (
-        <>
+        <ModalPortal open={!!selectedDept} onClose={closeDrawer}>
           <div
-            className="fixed inset-0 z-40 bg-black/40"
+            className="fixed inset-0 z-[9998] bg-slate-900/60 backdrop-blur-sm"
             onClick={closeDrawer}
           />
 
-          <aside className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white shadow-2xl overflow-y-auto dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700">
+          <aside className="fixed inset-y-0 right-0 z-[9999] w-full max-w-md bg-white shadow-2xl overflow-y-auto dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700">
             <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 px-5 py-4 z-10">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -917,7 +926,7 @@ function DepartmentsPage() {
               </section>
             </div>
           </aside>
-        </>
+        </ModalPortal>
       )}
 
       <AddMemberModal
@@ -929,8 +938,15 @@ function DepartmentsPage() {
       />
 
       {formOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 px-4">
-          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-xl dark:bg-slate-800">
+        <ModalPortal open={formOpen} onClose={() => setFormOpen(false)}>
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto"
+            onClick={() => setFormOpen(false)}
+          >
+            <div
+              className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-800 my-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
                 {editingDept
@@ -1011,7 +1027,8 @@ function DepartmentsPage() {
               </div>
             </form>
           </div>
-        </div>
+          </div>
+        </ModalPortal>
       )}
 
       <ConfirmModal
