@@ -49,7 +49,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     try {
       const sync = await chrome.storage.sync.get('baseUrl');
       const local = await chrome.storage.local.get('token');
-      const baseUrl = (sync.baseUrl || DEFAULT_URL).replace(/\/+$/, '');
+      let rawBaseUrl = sync.baseUrl;
+      if (!rawBaseUrl || rawBaseUrl === 'http://localhost:4000') {
+        rawBaseUrl = DEFAULT_URL;
+      }
+      const baseUrl = rawBaseUrl.replace(/\/+$/, '');
 
       if (!local.token) {
         sendResponse({ ok: false, reason: 'not-signed-in' });

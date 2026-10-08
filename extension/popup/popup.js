@@ -10,7 +10,7 @@ import {
 } from '../lib/crypto.js';
 import { apiLogin, apiGet, apiPost, apiRefresh } from '../lib/api.js';
 
-const DEFAULT_URL = 'http://localhost:4000';
+const DEFAULT_URL = 'https://knbitrix.duckdns.org';
 const DEFAULT_LOCK_MS = 15 * 60 * 1000;
 
 const $ = (id) => document.getElementById(id);
@@ -40,7 +40,12 @@ async function init() {
   }
 
   const sync = await chrome.storage.sync.get('baseUrl');
-  baseUrl = (sync.baseUrl || DEFAULT_URL).replace(/\/+$/, '');
+  let rawBaseUrl = sync.baseUrl;
+  if (!rawBaseUrl || rawBaseUrl === 'http://localhost:4000') {
+    rawBaseUrl = DEFAULT_URL;
+    chrome.storage.sync.set({ baseUrl: DEFAULT_URL }).catch(() => {});
+  }
+  baseUrl = rawBaseUrl.replace(/\/+$/, '');
 
   // Session data (cached master, decrypted cache, RSA private key) is scoped to
   // the server it was created against. If the server URL changed, drop it all —
@@ -64,6 +69,12 @@ async function init() {
   $('loginServer').textContent = baseUrl;
   $('lnkSettings').addEventListener('click', () => chrome.runtime.openOptionsPage());
   $('lnkOpenVault').addEventListener('click', () => chrome.tabs.create({ url: baseUrl }));
+  if ($('lnkOpenVaultLogin')) {
+    $('lnkOpenVaultLogin').addEventListener('click', (e) => {
+      e.preventDefault();
+      chrome.tabs.create({ url: baseUrl });
+    });
+  }
   $('lnkRefresh').addEventListener('click', () => loadCreds(true));
   $('btnLock').addEventListener('click', lockVault);
   $('btnLogin').addEventListener('click', onLogin);
