@@ -249,22 +249,32 @@ function Sidebar() {
                         return (
                           <div
                             key={folder.id}
-                            className={`w-full flex items-center justify-between rounded-lg transition-all duration-150 ${
-                              selected ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-secondary)]'
+                            className={`group w-full flex items-center justify-between pr-1 rounded-xl transition-all duration-150 ${
+                              selected
+                                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium'
+                                : 'text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-secondary)]'
                             }`}
                           >
                             <button
+                              type="button"
                               onClick={() => dispatch(selectFolder(folder.id))}
-                              className="flex items-center gap-2 px-2.5 py-2 text-left text-sm flex-1 min-w-0"
+                              className="flex items-center gap-2.5 pl-2.5 pr-1.5 py-2 text-left text-sm flex-1 min-w-0 focus:outline-none"
+                              title={folder.name}
                             >
-                              <Folder size={13} className={selected ? 'text-blue-500 dark:text-blue-400' : 'text-[var(--text-muted)]'} />
-                              <span className={`truncate ${selected ? 'font-medium' : ''}`}>
+                              <Folder
+                                size={14}
+                                className={`shrink-0 ${
+                                  selected ? 'text-blue-500 dark:text-blue-400' : 'text-[var(--text-muted)]'
+                                }`}
+                              />
+                              <span className="truncate flex-1 min-w-0 text-sm">
                                 {folder.name}
                               </span>
                             </button>
                             <FolderActionsMenu
                               folder={folder}
                               canManage={canManageFolder}
+                              isSelected={selected}
                               onRename={openRename}
                               onShare={openShare}
                               onDelete={handleDeleteFolder}

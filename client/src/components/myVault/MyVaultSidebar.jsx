@@ -56,16 +56,18 @@ function MyVaultSidebar({
               : 'hover:bg-slate-100 dark:hover:bg-slate-700'
           }`}
         >
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <Folder size={16} />
-            <span className="truncate">{folder.name}</span>
+          <div className="flex items-center gap-2 min-w-0 flex-1" title={folder.name}>
+            <Folder size={16} className="shrink-0" />
+            <span className="truncate flex-1 min-w-0">{folder.name}</span>
           </div>
 
           <button
+            type="button"
             onClick={(e) => toggleMenu(e, folder.id)}
-            className="p-1.5 rounded-lg hover:bg-white text-slate-500 dark:hover:bg-slate-700 dark:text-slate-400"
+            className="p-1.5 rounded-lg hover:bg-white text-slate-500 dark:hover:bg-slate-700 dark:text-slate-400 shrink-0"
+            title="Folder actions"
           >
-            <MoreHorizontal size={16} />
+            <MoreHorizontal size={16} className="shrink-0" />
           </button>
 
           {openMenuId === folder.id && (

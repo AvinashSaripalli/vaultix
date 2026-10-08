@@ -156,8 +156,8 @@ function VaultSidebar() {
                     : 'bg-white text-slate-700 border border-transparent hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
                 }`}
               >
-                <Folder size={15} />
-                <span className="text-sm font-medium">{folder.name}</span>
+                <Folder size={15} className="shrink-0" />
+                <span className="text-sm font-medium truncate flex-1 min-w-0">{folder.name}</span>
               </button>
             ))}
 
