@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import api from '../../services/api';
 import { shareFolderAccess } from '../../features/vault/vaultSlice';
 import { unwrapItemKey, wrapItemKey } from '../../utils/crypto';
+import ModalPortal from '../common/ModalPortal';
 
 function ShareFolderModal({ open, onClose, folderId, vaultId }) {
   const dispatch = useDispatch();

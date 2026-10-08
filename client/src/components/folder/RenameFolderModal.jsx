@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import api from '../../services/api';
 import { fetchFoldersByVault, clearVaultError } from '../../features/vault/vaultSlice';
+import ModalPortal from '../common/ModalPortal';
 
 function RenameFolderModal({ open, onClose, folder, vaultId }) {
   const dispatch = useDispatch();
