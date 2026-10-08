@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const prisma = require('../config/prisma');
 const generateId = require('../utils/generateId');
 const sendMail = require('../utils/sendMail');
+const { clientUrl } = require('../utils/clientUrl');
 const { renderEmail } = require('../utils/emailTemplate');
 const {
   encryptEnvelope,
@@ -120,23 +121,27 @@ const revokeAllRefreshTokens = (userId) =>
     data: { revokedAt: new Date() },
   });
 
+// Readable companion cookie: lets the SPA know a server session may exist
+// before it fires a refresh probe (the real token stays httpOnly).
+const SESSION_HINT_COOKIE_NAME = 'vaultix_session';
+
+const cookieBase = () => ({
+  httpOnly: false,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+  path: '/',
+  maxAge: REFRESH_TOKEN_TTL_SECONDS * 1000,
+});
+
 const setRefreshTokenCookie = (res, token) => {
-  res.cookie(REFRESH_COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-    path: '/',
-    maxAge: REFRESH_TOKEN_TTL_SECONDS * 1000,
-  });
+  res.cookie(REFRESH_COOKIE_NAME, token, { ...cookieBase(), httpOnly: true });
+  res.cookie(SESSION_HINT_COOKIE_NAME, '1', cookieBase());
 };
 
 const clearRefreshTokenCookie = (res) => {
-  res.clearCookie(REFRESH_COOKIE_NAME, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-    path: '/',
-  });
+  const opts = { ...cookieBase(), maxAge: undefined };
+  res.clearCookie(REFRESH_COOKIE_NAME, { ...opts, httpOnly: true });
+  res.clearCookie(SESSION_HINT_COOKIE_NAME, opts);
 };
 
 // Accept the refresh token from the httpOnly cookie (web client) or the
@@ -149,7 +154,7 @@ const refresh = async (req, res) => {
     const suppliedToken = getRefreshTokenFromRequest(req);
 
     if (!suppliedToken) {
-      return res.status(400).json({ message: 'Refresh token is required' });
+      return res.status(401).json({ message: 'Refresh token is required' });
     }
 
     const stored = await prisma.refreshToken.findUnique({
@@ -397,7 +402,7 @@ const register = async (req, res) => {
 
     // Send verification email for non-invited users
     if (!emailVerified && verificationToken) {
-      const verifyLink = `${process.env.CLIENT_URL}/verify-email?token=${verificationToken}`;
+      const verifyLink = `${clientUrl}/verify-email?token=${verificationToken}`;
 sendMail({
         to: user.email,
         subject: 'Verify your Vaultix email',
@@ -823,7 +828,7 @@ const requestPasswordReset = async (req, res) => {
       { expiresIn: '10m' }
     );
 
-    const resetLink = `${process.env.CLIENT_URL}/reset-password?token=${resetToken}`;
+    const resetLink = `${clientUrl}/reset-password?token=${resetToken}`;
 
     await sendMail({
       to: user.email,
@@ -1367,7 +1372,7 @@ const requestEmailVerification = async (req, res) => {
       },
     });
 
-    const verifyLink = `${process.env.CLIENT_URL}/verify-email?token=${verificationToken}`;
+    const verifyLink = `${clientUrl}/verify-email?token=${verificationToken}`;
 
     await sendMail({
       to: user.email,

@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const prisma = require('../config/prisma');
 const generateId = require('../utils/generateId');
 const sendMail = require('../utils/sendMail');
+const { clientUrl } = require('../utils/clientUrl');
 const { renderEmail } = require('../utils/emailTemplate');
 
 const sendInvitation = async (req, res) => {
@@ -26,7 +27,7 @@ const sendInvitation = async (req, res) => {
 
     const token = crypto.randomBytes(32).toString('hex');
 
-    const registerLink = `${process.env.CLIENT_URL}/register?token=${token}`;
+    const registerLink = `${clientUrl}/register?token=${token}`;
 
     await sendMail({
       to: email,

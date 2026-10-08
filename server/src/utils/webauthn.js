@@ -7,7 +7,10 @@ const {
 
 const RP_NAME = 'Vaultix';
 const RP_ID = process.env.WEBAUTHN_RP_ID || 'localhost';
-const ORIGIN = process.env.WEBAUTHN_ORIGIN || `https://${RP_ID}`;
+const ORIGIN = (process.env.WEBAUTHN_ORIGIN || `https://${RP_ID}`)
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
 
 function getRpConfig() {
   return { id: RP_ID, name: RP_NAME };

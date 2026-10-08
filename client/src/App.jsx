@@ -68,11 +68,18 @@ function App() {
       }
 
       // No stored access token — attempt a silent restore from the httpOnly
-      // refresh cookie (server-side session). Fails harmlessly when absent.
-      try {
-        await dispatch(refreshSession()).unwrap();
-      } catch {
-        // no valid session cookie — user must sign in
+      // refresh cookie (server-side session). The readable `vaultix_session`
+      // hint cookie tells us a session may exist, so anonymous visitors don't
+      // trigger a doomed refresh request (and a 401 in the console).
+      const hasSessionHint = document.cookie
+        .split(';')
+        .some((c) => c.trim().startsWith('vaultix_session='));
+      if (hasSessionHint) {
+        try {
+          await dispatch(refreshSession()).unwrap();
+        } catch {
+          // no valid session cookie — user must sign in
+        }
       }
       setInitDone(true);
     })();
