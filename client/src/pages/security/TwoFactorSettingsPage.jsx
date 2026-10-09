@@ -178,14 +178,14 @@ function TwoFactorSettingsPage() {
 
   return (
     <AppLayout>
-      <div className="max-w-3xl mx-auto space-y-6">
-        <div className="flex items-center gap-4">
-          <div className="h-14 w-14 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-700 text-xl">
+      <div className="max-w-3xl mx-auto space-y-5 sm:space-y-6 min-w-0">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-700 dark:text-indigo-300 text-xl shrink-0">
             <ShieldCheck size={26} />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Two-Factor Authentication</h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Protect your account with an extra layer of security</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100">Two-Factor Authentication</h1>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 sm:mt-1">Protect your account with an extra layer of security</p>
           </div>
         </div>
 
@@ -202,14 +202,14 @@ function TwoFactorSettingsPage() {
         )}
 
         {/* TOTP Section */}
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8">
-          <div className="flex items-center gap-4 pb-5 border-b border-slate-100 dark:border-slate-700">
-            <Smartphone size={22} className="text-slate-400 dark:text-slate-500" />
-            <div>
-              <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">Authenticator App</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Use an app like Google Authenticator, Authy, or 1Password</p>
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 sm:p-6 lg:p-8">
+          <div className="flex items-center gap-3 sm:gap-4 pb-5 border-b border-slate-100 dark:border-slate-700 flex-wrap sm:flex-nowrap">
+            <Smartphone size={22} className="text-slate-400 dark:text-slate-500 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-base sm:text-lg font-semibold text-slate-900 dark:text-slate-100">Authenticator App</p>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Use an app like Google Authenticator, Authy, or 1Password</p>
             </div>
-            <span className={`ml-auto inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
+            <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold shrink-0 ${
               totpStatus.enabled
                 ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
                 : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
@@ -343,7 +343,7 @@ function TwoFactorSettingsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                 {backupCodes.map((code, i) => (
                   <button
                     key={code}
@@ -386,7 +386,7 @@ function TwoFactorSettingsPage() {
         </div>
 
         {/* WebAuthn Section */}
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8">
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 sm:p-6 lg:p-8">
           <div className="flex items-center gap-4 pb-5 border-b border-slate-100 dark:border-slate-700">
             <KeyRound size={22} className="text-slate-400 dark:text-slate-500" />
             <div>

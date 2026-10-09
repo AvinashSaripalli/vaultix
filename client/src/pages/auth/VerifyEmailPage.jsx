@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { MailCheck, ShieldCheck, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { verifyEmail, requestEmailVerification } from '../../features/auth/authSlice';
+import logo from '../../assets/Vaultix.png';
 import bgImage from '../../assets/auth-bg.png';
 
 function VerifyEmailPage() {
@@ -80,18 +81,22 @@ function VerifyEmailPage() {
 
   return (
     <div
-      className="min-h-screen bg-cover bg-center relative"
+      className="min-h-screen overflow-y-auto bg-cover bg-center relative"
       style={{ backgroundImage: `url(${bgImage})` }}
     >
       <div className="absolute inset-0 bg-white/35 dark:bg-slate-950/60" />
 
-      <div className="relative z-10 min-h-screen flex items-center justify-center px-6">
+      <div className="relative z-10 min-h-screen flex items-center justify-center px-4 sm:px-6 py-6 sm:py-8">
         <div className="w-full max-w-[480px]">
-          <div className="bg-white/88 dark:bg-slate-800/90 backdrop-blur-md rounded-[32px] shadow-[0_20px_60px_rgba(37,99,235,0.14)] border border-white dark:border-slate-600 p-9 text-center">
-            <div className="flex justify-center mb-6">{config.icon}</div>
+          <div className="bg-white/88 dark:bg-slate-800/90 backdrop-blur-md rounded-2xl sm:rounded-[32px] shadow-[0_20px_60px_rgba(37,99,235,0.14)] border border-white dark:border-slate-600 p-5 sm:p-7 md:p-9 text-center">
+            <div className="flex justify-center mb-5">
+              <img src={logo} alt="Vaultix" className="w-36 sm:w-44" />
+            </div>
 
-            <h2 className="text-3xl font-black text-slate-950 dark:text-white">{config.title}</h2>
-            <p className="text-slate-500 dark:text-slate-400 mt-2 mb-7">{config.subtitle}</p>
+            <div className="flex justify-center mb-4">{config.icon}</div>
+
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-950 dark:text-white">{config.title}</h2>
+            <p className="text-slate-500 dark:text-slate-400 mt-2 mb-6 sm:mb-7 text-sm sm:text-base">{config.subtitle}</p>
 
             {message && (
               <div className={`mb-6 rounded-xl border px-4 py-3 text-sm ${
@@ -117,7 +122,7 @@ function VerifyEmailPage() {
                       type="button"
                       onClick={handleResend}
                       disabled={resending}
-                      className="w-full rounded-2xl bg-blue-600 py-4 font-bold text-white transition-all hover:bg-blue-700 hover:shadow-lg disabled:opacity-60"
+                      className="w-full rounded-2xl bg-blue-600 py-3.5 sm:py-4 font-bold text-white transition-all hover:bg-blue-700 hover:shadow-lg disabled:opacity-60"
                     >
                       {resending ? 'Sending...' : 'Resend Verification Email'}
                     </button>
@@ -131,7 +136,7 @@ function VerifyEmailPage() {
 
                   <Link
                     to="/login"
-                    className="block w-full rounded-2xl border border-slate-300 dark:border-slate-600 py-4 font-bold text-slate-700 dark:text-slate-200 transition-all hover:bg-slate-50 dark:hover:bg-slate-700"
+                    className="block w-full rounded-2xl border border-slate-300 dark:border-slate-600 py-3.5 sm:py-4 font-bold text-slate-700 dark:text-slate-200 transition-all hover:bg-slate-50 dark:hover:bg-slate-700"
                   >
                     Go to Login
                   </Link>
@@ -141,7 +146,7 @@ function VerifyEmailPage() {
               {status === 'success' && (
                 <Link
                   to="/login"
-                  className="block w-full rounded-2xl bg blue-600 bg-blue-600 py-4 font-bold text-white transition-all hover:bg-blue-700 hover:shadow-lg"
+                  className="block w-full rounded-2xl bg-blue-600 py-3.5 sm:py-4 font-bold text-white transition-all hover:bg-blue-700 hover:shadow-lg"
                 >
                   Continue to Login
                 </Link>

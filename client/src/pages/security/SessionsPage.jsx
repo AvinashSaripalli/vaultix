@@ -63,26 +63,26 @@ function SessionsPage() {
 
   return (
     <AppLayout>
-      <div className="max-w-4xl mx-auto space-y-6 pb-8">
+      <div className="max-w-4xl mx-auto space-y-5 sm:space-y-6 pb-8 min-w-0">
         {/* Header */}
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 lg:p-7">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-7">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-2xl bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center shrink-0">
                 <Shield size={20} className="text-blue-600" />
               </div>
               <div>
-                <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100">Active Sessions</h1>
-                <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100">Active Sessions</h1>
+                <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-0.5">
                   Manage your active sessions across devices
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
               <button
                 onClick={() => dispatch(fetchActiveSessions())}
                 disabled={loading}
-                className="h-10 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 transition disabled:opacity-50"
+                className="h-10 px-3.5 sm:px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 transition disabled:opacity-50"
               >
                 <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                 Refresh
@@ -90,7 +90,7 @@ function SessionsPage() {
               {otherSessions.length > 0 && (
                 <button
                   onClick={() => setConfirmRevokeAll(true)}
-                  className="h-10 px-4 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 flex items-center gap-2 transition"
+                  className="h-10 px-3.5 sm:px-4 rounded-xl bg-red-600 text-white text-xs sm:text-sm font-semibold hover:bg-red-700 flex items-center gap-2 transition"
                 >
                   <LogOut size={14} />
                   Revoke All Others
@@ -126,7 +126,7 @@ function SessionsPage() {
           <>
             {/* Current Session */}
             {currentSession && (
-              <div className="bg-white dark:bg-slate-800 border-2 border-emerald-200 dark:border-emerald-800 rounded-3xl p-6">
+              <div className="bg-white dark:bg-slate-800 border-2 border-emerald-200 dark:border-emerald-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                   <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">Current Session</p>
@@ -146,7 +146,7 @@ function SessionsPage() {
                 </div>
                 <div className="space-y-3">
                   {otherSessions.map((session) => (
-                    <div key={session.id} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5">
+                    <div key={session.id} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 sm:p-5">
                       <SessionCard
                         session={session}
                         onRevoke={() => setConfirmRevoke({ open: true, session })}
@@ -193,52 +193,56 @@ function SessionCard({ session, isCurrent, onRevoke }) {
   const Icon = SESSION_ICONS[deviceKey] || Globe;
 
   return (
-    <div className="flex items-start gap-4">
-      <div className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 ${
-        isCurrent
-          ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600'
-          : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
-      }`}>
-        <Icon size={22} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-            {session.browser} on {session.os}
-          </p>
-          {isCurrent && (
-            <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold uppercase">
-              This Device
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 min-w-0">
+      <div className="flex items-start gap-3 sm:gap-4 min-w-0 flex-1">
+        <div className={`h-11 sm:h-12 w-11 sm:w-12 rounded-xl flex items-center justify-center shrink-0 ${
+          isCurrent
+            ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600'
+            : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
+        }`}>
+          <Icon size={20} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+              {session.browser} on {session.os}
+            </p>
+            {isCurrent && (
+              <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold uppercase shrink-0">
+                This Device
+              </span>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-slate-500 dark:text-slate-400">
+            <span className="flex items-center gap-1">
+              <Globe size={12} />
+              {session.ipAddress || 'Unknown IP'}
             </span>
+            <span className="flex items-center gap-1">
+              <Clock size={12} />
+              {formatTimeAgo(session.createdAt)}
+            </span>
+            <span className="flex items-center gap-1 text-slate-400 dark:text-slate-500">
+              Expires: {formatExpiry(session.expiresAt)}
+            </span>
+          </div>
+          {session.user && (
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 truncate">
+              {session.user.fullName} ({session.user.email})
+            </p>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-slate-500 dark:text-slate-400">
-          <span className="flex items-center gap-1">
-            <Globe size={12} />
-            {session.ipAddress || 'Unknown IP'}
-          </span>
-          <span className="flex items-center gap-1">
-            <Clock size={12} />
-            {formatTimeAgo(session.createdAt)}
-          </span>
-          <span className="flex items-center gap-1 text-slate-400 dark:text-slate-500">
-            Expires: {formatExpiry(session.expiresAt)}
-          </span>
-        </div>
-        {session.user && (
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-            {session.user.fullName} ({session.user.email})
-          </p>
-        )}
       </div>
       {!isCurrent && onRevoke && (
-        <button
-          onClick={onRevoke}
-          className="h-8 px-3 rounded-lg border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-xs font-semibold hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-1.5 transition shrink-0"
-        >
-          <LogOut size={12} />
-          Revoke
-        </button>
+        <div className="flex sm:justify-end pl-14 sm:pl-0 shrink-0">
+          <button
+            onClick={onRevoke}
+            className="h-8 px-3 rounded-lg border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-xs font-semibold hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-1.5 transition"
+          >
+            <LogOut size={12} />
+            Revoke
+          </button>
+        </div>
       )}
     </div>
   );

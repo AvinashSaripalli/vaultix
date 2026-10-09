@@ -80,7 +80,7 @@ function StatCard({ icon, label, value, subtext, gradient, valueColor, onClick }
 function LoadingSkeletonRow() {
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-30" />)}
       </div>
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -127,9 +127,9 @@ function DashboardPage() {
 
   return (
     <AppLayout>
-      <div className="w-full min-w-0 space-y-6 pb-8">
+      <div className="w-full min-w-0 space-y-5 sm:space-y-6 pb-8">
         {/* Header */}
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 lg:p-7">
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-7">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <div className="flex items-center gap-3">
@@ -137,8 +137,8 @@ function DashboardPage() {
                   <Shield size={20} className="text-indigo-600" />
                 </div>
                 <div>
-                  <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100">Security Dashboard</h1>
-                  <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">
+                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100">Security Dashboard</h1>
+                  <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-0.5">
                     Good {new Date().getHours() < 12 ? 'morning' : 'afternoon'}, {user?.fullName?.split(' ')[0] || 'there'}
                   </p>
                 </div>
@@ -151,7 +151,7 @@ function DashboardPage() {
                     <button
                       key={type}
                       onClick={() => setVaultType(type)}
-                      className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                      className={`px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 ${
                         vaultType === type ? 'bg-white dark:bg-slate-800 shadow-sm text-slate-900 dark:text-slate-100' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                       }`}
                     >
@@ -165,12 +165,12 @@ function DashboardPage() {
         </div>
 
         {/* Vault context description */}
-        <div className={`rounded-2xl border px-5 py-4 flex items-center gap-3 ${vaultType === 'COMPANY' ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800' : 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800'}`}>
+        <div className={`rounded-2xl border px-4 sm:px-5 py-3.5 sm:py-4 flex items-center gap-3 ${vaultType === 'COMPANY' ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800' : 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800'}`}>
           <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${vaultType === 'COMPANY' ? 'bg-indigo-600 text-white' : 'bg-emerald-600 text-white'}`}>
             <Shield size={16} />
           </div>
-          <div>
-            <p className={`text-sm font-semibold ${vaultType === 'COMPANY' ? 'text-indigo-900 dark:text-indigo-200' : 'text-emerald-900 dark:text-emerald-200'}`}>
+          <div className="min-w-0">
+            <p className={`text-xs sm:text-sm font-semibold ${vaultType === 'COMPANY' ? 'text-indigo-900 dark:text-indigo-200' : 'text-emerald-900 dark:text-emerald-200'}`}>
               {vaultType === 'COMPANY' ? 'Company Vault Dashboard' : 'Personal Vault Dashboard'}
             </p>
             <p className={`text-xs mt-0.5 ${vaultType === 'COMPANY' ? 'text-indigo-700 dark:text-indigo-300' : 'text-emerald-700 dark:text-emerald-300'}`}>
@@ -179,7 +179,7 @@ function DashboardPage() {
                 : 'Showing private analytics — your personal passwords, weak/old/at-risk counts, and your own security score.'}
             </p>
           </div>
-          <span className={`ml-auto hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${vaultType === 'COMPANY' ? 'bg-white dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700' : 'bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700'}`}>
+          <span className={`ml-auto hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold shrink-0 ${vaultType === 'COMPANY' ? 'bg-white dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700' : 'bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700'}`}>
             <span className={`h-2 w-2 rounded-full ${vaultType === 'COMPANY' ? 'bg-indigo-600' : 'bg-emerald-600'}`} />
             {vaultType === 'COMPANY' ? 'Company' : 'Personal'}
           </span>
@@ -187,7 +187,7 @@ function DashboardPage() {
 
         {/* Error */}
         {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl px-5 py-4">
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl px-4 sm:px-5 py-3 sm:py-4">
             <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
           </div>
         )}
@@ -199,7 +199,7 @@ function DashboardPage() {
         {!loading && !error && (
           <>
             {/* Stat Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <StatCard
                 icon={KeyRound} label="Total Passwords" value={totalPasswords || 0}
                 subtext={vaultType === 'COMPANY' ? 'Company vault' : 'Personal vault'}
@@ -231,9 +231,9 @@ function DashboardPage() {
             </div>
 
             {/* Charts Row — taller and more spacious */}
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 sm:gap-6">
               {/* Password Activity Chart */}
-              <div className="xl:col-span-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 min-w-0">
+              <div className="xl:col-span-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl sm:rounded-3xl p-4 sm:p-6 min-w-0">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
                   <div className="flex items-center gap-2">
                     <TrendingUp size={18} className="text-indigo-600" />
@@ -331,7 +331,7 @@ function DashboardPage() {
               </div>
 
               {/* Security Score */}
-              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 min-w-0 flex flex-col">
+              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl sm:rounded-3xl p-4 sm:p-6 min-w-0 flex flex-col">
                 <div className="flex items-center justify-between mb-2">
                   <div>
                     <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Security Score</h3>
@@ -385,17 +385,17 @@ function DashboardPage() {
                 </div>
 
                 {/* Score breakdown */}
-                <div className="grid grid-cols-3 gap-3 mt-auto">
+                <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-auto">
                   {[
                     { label: 'Weak', value: weakPasswords, color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-800' },
                     { label: 'Old', value: oldPasswords, color: 'text-orange-600', bg: 'bg-orange-50 dark:bg-orange-900/20 border-orange-100 dark:border-orange-800' },
                     { label: 'At Risk', value: riskPasswords, color: 'text-red-600', bg: 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800' },
                   ].map((s) => (
-                    <div key={s.label} className={`rounded-xl border ${s.bg} p-3 text-center`}>
+                    <div key={s.label} className={`rounded-xl border ${s.bg} p-2.5 sm:p-3 text-center`}>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{s.label}</p>
-                      <p className={`font-bold text-2xl ${s.color}`}>{s.value || 0}</p>
+                      <p className={`font-bold text-xl sm:text-2xl ${s.color}`}>{s.value || 0}</p>
                       {totalPasswords > 0 && (
-                        <p className={`text-xs mt-0.5 ${s.color} opacity-75`}>
+                        <p className={`text-[11px] sm:text-xs mt-0.5 ${s.color} opacity-75`}>
                           {Math.round(((s.value || 0) / totalPasswords) * 100)}%
                         </p>
                       )}
@@ -406,9 +406,9 @@ function DashboardPage() {
             </div>
 
             {/* Login Activity + Quick Actions + Recent Activity */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6">
               {/* Login Activity */}
-              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 min-w-0">
+              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl sm:rounded-3xl p-4 sm:p-6 min-w-0">
                 <div className="flex items-center gap-2 mb-4">
                   <LogIn size={16} className="text-indigo-600" />
                   <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Login Activity</h3>
@@ -420,18 +420,18 @@ function DashboardPage() {
                   </div>
                 ) : (
                   <>
-                    <div className="grid grid-cols-3 gap-3 mb-4">
-                      <div className="rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 p-3 text-center">
+                    <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4">
+                      <div className="rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 p-2.5 sm:p-3 text-center">
                         <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Success</p>
-                        <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">{loginSuccess || 0}</p>
+                        <p className="text-xl sm:text-2xl font-bold text-emerald-700 dark:text-emerald-300">{loginSuccess || 0}</p>
                       </div>
-                      <div className="rounded-2xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3 text-center">
+                      <div className="rounded-2xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-2.5 sm:p-3 text-center">
                         <p className="text-xs text-red-600 dark:text-red-400 font-medium">Failed</p>
-                        <p className="text-2xl font-bold text-red-700 dark:text-red-300">{loginFailed || 0}</p>
+                        <p className="text-xl sm:text-2xl font-bold text-red-700 dark:text-red-300">{loginFailed || 0}</p>
                       </div>
-                      <div className="rounded-2xl bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 p-3 text-center">
+                      <div className="rounded-2xl bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 p-2.5 sm:p-3 text-center">
                         <p className="text-xs text-slate-600 dark:text-slate-300 font-medium">Blocked</p>
-                        <p className="text-2xl font-bold text-slate-700 dark:text-slate-200">{loginBlocked || 0}</p>
+                        <p className="text-xl sm:text-2xl font-bold text-slate-700 dark:text-slate-200">{loginBlocked || 0}</p>
                       </div>
                     </div>
                     <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">Total: {loginTotal || 0} attempts</p>
@@ -452,61 +452,61 @@ function DashboardPage() {
               </div>
 
               {/* Quick Actions */}
-              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 min-w-0">
+              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl sm:rounded-3xl p-4 sm:p-6 min-w-0">
                 <div className="flex items-center gap-2 mb-4">
                   <ExternalLink size={16} className="text-indigo-600" />
                   <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Quick Actions</h3>
                 </div>
                 <div className="space-y-3">
-                  <button onClick={() => navigate('/my-vault')} className="w-full flex items-center gap-3 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-600 hover:bg-indigo-50/40 dark:hover:bg-indigo-900/20 transition group text-left">
-                    <div className="h-10 w-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center group-hover:bg-indigo-200 dark:group-hover:bg-indigo-800/50 transition shrink-0">
+                  <button onClick={() => navigate('/my-vault')} className="w-full flex items-center gap-3 p-3 sm:p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-600 hover:bg-indigo-50/40 dark:hover:bg-indigo-900/20 transition group text-left">
+                    <div className="h-9 sm:h-10 w-9 sm:w-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center group-hover:bg-indigo-200 dark:group-hover:bg-indigo-800/50 transition shrink-0">
                       <KeyRound size={18} className="text-indigo-600" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Go to My Vault</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">Manage your passwords</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate">Manage your passwords</p>
                     </div>
                     <ArrowRight size={16} className="text-slate-400 dark:text-slate-500 group-hover:text-indigo-600 transition shrink-0" />
                   </button>
-                  <button onClick={() => navigate('/activity-log')} className="w-full flex items-center gap-3 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-600 hover:bg-amber-50/40 dark:hover:bg-amber-900/20 transition group text-left">
-                    <div className="h-10 w-10 rounded-xl bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center group-hover:bg-amber-200 dark:group-hover:bg-amber-800/50 transition shrink-0">
+                  <button onClick={() => navigate('/activity-log')} className="w-full flex items-center gap-3 p-3 sm:p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-600 hover:bg-amber-50/40 dark:hover:bg-amber-900/20 transition group text-left">
+                    <div className="h-9 sm:h-10 w-9 sm:w-10 rounded-xl bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center group-hover:bg-amber-200 dark:group-hover:bg-amber-800/50 transition shrink-0">
                       <Activity size={18} className="text-amber-600" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">View Activity Log</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">Audit trail of all actions</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate">Audit trail of all actions</p>
                     </div>
                     <ArrowRight size={16} className="text-slate-400 dark:text-slate-500 group-hover:text-amber-600 transition shrink-0" />
                   </button>
-                  <button onClick={() => navigate('/security/password-health')} className="w-full flex items-center gap-3 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-600 hover:bg-emerald-50/40 dark:hover:bg-emerald-900/20 transition group text-left">
-                    <div className="h-10 w-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center group-hover:bg-emerald-200 dark:group-hover:bg-emerald-800/50 transition shrink-0">
+                  <button onClick={() => navigate('/security/password-health')} className="w-full flex items-center gap-3 p-3 sm:p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-600 hover:bg-emerald-50/40 dark:hover:bg-emerald-900/20 transition group text-left">
+                    <div className="h-9 sm:h-10 w-9 sm:w-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center group-hover:bg-emerald-200 dark:group-hover:bg-emerald-800/50 transition shrink-0">
                       <ShieldCheck size={18} className="text-emerald-600" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Password Health</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">Strength analysis & recommendations</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate">Strength analysis & recommendations</p>
                     </div>
                     <ArrowRight size={16} className="text-slate-400 dark:text-slate-500 group-hover:text-emerald-600 transition shrink-0" />
                   </button>
                   {user?.role === 'ADMIN' && (
                     <>
-                      <button onClick={() => firstCompanyVaultSlug ? navigate(`/vaults/${firstCompanyVaultSlug}`) : null} className="w-full flex items-center gap-3 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-600 hover:bg-emerald-50/40 dark:hover:bg-emerald-900/20 transition group text-left">
-                        <div className="h-10 w-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center group-hover:bg-emerald-200 dark:group-hover:bg-emerald-800/50 transition shrink-0">
+                      <button onClick={() => firstCompanyVaultSlug ? navigate(`/vaults/${firstCompanyVaultSlug}`) : null} className="w-full flex items-center gap-3 p-3 sm:p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-600 hover:bg-emerald-50/40 dark:hover:bg-emerald-900/20 transition group text-left">
+                        <div className="h-9 sm:h-10 w-9 sm:w-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center group-hover:bg-emerald-200 dark:group-hover:bg-emerald-800/50 transition shrink-0">
                           <Shield size={18} className="text-emerald-600" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Company Vault</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">Manage company passwords</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 truncate">Manage company passwords</p>
                         </div>
                         <ArrowRight size={16} className="text-slate-400 dark:text-slate-500 group-hover:text-emerald-600 transition shrink-0" />
                       </button>
-                      <button onClick={() => navigate('/team-management')} className="w-full flex items-center gap-3 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-purple-300 dark:hover:border-purple-600 hover:bg-purple-50/40 dark:hover:bg-purple-900/20 transition group text-left">
-                        <div className="h-10 w-10 rounded-xl bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center group-hover:bg-purple-200 dark:group-hover:bg-purple-800/50 transition shrink-0">
+                      <button onClick={() => navigate('/team-management')} className="w-full flex items-center gap-3 p-3 sm:p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-purple-300 dark:hover:border-purple-600 hover:bg-purple-50/40 dark:hover:bg-purple-900/20 transition group text-left">
+                        <div className="h-9 sm:h-10 w-9 sm:w-10 rounded-xl bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center group-hover:bg-purple-200 dark:group-hover:bg-purple-800/50 transition shrink-0">
                           <Users size={18} className="text-purple-600" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Team Management</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">Manage users & invitations</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 truncate">Manage users & invitations</p>
                         </div>
                         <ArrowRight size={16} className="text-slate-400 dark:text-slate-500 group-hover:text-purple-600 transition shrink-0" />
                       </button>
@@ -516,7 +516,7 @@ function DashboardPage() {
               </div>
 
               {/* Recent Activity Feed */}
-              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 min-w-0">
+              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl sm:rounded-3xl p-4 sm:p-6 min-w-0">
                 <div className="flex items-center gap-2 mb-4">
                   <Activity size={16} className="text-indigo-600" />
                   <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Recent Activity</h3>
@@ -561,60 +561,60 @@ function DashboardPage() {
             </div>
 
             {/* Recent Passwords Table */}
-            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl overflow-hidden min-w-0">
-              <div className="p-6 pb-0">
+            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl sm:rounded-3xl overflow-hidden min-w-0">
+              <div className="p-4 sm:p-6 pb-0">
                 <div className="flex items-center gap-2 mb-1">
                   <KeyRound size={16} className="text-indigo-600" />
                   <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Recent Passwords</h3>
                 </div>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Latest passwords in your {vaultType === 'COMPANY' ? 'company' : 'personal'} vault</p>
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mb-4">Latest passwords in your {vaultType === 'COMPANY' ? 'company' : 'personal'} vault</p>
               </div>
               {recentLoading ? (
-                <div className="p-6 space-y-3">
+                <div className="p-4 sm:p-6 space-y-3">
                   {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-12" />)}
                 </div>
               ) : recentPasswords?.length > 0 ? (
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[700px]">
+                  <table className="w-full min-w-[620px]">
                     <thead>
                       <tr className="border-t border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/50">
-                        <th className="text-left px-6 py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Name</th>
-                        <th className="text-left px-6 py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Login</th>
-                        <th className="text-left px-6 py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Vault</th>
-                        <th className="text-center px-6 py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Weak</th>
-                        <th className="text-center px-6 py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Old</th>
-                        <th className="text-center px-6 py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Risk</th>
-                        <th className="text-right px-6 py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Updated</th>
+                        <th className="text-left px-4 sm:px-6 py-3 sm:py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Name</th>
+                        <th className="text-left px-4 sm:px-6 py-3 sm:py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Login</th>
+                        <th className="text-left px-4 sm:px-6 py-3 sm:py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Vault</th>
+                        <th className="text-center px-4 sm:px-6 py-3 sm:py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Weak</th>
+                        <th className="text-center px-4 sm:px-6 py-3 sm:py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Old</th>
+                        <th className="text-center px-4 sm:px-6 py-3 sm:py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Risk</th>
+                        <th className="text-right px-4 sm:px-6 py-3 sm:py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Updated</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                       {recentPasswords.map((row) => (
                         <tr key={row.id} className="hover:bg-slate-50 dark:hover:bg-slate-700 transition">
-                          <td className="px-6 py-4">
-                            <span className="font-medium text-slate-900 dark:text-slate-100">{row.name}</span>
+                          <td className="px-4 sm:px-6 py-3.5 sm:py-4">
+                            <span className="font-medium text-slate-900 dark:text-slate-100 text-sm">{row.name}</span>
                           </td>
-                          <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">{row.login}</td>
-                          <td className="px-6 py-4">
+                          <td className="px-4 sm:px-6 py-3.5 sm:py-4 text-xs sm:text-sm text-slate-600 dark:text-slate-300">{row.login}</td>
+                          <td className="px-4 sm:px-6 py-3.5 sm:py-4">
                             <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2.5 py-1 rounded-lg">
                               {row.vault?.name || '-'}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-center">
+                          <td className="px-4 sm:px-6 py-3.5 sm:py-4 text-center">
                             <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold ${
                               row.isWeak ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300'
                             }`}>{row.isWeak ? 'Yes' : 'No'}</span>
                           </td>
-                          <td className="px-6 py-4 text-center">
+                          <td className="px-4 sm:px-6 py-3.5 sm:py-4 text-center">
                             <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold ${
                               row.isOld ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300'
                             }`}>{row.isOld ? 'Yes' : 'No'}</span>
                           </td>
-                          <td className="px-6 py-4 text-center">
+                          <td className="px-4 sm:px-6 py-3.5 sm:py-4 text-center">
                             <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold ${
                               row.isAtRisk ? 'bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-300' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300'
                             }`}>{row.isAtRisk ? 'Yes' : 'No'}</span>
                           </td>
-                          <td className="px-6 py-4 text-right text-xs text-slate-400 dark:text-slate-500">{formatTimeAgo(row.updatedAt)}</td>
+                          <td className="px-4 sm:px-6 py-3.5 sm:py-4 text-right text-xs text-slate-400 dark:text-slate-500">{formatTimeAgo(row.updatedAt)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -628,7 +628,7 @@ function DashboardPage() {
                 </div>
               )}
               {recentPasswords?.length > 0 && (
-                <div className="px-6 py-3 border-t border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30 text-right">
+                <div className="px-4 sm:px-6 py-3 border-t border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30 text-right">
                   <button onClick={() => navigate('/my-vault')} className="text-xs font-semibold text-indigo-600 hover:text-indigo-700">
                     View all passwords →
                   </button>

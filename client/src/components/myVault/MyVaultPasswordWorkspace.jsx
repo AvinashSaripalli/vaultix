@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useSelector } from 'react-redux';
-import { Lock, LockKeyhole, Search, SearchX } from 'lucide-react';
+import { Lock, LockKeyhole, Search, SearchX, ArrowLeft } from 'lucide-react';
 import ItemTypeBadge from './ItemTypeBadge';
 import ItemDetailsPanel from './ItemDetailsPanel';
 import { getItemTypeMeta } from '../../utils/itemTypes';
@@ -62,7 +62,7 @@ function MyVaultPasswordWorkspace({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] lg:grid-cols-[280px_1fr] xl:grid-cols-[300px_1fr] min-h-[600px] divide-y md:divide-y-0 md:divide-x divide-slate-200 dark:divide-slate-700 min-w-0">
           {/* Left Side */}
-          <div className="p-3.5 sm:p-5 bg-slate-50/50 dark:bg-slate-800/50 min-w-0">
+          <div className={`p-3.5 sm:p-5 bg-slate-50/50 dark:bg-slate-800/50 min-w-0 ${selectedPasswordId ? 'hidden md:block' : 'block'}`}>
             <div className="relative mb-5">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
@@ -124,7 +124,15 @@ function MyVaultPasswordWorkspace({
           </div>
 
           {/* Right Side */}
-          <div className="p-4 sm:p-6 lg:p-8 min-w-0">
+          <div className={`p-4 sm:p-6 lg:p-8 min-w-0 ${!selectedPasswordId ? 'hidden md:block' : 'block'}`}>
+            <button
+              type="button"
+              onClick={() => onSelectPassword(null)}
+              className="md:hidden inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 mb-4 py-1.5 px-3 rounded-xl bg-indigo-50/70 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 transition border border-indigo-100 dark:border-indigo-800"
+            >
+              <ArrowLeft size={14} />
+              Back to items
+            </button>
             {!selectedPassword ? (
               <div className="h-full min-h-[460px] flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 text-center">
                 <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-3 shadow-sm">

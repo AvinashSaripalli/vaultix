@@ -240,7 +240,7 @@ function SharedWithMePage() {
 
                     <button
                       onClick={() => handleView(item)}
-                      className="flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 text-white px-3.5 py-2 text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm"
+                      className="flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 text-white px-3.5 py-2 text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm w-full lg:w-auto"
                     >
                       <Eye size={14} />
                       View

@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   Plus,
   Check,
+  ArrowLeft,
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import api from '../../services/api';
@@ -28,7 +29,7 @@ import { setSessionRsaPrivateKey, setSessionRsaPublicKey } from '../../features/
 import { TYPE_FIELDS, parseCustomFields, CUSTOM_FIELDS_KEY, getItemTypeMeta } from '../../utils/itemTypes';
 import { detectCardNetwork } from '../../utils/cardValidation';
 
-function PasswordDetailsPanel({ onShareVault, onAddLogin }) {
+function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
   const dispatch = useDispatch();
 
   const {
@@ -385,6 +386,16 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin }) {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 min-w-0">
+      {onBackToList && (
+        <button
+          type="button"
+          onClick={onBackToList}
+          className="md:hidden inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 mb-4 py-1.5 px-3 rounded-xl bg-indigo-50/70 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 transition border border-indigo-100 dark:border-indigo-800"
+        >
+          <ArrowLeft size={14} />
+          Back to passwords
+        </button>
+      )}
       <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 min-w-0">
         <div className="min-w-0 flex-1">
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Selected password group</p>

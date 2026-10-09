@@ -569,28 +569,28 @@ function DepartmentsPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+      <div className="space-y-6 min-w-0">
+        <div className="rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 lg:p-8 shadow-sm dark:border-slate-700 dark:bg-slate-800">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Departments</h1>
-              <p className="text-sm text-slate-500 mt-1 dark:text-slate-400">
+              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100">Departments</h1>
+              <p className="text-xs sm:text-sm text-slate-500 mt-1 dark:text-slate-400">
                 Your organization structure. Click a department to view its members. Access granted
                 to a parent flows down to all sub-departments.
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto shrink-0">
               <input
                 type="text"
                 placeholder="Search..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="h-10 w-48 rounded-xl border border-slate-300 bg-slate-50 px-3 text-sm outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
+                className="h-10 w-full sm:w-48 rounded-xl border border-slate-300 bg-slate-50 px-3 text-sm outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
               />
               <button
                 onClick={() => openCreateModal()}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+                className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 w-full sm:w-auto shadow-sm"
               >
                 <Plus size={15} />
                 New Department
@@ -600,7 +600,7 @@ function DepartmentsPage() {
         </div>
 
         {/* Org chart */}
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        <div className="rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
           {loading && <p className="text-slate-500 dark:text-slate-400">Loading structure...</p>}
 
           {error && (

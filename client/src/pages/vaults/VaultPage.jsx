@@ -46,6 +46,7 @@ import {
   fetchVaultTrash,
   restorePassword,
   purgePassword,
+  selectPassword,
 } from '../../features/vault/vaultSlice';
 
 import VaultPolicyModal from '../../components/vault/VaultPolicyModal';
@@ -81,6 +82,7 @@ function VaultPage() {
     vaultsLoading,
     passwordsLoading,
     passwords,
+    selectedPasswordId,
     trashByVault,
     trashLoading,
     error,
@@ -903,16 +905,21 @@ function VaultPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] lg:grid-cols-[320px_1fr] xl:grid-cols-[360px_1fr] min-h-[640px] divide-y md:divide-y-0 md:divide-x divide-slate-200 dark:divide-slate-700 min-w-0">
-                <PasswordListPanel />
-                <PasswordDetailsPanel
-                  onShareVault={() => setVaultShareOpen(true)}
-                  onAddLogin={(data) => {
-                    // data can be string (legacy) or {name, url, tags}
-                    const prefill = typeof data === 'string' ? { name: data } : data;
-                    setPrefillData(prefill);
-                    dispatch(openAddPasswordModal());
-                  }}
-                />
+                <div className={`${selectedPasswordId ? 'hidden md:block' : 'block'} min-w-0`}>
+                  <PasswordListPanel />
+                </div>
+                <div className={`${!selectedPasswordId ? 'hidden md:block' : 'block'} min-w-0`}>
+                  <PasswordDetailsPanel
+                    onBackToList={() => dispatch(selectPassword(null))}
+                    onShareVault={() => setVaultShareOpen(true)}
+                    onAddLogin={(data) => {
+                      // data can be string (legacy) or {name, url, tags}
+                      const prefill = typeof data === 'string' ? { name: data } : data;
+                      setPrefillData(prefill);
+                      dispatch(openAddPasswordModal());
+                    }}
+                  />
+                </div>
               </div>
             )}
           </>

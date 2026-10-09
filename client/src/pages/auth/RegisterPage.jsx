@@ -85,13 +85,13 @@ function RegisterPage() {
 
   return (
     <div
-      className="h-screen overflow-hidden bg-cover bg-center relative"
+      className="min-h-screen overflow-y-auto bg-cover bg-center relative"
       style={{ backgroundImage: `url(${bgImage})` }}
     >
       <div className="absolute inset-0 bg-white/35 dark:bg-slate-950/60" />
 
-      <div className="relative z-10 h-full max-w-[1450px] mx-auto grid grid-cols-1 lg:grid-cols-[1fr_430px] items-center gap-8 px-10">
-        <div className="max-w-[780px]">
+      <div className="relative z-10 min-h-screen max-w-[1450px] mx-auto grid grid-cols-1 lg:grid-cols-[1fr_430px] items-center gap-8 px-4 sm:px-6 lg:px-10 py-6 sm:py-8 lg:py-0">
+        <div className="max-w-[780px] hidden lg:block">
           <img src={logo} alt="Vaultix" className="w-64 mb-10" />
 
           <h1 className="text-6xl font-black leading-[1.05] tracking-[-2px] text-[#020617] dark:text-white">
@@ -128,6 +128,10 @@ function RegisterPage() {
           title="Create account"
           subtitle="Start managing passwords securely."
         >
+          <div className="lg:hidden flex justify-center mb-4">
+            <img src={logo} alt="Vaultix" className="w-40" />
+          </div>
+
           {inviteLoading && (
             <div className="mb-4 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 px-4 py-3 text-sm text-blue-700 dark:text-blue-400">
               Checking your invitation...
@@ -227,9 +231,9 @@ function RegisterPage() {
 
 function AuthCard({ title, subtitle, children }) {
   return (
-    <div className="bg-white/88 dark:bg-slate-800/90 backdrop-blur-md rounded-[32px] shadow-[0_20px_60px_rgba(37,99,235,0.14)] border border-white dark:border-slate-600 p-9 w-full max-w-[430px]">
-      <h2 className="text-4xl font-black text-slate-950 dark:text-white">{title}</h2>
-      <p className="text-slate-500 dark:text-slate-400 mt-2 mb-7">{subtitle}</p>
+    <div className="bg-white/88 dark:bg-slate-800/90 backdrop-blur-md rounded-2xl sm:rounded-[32px] shadow-[0_20px_60px_rgba(37,99,235,0.14)] border border-white dark:border-slate-600 p-5 sm:p-7 md:p-9 w-full max-w-[430px] mx-auto min-w-0">
+      <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-950 dark:text-white">{title}</h2>
+      <p className="text-slate-500 dark:text-slate-400 mt-2 mb-6 sm:mb-7 text-sm sm:text-base">{subtitle}</p>
       {children}
     </div>
   );
@@ -245,7 +249,7 @@ function Input({ type, placeholder, value, onChange, error, disabled }) {
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
         required
-        className={`w-full rounded-2xl border bg-white/90 dark:bg-slate-800/90 dark:text-slate-100 px-5 py-4 outline-none transition-all focus:ring-4 ${
+        className={`w-full rounded-2xl border bg-white/90 dark:bg-slate-800/90 dark:text-slate-100 px-4 sm:px-5 py-3 sm:py-4 text-sm sm:text-base outline-none transition-all focus:ring-4 ${
           disabled
             ? 'opacity-60 cursor-not-allowed'
             : ''

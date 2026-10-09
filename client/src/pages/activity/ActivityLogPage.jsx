@@ -638,26 +638,26 @@ function ActivityLogPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-5">
+      <div className="space-y-5 min-w-0">
         {/* Header */}
-        <div className="rounded-2xl border border-slate-200 bg-white px-8 py-7 dark:border-slate-700 dark:bg-slate-800">
+        <div className="rounded-2xl border border-slate-200 bg-white px-4 sm:px-6 lg:px-8 py-5 sm:py-7 dark:border-slate-700 dark:bg-slate-800">
           <div className="flex flex-col gap-4">
             <div>
-              <h1 className="text-4xl font-bold text-slate-900 dark:text-slate-100">Activity Log</h1>
-              <p className="mt-2 text-slate-500 dark:text-slate-400">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-100">Activity Log</h1>
+              <p className="mt-1 sm:mt-2 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
                 Track actions, login history, and notifications in one place
               </p>
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-1 border-b border-slate-200 dark:border-slate-700">
+            <div className="flex gap-1 border-b border-slate-200 dark:border-slate-700 overflow-x-auto no-scrollbar">
               {TABS.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => handleTabChange(tab.id)}
-                  className={`px-4 py-3 text-sm font-semibold border-b-2 transition ${
+                  className={`px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold border-b-2 transition whitespace-nowrap ${
                     activeTab === tab.id
-                      ? 'border-indigo-600 text-indigo-600'
+                      ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
                       : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
                   }`}
                 >
@@ -672,7 +672,7 @@ function ActivityLogPage() {
             </div>
 
             {/* Filters */}
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
               <div className="relative w-full sm:w-[340px]">
                 <Search
                   size={18}
@@ -837,111 +837,113 @@ function ActivityLogPage() {
             )}
             {!activityLoading && !error && (
               <>
-                <table className="w-full min-w-[900px]">
-                  <thead className="bg-slate-50 dark:bg-slate-800/50">
-                    <tr className="text-left text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                      <th className="px-6 py-4">
-                        <button
-                          onClick={() => handleSort('date')}
-                          className="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400"
-                        >
-                          Date
-                          {sortIcon('date')}
-                        </button>
-                      </th>
-                      <th className="px-6 py-4">
-                        <button
-                          onClick={() => handleSort('user')}
-                          className="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400"
-                        >
-                          User
-                          {sortIcon('user')}
-                        </button>
-                      </th>
-                      <th className="px-6 py-4">
-                        <button
-                          onClick={() => handleSort('action')}
-                          className="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400"
-                        >
-                          Action
-                          {sortIcon('action')}
-                        </button>
-                      </th>
-                      <th className="px-6 py-4">
-                        <button
-                          onClick={() => handleSort('target')}
-                          className="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400"
-                        >
-                          Target
-                          {sortIcon('target')}
-                        </button>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {groupedLogs.map((group, gi) => (
-                      <Fragment key={group.label}>
-                        {gi > 0 && (
-                          <tr className="border-t-2 border-slate-200 dark:border-slate-700">
-                            <td colSpan={4} className="p-0" />
-                          </tr>
-                        )}
-                        {group.items.map((log) => (
-                          <tr
-                            key={log.id}
-                            className="border-t border-slate-100 hover:bg-slate-50/70 dark:border-slate-700 dark:hover:bg-slate-700/50"
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[760px]">
+                    <thead className="bg-slate-50 dark:bg-slate-800/50">
+                      <tr className="text-left text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        <th className="px-4 sm:px-6 py-3.5 sm:py-4">
+                          <button
+                            onClick={() => handleSort('date')}
+                            className="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400"
                           >
-                            <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-700 dark:text-slate-300">
-                              {log.createdAt
-                                ? new Date(log.createdAt).toLocaleString()
-                                : '-'}
-                            </td>
-                            <td className="px-6 py-4 text-sm">
-                              <div>
-                                <p className="font-medium text-slate-900 dark:text-slate-100">
-                                  {log.user?.fullName || 'User'}
-                                </p>
-                                <p className="text-xs text-slate-500 dark:text-slate-400">
-                                  {log.user?.email || '-'}
-                                </p>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4">
-                              <span
-                                className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold ${getActionBadge(log.action)}`}
-                              >
-                                {getActionIcon(log.action)}
-                                {formatAction(log.action)}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">
-                              <div className="flex items-center gap-2">
-                                <p className="font-semibold">
-                                  {log.metadata?.name || log.targetId || '-'}
-                                </p>
-                                {log.metadata?.personalVault && (
-                                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-teal-50 text-teal-700 shrink-0 dark:bg-teal-900/20 dark:text-teal-400">
-                                    Personal Vault
-                                  </span>
+                            Date
+                            {sortIcon('date')}
+                          </button>
+                        </th>
+                        <th className="px-4 sm:px-6 py-3.5 sm:py-4">
+                          <button
+                            onClick={() => handleSort('user')}
+                            className="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400"
+                          >
+                            User
+                            {sortIcon('user')}
+                          </button>
+                        </th>
+                        <th className="px-4 sm:px-6 py-3.5 sm:py-4">
+                          <button
+                            onClick={() => handleSort('action')}
+                            className="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400"
+                          >
+                            Action
+                            {sortIcon('action')}
+                          </button>
+                        </th>
+                        <th className="px-4 sm:px-6 py-3.5 sm:py-4">
+                          <button
+                            onClick={() => handleSort('target')}
+                            className="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400"
+                          >
+                            Target
+                            {sortIcon('target')}
+                          </button>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {groupedLogs.map((group, gi) => (
+                        <Fragment key={group.label}>
+                          {gi > 0 && (
+                            <tr className="border-t-2 border-slate-200 dark:border-slate-700">
+                              <td colSpan={4} className="p-0" />
+                            </tr>
+                          )}
+                          {group.items.map((log) => (
+                            <tr
+                              key={log.id}
+                              className="border-t border-slate-100 hover:bg-slate-50/70 dark:border-slate-700 dark:hover:bg-slate-700/50"
+                            >
+                              <td className="whitespace-nowrap px-4 sm:px-6 py-3.5 sm:py-4 text-xs sm:text-sm text-slate-700 dark:text-slate-300">
+                                {log.createdAt
+                                  ? new Date(log.createdAt).toLocaleString()
+                                  : '-'}
+                              </td>
+                              <td className="px-4 sm:px-6 py-3.5 sm:py-4 text-xs sm:text-sm">
+                                <div>
+                                  <p className="font-medium text-slate-900 dark:text-slate-100">
+                                    {log.user?.fullName || 'User'}
+                                  </p>
+                                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                                    {log.user?.email || '-'}
+                                  </p>
+                                </div>
+                              </td>
+                              <td className="px-4 sm:px-6 py-3.5 sm:py-4">
+                                <span
+                                  className={`inline-flex items-center gap-1.5 sm:gap-2 rounded-full px-2.5 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-xs font-semibold ${getActionBadge(log.action)}`}
+                                >
+                                  {getActionIcon(log.action)}
+                                  {formatAction(log.action)}
+                                </span>
+                              </td>
+                              <td className="px-4 sm:px-6 py-3.5 sm:py-4 text-xs sm:text-sm text-slate-700 dark:text-slate-300">
+                                <div className="flex items-center gap-2">
+                                  <p className="font-semibold">
+                                    {log.metadata?.name || log.targetId || '-'}
+                                  </p>
+                                  {log.metadata?.personalVault && (
+                                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-teal-50 text-teal-700 shrink-0 dark:bg-teal-900/20 dark:text-teal-400">
+                                      Personal Vault
+                                    </span>
+                                  )}
+                                  {log.metadata?.vaultType === 'COMPANY' && (
+                                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 shrink-0 dark:bg-amber-900/20 dark:text-amber-400">
+                                      Company Vault
+                                    </span>
+                                  )}
+                                </div>
+                                {log.metadata?.name && log.targetId && (
+                                  <p className="text-xs text-slate-400 dark:text-slate-500">
+                                    {log.targetId}
+                                  </p>
                                 )}
-                                {log.metadata?.vaultType === 'COMPANY' && (
-                                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 shrink-0 dark:bg-amber-900/20 dark:text-amber-400">
-                                    Company Vault
-                                  </span>
-                                )}
-                              </div>
-                              {log.metadata?.name && log.targetId && (
-                                <p className="text-xs text-slate-400 dark:text-slate-500">
-                                  {log.targetId}
-                                </p>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </Fragment>
-                    ))}
-                  </tbody>
-                </table>
+                              </td>
+                            </tr>
+                          ))}
+                        </Fragment>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
                 {!filteredLogs.length && (
                   <div className="py-14 text-center">
@@ -952,15 +954,15 @@ function ActivityLogPage() {
                 )}
 
                 {filteredLogs.length > 0 && (
-                  <div className="flex flex-col gap-4 border-t border-slate-200 px-6 py-4 lg:flex-row lg:items-center lg:justify-between dark:border-slate-700">
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                  <div className="flex flex-col gap-3 sm:gap-4 border-t border-slate-200 px-4 sm:px-6 py-3.5 sm:py-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700">
+                    <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
                       Showing {startItem} - {endItem} of {filteredLogs.length}
                     </p>
                     <div className="flex flex-wrap items-center gap-2">
                       <button
                         onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
                         disabled={currentPage === 1}
-                        className="rounded-xl border border-slate-300 px-4 py-2 text-sm disabled:opacity-50 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                        className="rounded-xl border border-slate-300 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm disabled:opacity-50 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
                       >
                         Previous
                       </button>
@@ -970,7 +972,7 @@ function ActivityLogPage() {
                           setCurrentPage((p) => Math.min(p + 1, totalPages))
                         }
                         disabled={currentPage === totalPages}
-                        className="rounded-xl border border-slate-300 px-4 py-2 text-sm disabled:opacity-50 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                        className="rounded-xl border border-slate-300 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm disabled:opacity-50 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
                       >
                         Next
                       </button>
@@ -1006,7 +1008,7 @@ function ActivityLogPage() {
                                 expandedLogin === item.id ? null : item.id
                               )
                             }
-                            className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50/70 cursor-pointer dark:hover:bg-slate-700/50"
+                            className="flex items-center gap-3 sm:gap-4 px-3.5 sm:px-6 py-3.5 sm:py-4 hover:bg-slate-50/70 cursor-pointer dark:hover:bg-slate-700/50"
                           >
                             <div className="shrink-0">
                               {expandedLogin === item.id ? (
@@ -1024,21 +1026,24 @@ function ActivityLogPage() {
                             <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-xs font-semibold shrink-0">
                               {item.user?.fullName?.charAt(0) || 'U'}
                             </div>
-                            <div className="min-w-0 flex-1 grid grid-cols-5 gap-4 text-sm items-center">
-                              <div>
+                            <div className="min-w-0 flex-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4 text-xs sm:text-sm items-center">
+                              <div className="min-w-0">
                                 <p className="font-medium text-slate-900 truncate dark:text-slate-100">
                                   {item.user?.fullName || 'User'}
                                 </p>
+                                <p className="text-[11px] text-slate-500 truncate sm:hidden dark:text-slate-400">
+                                  {item.user?.email || '-'}
+                                </p>
                               </div>
-                              <div className="text-slate-600 truncate dark:text-slate-300">
+                              <div className="text-slate-600 truncate hidden sm:block dark:text-slate-300">
                                 {item.user?.email || '-'}
                               </div>
-                              <div className="text-slate-600 text-xs dark:text-slate-300">
+                              <div className="text-slate-600 text-xs hidden md:block dark:text-slate-300">
                                 {item.ipAddress || '-'}
                               </div>
                               <div>
                                 <span
-                                  className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
+                                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] sm:text-xs font-semibold ${
                                     item.status === 'SUCCESS'
                                       ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400'
                                       : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400'
@@ -1047,7 +1052,7 @@ function ActivityLogPage() {
                                   {item.status || '-'}
                                 </span>
                               </div>
-                              <div className="text-slate-600 whitespace-nowrap dark:text-slate-300">
+                              <div className="text-slate-500 text-xs whitespace-nowrap text-right lg:text-left dark:text-slate-400">
                                 {item.createdAt
                                   ? new Date(item.createdAt).toLocaleString()
                                   : '-'}
@@ -1055,8 +1060,8 @@ function ActivityLogPage() {
                             </div>
                           </div>
                           {expandedLogin === item.id && (
-                            <div className="bg-slate-50 px-6 py-4 border-t border-slate-100 dark:bg-slate-800/50 dark:border-slate-700">
-                              <div className="grid grid-cols-2 gap-4 text-sm ml-9">
+                            <div className="bg-slate-50 px-4 sm:px-6 py-4 border-t border-slate-100 dark:bg-slate-800/50 dark:border-slate-700">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm sm:ml-9">
                                 <div>
                                   <p className="text-xs text-slate-400 mb-1 dark:text-slate-500">
                                     IP Address
@@ -1079,7 +1084,7 @@ function ActivityLogPage() {
                                     {item.status || '-'}
                                   </span>
                                 </div>
-                                <div className="col-span-2">
+                                <div className="col-span-1 sm:col-span-2">
                                   <p className="text-xs text-slate-400 mb-1 dark:text-slate-500">
                                     Device / User Agent
                                   </p>
@@ -1088,7 +1093,7 @@ function ActivityLogPage() {
                                   </p>
                                 </div>
                                 {item.location && (
-                                  <div className="col-span-2">
+                                  <div className="col-span-1 sm:col-span-2">
                                     <p className="text-xs text-slate-400 mb-1 dark:text-slate-500">
                                       Location
                                     </p>
@@ -1113,8 +1118,8 @@ function ActivityLogPage() {
                 )}
 
                 {filteredLogin.length > PAGE_SIZE && (
-                  <div className="flex flex-col gap-4 border-t border-slate-200 px-6 py-4 lg:flex-row lg:items-center lg:justify-between dark:border-slate-700">
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                  <div className="flex flex-col gap-3 sm:gap-4 border-t border-slate-200 px-4 sm:px-6 py-3.5 sm:py-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700">
+                    <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
                       Page {currentPage} of {loginTotalPages}
                     </p>
                     <div className="flex flex-wrap items-center gap-2">
@@ -1123,7 +1128,7 @@ function ActivityLogPage() {
                           setCurrentPage((p) => Math.max(p - 1, 1))
                         }
                         disabled={currentPage === 1}
-                        className="rounded-xl border border-slate-300 px-4 py-2 text-sm disabled:opacity-50 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                        className="rounded-xl border border-slate-300 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm disabled:opacity-50 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
                       >
                         Previous
                       </button>
@@ -1135,7 +1140,7 @@ function ActivityLogPage() {
                           )
                         }
                         disabled={currentPage === loginTotalPages}
-                        className="rounded-xl border border-slate-300 px-4 py-2 text-sm disabled:opacity-50 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                        className="rounded-xl border border-slate-300 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm disabled:opacity-50 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
                       >
                         Next
                       </button>
@@ -1151,13 +1156,13 @@ function ActivityLogPage() {
         {activeTab === 'unread' && (
           <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden dark:border-slate-700 dark:bg-slate-800">
             {/* Unread header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50/50 dark:border-slate-700 dark:bg-slate-800/50">
-              <div className="flex items-center gap-3">
-                <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-slate-200 bg-slate-50/50 dark:border-slate-700 dark:bg-slate-800/50">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <p className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300">
                   {filteredUnreadItems.length} item
                   {filteredUnreadItems.length !== 1 ? 's' : ''}
                 </p>
-                <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-slate-500">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400 dark:text-slate-500">
                   <span className="flex items-center gap-1">
                     <span className="h-2 w-2 rounded-full bg-slate-300 inline-block" />
                     {allActivityItems.filter((i) => i.type === 'ACTIVITY').length} actions
@@ -1174,7 +1179,7 @@ function ActivityLogPage() {
                   </span>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 shrink-0">
                 {totalUnreadCount > 0 && (
                   <span className="h-5 min-w-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold inline-flex items-center justify-center">
                     {totalUnreadCount > 99 ? '99+' : totalUnreadCount} unread
@@ -1183,7 +1188,7 @@ function ActivityLogPage() {
                 {unreadItems.length > 0 && (
                   <button
                     onClick={markAllRead}
-                    className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 transition dark:text-indigo-400"
+                    className="text-xs sm:text-sm font-semibold text-indigo-600 hover:text-indigo-700 transition dark:text-indigo-400"
                   >
                     Mark all read
                   </button>
@@ -1214,13 +1219,13 @@ function ActivityLogPage() {
                     <div
                       key={item.id}
                       onClick={() => isAlert && markAsRead(item)}
-                      className={`flex items-start gap-4 px-6 py-4 transition ${
+                      className={`flex items-start gap-3 sm:gap-4 px-4 sm:px-6 py-3.5 sm:py-4 transition ${
                         isAlert ? 'hover:bg-slate-50 cursor-pointer dark:hover:bg-slate-700' : ''
                       } ${isUnread ? 'bg-indigo-50/30 dark:bg-indigo-900/20' : ''}`}
                     >
                       {/* Icon */}
                       <div
-                        className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${iconClass}`}
+                        className={`h-8 sm:h-9 w-8 sm:w-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${iconClass}`}
                       >
                         {icon}
                       </div>
@@ -1236,7 +1241,7 @@ function ActivityLogPage() {
                               className="text-green-500 shrink-0"
                             />
                           ) : null}
-                          <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                          <p className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-slate-100">
                             {item.title}
                           </p>
                           <span
@@ -1271,15 +1276,15 @@ function ActivityLogPage() {
             )}
 
             {filteredUnreadItems.length > PAGE_SIZE && (
-              <div className="flex flex-col gap-4 border-t border-slate-200 px-6 py-4 lg:flex-row lg:items-center lg:justify-between dark:border-slate-700">
-                <p className="text-sm text-slate-500 dark:text-slate-400">
+              <div className="flex flex-col gap-3 sm:gap-4 border-t border-slate-200 px-4 sm:px-6 py-3.5 sm:py-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700">
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
                   Page {currentPage} of {unreadTotalPages} · {filteredUnreadItems.length} total
                 </p>
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
                     disabled={currentPage === 1}
-                    className="rounded-xl border border-slate-300 px-4 py-2 text-sm disabled:opacity-50 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                    className="rounded-xl border border-slate-300 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm disabled:opacity-50 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
                   >
                     Previous
                   </button>
@@ -1289,7 +1294,7 @@ function ActivityLogPage() {
                       setCurrentPage((p) => Math.min(p + 1, unreadTotalPages))
                     }
                     disabled={currentPage === unreadTotalPages}
-                    className="rounded-xl border border-slate-300 px-4 py-2 text-sm disabled:opacity-50 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                    className="rounded-xl border border-slate-300 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm disabled:opacity-50 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
                   >
                     Next
                   </button>

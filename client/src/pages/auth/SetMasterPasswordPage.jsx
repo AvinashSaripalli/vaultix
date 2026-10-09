@@ -119,15 +119,15 @@ function SetMasterPasswordPage() {
 
   return (
     <div
-      className="h-screen overflow-hidden bg-cover bg-center relative"
+      className="min-h-screen overflow-y-auto bg-cover bg-center relative"
       style={{
         backgroundImage: `url(${bgImage})`,
       }}
     >
       <div className="absolute inset-0 bg-white/35 dark:bg-slate-950/60" />
 
-      <div className="relative z-10 h-full max-w-[1450px] mx-auto grid grid-cols-1 lg:grid-cols-[1fr_440px] items-center gap-8 px-10">
-        <div className="max-w-[800px]">
+      <div className="relative z-10 min-h-screen max-w-[1450px] mx-auto grid grid-cols-1 lg:grid-cols-[1fr_440px] items-center gap-8 px-4 sm:px-6 lg:px-10 py-6 sm:py-8 lg:py-0">
+        <div className="max-w-[800px] hidden lg:block">
           <img
             src={logo}
             alt="Vaultix"
@@ -178,6 +178,9 @@ function SetMasterPasswordPage() {
             navigate('/register');
           }}
         >
+          <div className="lg:hidden flex justify-center mb-4">
+            <img src={logo} alt="Vaultix" className="w-40" />
+          </div>
           {recoveryKey ? (
             <div className="space-y-4">
               <div className="flex flex-col items-center gap-3 mb-2">
@@ -247,7 +250,7 @@ function SetMasterPasswordPage() {
                     )
                   }
                   required
-                  className={`w-full rounded-2xl border bg-white/90 dark:bg-slate-800/90 dark:text-slate-100 px-5 pr-12 py-4 outline-none transition-all focus:ring-4 ${
+                  className={`w-full rounded-2xl border bg-white/90 dark:bg-slate-800/90 dark:text-slate-100 px-4 sm:px-5 pr-12 py-3 sm:py-4 text-sm sm:text-base outline-none transition-all focus:ring-4 ${
                     errors.masterPassword
                       ? 'border-red-300 dark:border-red-700 focus:border-red-500 focus:ring-red-100'
                       : 'border-slate-300 dark:border-slate-600 focus:border-blue-500 focus:ring-blue-100'
@@ -295,7 +298,7 @@ function SetMasterPasswordPage() {
                     )
                   }
                   required
-                  className={`w-full rounded-2xl border bg-white/90 dark:bg-slate-800/90 dark:text-slate-100 px-5 pr-12 py-4 outline-none transition-all focus:ring-4 ${
+                  className={`w-full rounded-2xl border bg-white/90 dark:bg-slate-800/90 dark:text-slate-100 px-4 sm:px-5 pr-12 py-3 sm:py-4 text-sm sm:text-base outline-none transition-all focus:ring-4 ${
                     errors.confirmMasterPassword
                       ? 'border-red-300 dark:border-red-700 focus:border-red-500 focus:ring-red-100'
                       : 'border-slate-300 dark:border-slate-600 focus:border-blue-500 focus:ring-blue-100'
@@ -334,7 +337,7 @@ function SetMasterPasswordPage() {
                     e.target.value
                   )
                 }
-                className={`w-full rounded-2xl border bg-white/90 dark:bg-slate-800/90 dark:text-slate-100 px-5 py-4 outline-none transition-all focus:ring-4 ${
+                className={`w-full rounded-2xl border bg-white/90 dark:bg-slate-800/90 dark:text-slate-100 px-4 sm:px-5 py-3 sm:py-4 text-sm sm:text-base outline-none transition-all focus:ring-4 ${
                   errors.hint
                     ? 'border-red-300 dark:border-red-700 focus:border-red-500 focus:ring-red-100'
                     : 'border-slate-300 dark:border-slate-600 focus:border-blue-500 focus:ring-blue-100'
@@ -354,7 +357,7 @@ function SetMasterPasswordPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-2xl bg-blue-600 py-4 font-bold text-white transition-all hover:bg-blue-700 hover:shadow-lg disabled:opacity-60"
+              className="w-full rounded-2xl bg-blue-600 py-3.5 sm:py-4 font-bold text-white transition-all hover:bg-blue-700 hover:shadow-lg disabled:opacity-60"
             >
               {loading
                 ? 'Saving...'
@@ -376,7 +379,7 @@ function AuthCard({
   onBack,
 }) {
   return (
-    <div className="bg-white/88 dark:bg-slate-800/90 backdrop-blur-md rounded-[32px] shadow-[0_20px_60px_rgba(37,99,235,0.14)] border border-white dark:border-slate-600 p-9 w-full max-w-[440px]">
+    <div className="bg-white/88 dark:bg-slate-800/90 backdrop-blur-md rounded-2xl sm:rounded-[32px] shadow-[0_20px_60px_rgba(37,99,235,0.14)] border border-white dark:border-slate-600 p-5 sm:p-7 md:p-9 w-full max-w-[440px] mx-auto min-w-0">
       <button
         type="button"
         onClick={onBack}
@@ -386,11 +389,11 @@ function AuthCard({
         Back
       </button>
 
-      <h2 className="text-4xl font-black text-slate-950 dark:text-white">
+      <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-950 dark:text-white">
         {title}
       </h2>
 
-      <p className="text-slate-500 dark:text-slate-400 mt-2 mb-7">
+      <p className="text-slate-500 dark:text-slate-400 mt-2 mb-6 sm:mb-7 text-sm sm:text-base">
         {subtitle}
       </p>
 
