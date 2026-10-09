@@ -2,8 +2,9 @@ import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 import Footer from './Footer';
 import VerifyEmailBanner from '../security/VerifyEmailBanner';
+import { LayoutProvider } from '../../context/LayoutContext';
 
-function AppLayout({ children }) {
+function AppLayoutContent({ children }) {
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] flex transition-colors duration-200">
       <Sidebar />
@@ -12,13 +13,23 @@ function AppLayout({ children }) {
         <Topbar />
         <VerifyEmailBanner />
 
-        {/* Main content */}
-        <main className="p-6 flex-1">{children}</main>
+        {/* Main content with responsive padding and overflow-x protection */}
+        <main className="p-3 sm:p-5 lg:p-6 flex-1 min-w-0 overflow-x-hidden">
+          {children}
+        </main>
 
         {/* Footer */}
         <Footer />
       </div>
     </div>
+  );
+}
+
+function AppLayout({ children }) {
+  return (
+    <LayoutProvider>
+      <AppLayoutContent>{children}</AppLayoutContent>
+    </LayoutProvider>
   );
 }
 

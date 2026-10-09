@@ -328,7 +328,7 @@ function MyVaultPage() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-[280px_1fr] gap-5">
+            <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-4 sm:gap-5 min-w-0">
               <MyVaultSidebar
                 folders={folders}
                 selectedFolderId={selectedFolderId}

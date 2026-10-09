@@ -50,7 +50,7 @@ function FolderMembersSummary({ onClick }) {
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-3 mt-3 text-left"
+      className="flex items-center gap-2 sm:gap-3 mt-2 sm:mt-3 text-left flex-wrap min-w-0"
     >
       <div className="flex items-center">
         {visibleMembers.map((item, index) => (

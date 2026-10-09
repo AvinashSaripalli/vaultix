@@ -13,12 +13,16 @@ import {
   RefreshCw,
   Sun,
   Moon,
+  Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { logoutUser } from '../../features/auth/authSlice';
 import { toggleTheme } from '../../features/theme/themeSlice';
 import useLockVault from '../../hooks/useLockVault';
+import { useLayout } from '../../context/LayoutContext';
 import api from '../../services/api';
 
 function getItemIcon(type, meta) {
@@ -69,6 +73,7 @@ function Topbar() {
   const lockVault = useLockVault();
   const { user, isMasterVerified } = useSelector((state) => state.auth);
   const { mode } = useSelector((state) => state.theme);
+  const { sidebarCollapsed, toggleSidebarCollapse, toggleMobileSidebar } = useLayout();
 
   const [open, setOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -79,7 +84,6 @@ function Topbar() {
   const userMenuRef = useRef(null);
 
   const fetchRecentActivity = useCallback(async () => {
-    // Don't poll if there's no token — avoids infinite 401 loops on expired sessions
     if (!localStorage.getItem('token')) return;
     setLoading(true);
     try {
@@ -157,59 +161,85 @@ function Topbar() {
   };
 
   return (
-    <div className="h-[72px] bg-[var(--bg-topbar)] border-b border-[var(--border-primary)] flex items-center justify-between px-8 transition-colors duration-200">
-      <div className="flex items-center gap-3">
-        <h2 className="text-sm font-semibold text-[var(--text-secondary)]">Password Manager</h2>
+    <div className="h-16 sm:h-[72px] bg-[var(--bg-topbar)] border-b border-[var(--border-primary)] flex items-center justify-between px-3 sm:px-6 lg:px-8 transition-colors duration-200">
+      {/* Left side: drawer/collapse toggles + title */}
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+        {/* Mobile drawer toggle */}
+        <button
+          onClick={toggleMobileSidebar}
+          className="lg:hidden h-9 w-9 sm:h-10 sm:w-10 rounded-xl border border-[var(--border-primary)] bg-[var(--bg-card)] flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors shrink-0"
+          title="Open navigation menu"
+          aria-label="Open navigation menu"
+        >
+          <Menu size={18} />
+        </button>
+
+        {/* Desktop collapse toggle */}
+        <button
+          onClick={toggleSidebarCollapse}
+          className="hidden lg:flex h-10 w-10 rounded-xl border border-[var(--border-primary)] bg-[var(--bg-card)] items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors shrink-0"
+          title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-label="Toggle sidebar"
+        >
+          {sidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+        </button>
+
+        <h2 className="text-xs sm:text-sm font-semibold text-[var(--text-secondary)] truncate">
+          Password Manager
+        </h2>
         {isMasterVerified && (
-          <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
+          <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 shrink-0">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
             Vault unlocked
           </span>
         )}
       </div>
 
-      <div className="flex items-center gap-3">
+      {/* Right side controls */}
+      <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
         {isMasterVerified && (
           <button
             onClick={() => lockVault()}
-            className="hidden sm:flex items-center gap-2 h-10 rounded-xl border border-[var(--border-primary)] bg-[var(--bg-card)] px-3 text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-red-600 dark:hover:text-red-400 transition-colors"
+            className="flex items-center gap-1.5 sm:gap-2 h-9 sm:h-10 rounded-xl border border-[var(--border-primary)] bg-[var(--bg-card)] px-2.5 sm:px-3 text-xs sm:text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-red-600 dark:hover:text-red-400 transition-colors"
             title="Lock vault (Ctrl+Shift+L)"
           >
             <LockKeyhole size={16} />
-            Lock
+            <span className="hidden sm:inline">Lock</span>
           </button>
         )}
+
         {/* Theme toggle */}
         <button
           onClick={() => dispatch(toggleTheme())}
-          className="h-10 w-10 rounded-xl border border-[var(--border-primary)] bg-[var(--bg-card)] flex items-center justify-center hover:bg-[var(--bg-hover)] transition-colors"
+          className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl border border-[var(--border-primary)] bg-[var(--bg-card)] flex items-center justify-center hover:bg-[var(--bg-hover)] transition-colors"
           title={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
         >
           {mode === 'dark' ? (
-            <Sun size={18} className="text-amber-400" />
+            <Sun size={17} className="text-amber-400" />
           ) : (
-            <Moon size={18} className="text-slate-600" />
+            <Moon size={17} className="text-slate-600" />
           )}
         </button>
 
+        {/* Activity notifications */}
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={handleOpen}
-            className="relative h-10 w-10 rounded-xl border border-[var(--border-primary)] bg-[var(--bg-card)] flex items-center justify-center hover:bg-[var(--bg-hover)] transition-colors"
+            className="relative h-9 w-9 sm:h-10 sm:w-10 rounded-xl border border-[var(--border-primary)] bg-[var(--bg-card)] flex items-center justify-center hover:bg-[var(--bg-hover)] transition-colors"
           >
-            <Bell size={18} className="text-[var(--text-secondary)]" />
+            <Bell size={17} className="text-[var(--text-secondary)]" />
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 h-5 min-w-5 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+              <span className="absolute -top-1 -right-1 h-4.5 min-w-4.5 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}
           </button>
 
           {open && (
-            <div className="absolute right-0 top-12 w-[400px] bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-2xl shadow-xl z-50 overflow-hidden">
+            <div className="absolute right-0 top-12 w-[calc(100vw-24px)] sm:w-[400px] max-w-[400px] bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-2xl shadow-xl z-50 overflow-hidden">
               {/* Header */}
-              <div className="px-5 py-3.5 border-b border-[var(--border-primary)] flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
+              <div className="px-4 sm:px-5 py-3.5 border-b border-[var(--border-primary)] flex items-center justify-between">
+                <div className="flex items-center gap-2">
                   <h3 className="font-bold text-[var(--text-primary)] text-sm">Recent Activity</h3>
                   {unreadCount > 0 && (
                     <span className="h-5 min-w-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold inline-flex items-center justify-center">
@@ -217,7 +247,7 @@ function Topbar() {
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
                   <button
                     onClick={fetchRecentActivity}
                     disabled={loading}
@@ -247,7 +277,7 @@ function Topbar() {
               </div>
 
               {/* Items list */}
-              <div className="max-h-[420px] overflow-y-auto divide-y divide-[var(--border-secondary)]">
+              <div className="max-h-[380px] sm:max-h-[420px] overflow-y-auto divide-y divide-[var(--border-secondary)]">
                 {loading && items.length === 0 && (
                   <div className="p-6 text-center text-sm text-[var(--text-muted)]">
                     Loading...
@@ -315,11 +345,11 @@ function Topbar() {
               </div>
 
               {/* Footer summary */}
-              <div className="px-5 py-2.5 border-t border-[var(--border-secondary)] flex items-center justify-between bg-[var(--bg-hover)]">
-                <p className="text-[11px] text-[var(--text-muted)]">
+              <div className="px-4 sm:px-5 py-2.5 border-t border-[var(--border-secondary)] flex items-center justify-between bg-[var(--bg-hover)]">
+                <p className="text-[11px] text-[var(--text-muted)] truncate">
                   {activityCount} actions · {loginCount} logins · {alertCount} alerts
                 </p>
-                <p className="text-[11px] font-semibold text-[var(--text-secondary)]">
+                <p className="text-[11px] font-semibold text-[var(--text-secondary)] shrink-0 ml-2">
                   {unreadCount} unread
                 </p>
               </div>
@@ -331,16 +361,18 @@ function Topbar() {
         <div className="relative" ref={userMenuRef}>
           <button
             onClick={() => setUserMenuOpen((prev) => !prev)}
-            className="flex items-center gap-3 hover:bg-[var(--bg-hover)] rounded-xl px-2 py-1.5 transition-colors"
+            className="flex items-center gap-2 sm:gap-2.5 hover:bg-[var(--bg-hover)] rounded-xl px-1.5 sm:px-2 py-1.5 transition-colors"
           >
-            <div className="w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-700 dark:text-indigo-400 text-sm font-semibold">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-700 dark:text-indigo-400 text-xs sm:text-sm font-semibold shrink-0">
               {user?.fullName ? user.fullName.charAt(0).toUpperCase() : 'U'}
             </div>
-            <div className="leading-tight text-left">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">
+            <div className="leading-tight text-left min-w-0 hidden sm:block">
+              <p className="text-xs sm:text-sm font-semibold text-[var(--text-primary)] max-w-[100px] lg:max-w-[130px] truncate">
                 {user?.fullName || 'User'}
               </p>
-              <p className="text-xs text-[var(--text-muted)]">{user?.email || ''}</p>
+              <p className="text-[11px] text-[var(--text-muted)] max-w-[120px] truncate hidden md:block">
+                {user?.email || ''}
+              </p>
             </div>
           </button>
 

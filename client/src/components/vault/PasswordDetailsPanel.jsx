@@ -131,7 +131,7 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin }) {
 
   if (!selectedPassword) {
     return (
-      <div className="p-8 flex flex-col items-center justify-center min-h-[460px] text-center">
+      <div className="p-4 sm:p-8 flex flex-col items-center justify-center min-h-[460px] text-center min-w-0">
         <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-3 shadow-sm">
           <Lock size={26} />
         </div>
@@ -384,27 +384,27 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin }) {
   const canAddLogin = user?.role === 'ADMIN' || ['ADMINISTRATOR', 'READ_WRITE'].includes(selectedFolderAccess);
 
   return (
-    <div className="p-8">
-      <div className="mb-8 flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Selected password group</p>
-          <div className="flex items-center gap-3 mt-1">
-            <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+    <div className="p-4 sm:p-6 lg:p-8 min-w-0">
+      <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 min-w-0">
+        <div className="min-w-0 flex-1">
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Selected password group</p>
+          <div className="flex items-center gap-2.5 mt-1 flex-wrap min-w-0">
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100 truncate">
               {selectedPassword.name}
             </h2>
             {selectedPassword.isSensitive && (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 text-amber-800 px-3 py-1 text-xs font-semibold dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 text-amber-800 px-2.5 py-0.5 text-xs font-semibold dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shrink-0">
                 <Lock size={12} />
                 Secured
               </span>
             )}
           </div>
-          <p className="text-slate-500 mt-2 dark:text-slate-400">
+          <p className="text-xs sm:text-sm text-slate-500 mt-1 dark:text-slate-400">
             {sameNamePasswords.length} account
             {sameNamePasswords.length > 1 ? 's' : ''}
           </p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center flex-wrap gap-2 shrink-0">
           {canAddLogin && onAddLogin && (
             <button
               onClick={() =>
@@ -414,17 +414,17 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin }) {
                   tags: (selectedPassword.tags || []).map((t) => t.tag?.name).filter(Boolean),
                 })
               }
-              className="h-10 px-5 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold inline-flex items-center gap-1.5"
+              className="h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold inline-flex items-center gap-1.5 transition shadow-sm"
               title="Add another login to this service"
             >
-              <Plus size={16} />
-              Add Login
+              <Plus size={15} />
+              <span>Add Login</span>
             </button>
           )}
           {user?.role === 'ADMIN' && onShareVault && selectedVault && (
             <button
               onClick={onShareVault}
-              className="h-10 px-5 rounded-full border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300"
+              className="h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-semibold dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 transition shadow-sm"
             >
               Share Vault
             </button>
@@ -459,7 +459,7 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin }) {
           return (
             <div
               key={item.id}
-              className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800"
+              className="rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800 min-w-0"
             >
               <div className="flex items-start justify-between gap-5 mb-5">
                 <div className="flex items-center gap-2">
@@ -865,14 +865,14 @@ function CopyIconButton({ onCopy, title = 'Copy to clipboard' }) {
 
 function DetailRow({ label, value, action, isMono = false }) {
   return (
-    <div className="grid grid-cols-[120px_1fr_80px] items-center border-b border-slate-200 last:border-b-0 px-4 py-3.5 dark:border-slate-700/80">
-      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{label}</p>
+    <div className="grid grid-cols-[90px_1fr_auto] sm:grid-cols-[120px_1fr_auto] gap-2 items-center border-b border-slate-200 last:border-b-0 px-3 sm:px-4 py-3 sm:py-3.5 dark:border-slate-700/80 min-w-0">
+      <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 shrink-0">{label}</p>
 
-      <div className={`text-sm text-slate-900 break-all dark:text-slate-100 ${isMono ? 'font-mono tracking-wider select-all' : ''}`}>
+      <div className={`text-xs sm:text-sm text-slate-900 break-all min-w-0 dark:text-slate-100 ${isMono ? 'font-mono tracking-wider select-all' : ''}`}>
         {value}
       </div>
 
-      <div className="flex justify-end">{action}</div>
+      <div className="flex justify-end shrink-0">{action}</div>
     </div>
   );
 }

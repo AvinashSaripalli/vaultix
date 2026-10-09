@@ -60,9 +60,9 @@ function MyVaultPasswordWorkspace({
           <p className="text-sm">Add your first password, card or note to get started</p>
         </div>
       ) : (
-        <div className="grid grid-cols-[320px_1fr] min-h-[600px]">
+        <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] lg:grid-cols-[280px_1fr] xl:grid-cols-[300px_1fr] min-h-[600px] divide-y md:divide-y-0 md:divide-x divide-slate-200 dark:divide-slate-700 min-w-0">
           {/* Left Side */}
-          <div className="border-r border-slate-200 p-5 bg-slate-50/50 dark:border-slate-700 dark:bg-slate-800/50">
+          <div className="p-3.5 sm:p-5 bg-slate-50/50 dark:bg-slate-800/50 min-w-0">
             <div className="relative mb-5">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
@@ -93,25 +93,25 @@ function MyVaultPasswordWorkspace({
                     <button
                       key={item.id}
                       onClick={() => handleSelect(item.id)}
-                      className={`w-full text-left rounded-xl border p-4 transition ${
+                      className={`w-full text-left rounded-xl border p-4 transition min-w-0 ${
                         selectedPassword?.id === item.id
                           ? 'bg-indigo-50 border-indigo-200 dark:bg-indigo-900/20 dark:border-indigo-800'
                           : 'bg-white border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-slate-700'
                       }`}
                     >
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 min-w-0">
                         {item.parentId && (
                           <span className="text-slate-400 dark:text-slate-500 text-xs">↳</span>
                         )}
-                        <h3 className="font-semibold text-slate-900 truncate flex items-center gap-1.5 flex-1 dark:text-slate-100">
+                        <h3 className="font-semibold text-slate-900 truncate flex items-center gap-1.5 flex-1 dark:text-slate-100 min-w-0">
                           {item.name}
                         </h3>
                         {item.isSensitive && (
                           <Lock size={12} className="text-emerald-600 shrink-0 dark:text-emerald-400" />
                         )}
                       </div>
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <p className="text-sm text-slate-500 truncate dark:text-slate-400">
+                      <div className="flex items-center gap-2 mt-1.5 min-w-0">
+                        <p className="text-sm text-slate-500 truncate dark:text-slate-400 min-w-0 flex-1">
                           {item.login || meta.label}
                         </p>
                         <ItemTypeBadge type={item.type} />
@@ -124,7 +124,7 @@ function MyVaultPasswordWorkspace({
           </div>
 
           {/* Right Side */}
-          <div className="p-8">
+          <div className="p-4 sm:p-6 lg:p-8 min-w-0">
             {!selectedPassword ? (
               <div className="h-full min-h-[460px] flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 text-center">
                 <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-3 shadow-sm">

@@ -216,7 +216,7 @@ function FolderHistoryPanel({ open, onClose, folderId }) {
             </div>
           </div> */}
 
-          <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] lg:grid-cols-[300px_1fr] gap-4 sm:gap-6 min-w-0">
             <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
               <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex items-center gap-2 bg-white dark:bg-slate-800">
                 <Users size={18} className="text-slate-600 dark:text-slate-300" />

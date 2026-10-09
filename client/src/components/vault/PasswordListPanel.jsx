@@ -89,22 +89,22 @@ function PasswordListPanel() {
   }, [paginatedGroups, selectedPasswordId, selectedFolderId, dispatch]);
 
   return (
-    <div className="bg-white p-6 border-r border-slate-200 dark:bg-slate-800 dark:border-slate-700 flex flex-col justify-between min-h-[640px]">
+    <div className="bg-white p-3.5 sm:p-5 border-r border-slate-200 dark:bg-slate-800 dark:border-slate-700 flex flex-col justify-between min-h-[640px] min-w-0">
       <div>
-        <div className="relative mb-4">
-          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+        <div className="relative mb-3.5">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             placeholder="Search passwords..."
             value={searchTerm}
             onChange={(e) => dispatch(setSearchTerm(e.target.value))}
-            className="w-full h-[48px] rounded-2xl border border-slate-200 bg-slate-50 pl-10 pr-5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:bg-slate-800/50 dark:border-slate-700"
+            className="w-full h-10 sm:h-11 rounded-xl sm:rounded-2xl border border-slate-200 bg-slate-50 pl-9 pr-4 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:bg-slate-800/50 dark:border-slate-700"
           />
         </div>
 
-        <div className="flex items-center justify-between mb-5">
-          <div>
-            <p className="text-[24px] font-bold text-slate-900 leading-tight dark:text-slate-100">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <div className="min-w-0">
+            <p className="text-lg sm:text-xl font-bold text-slate-900 leading-tight dark:text-slate-100 truncate">
               {totalGroups} password{totalGroups !== 1 ? 's' : ''}
             </p>
             {totalGroups > 0 && !isAll && (
@@ -135,7 +135,7 @@ function PasswordListPanel() {
           )}
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {paginatedGroups.map((group) => {
             const active = group.items.some(
               (item) => item.id === selectedPasswordId
@@ -145,17 +145,17 @@ function PasswordListPanel() {
               <button
                 key={group.name}
                 onClick={() => dispatch(selectPassword(group.items[0].id))}
-                className={`w-full text-left px-5 py-4 rounded-2xl border transition ${
+                className={`w-full text-left px-3.5 sm:px-4 py-3 sm:py-3.5 rounded-xl border transition min-w-0 ${
                   active
                     ? 'bg-indigo-50 border-indigo-200 shadow-sm dark:bg-indigo-900/20 dark:border-indigo-800'
                     : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:hover:border-slate-600 dark:hover:bg-slate-700'
                 }`}
               >
-                <div className="text-[17px] font-bold text-slate-900 dark:text-slate-100 truncate">
+                <div className="text-sm sm:text-[15px] font-semibold text-slate-900 dark:text-slate-100 truncate">
                   {group.name}
                 </div>
 
-                <div className="text-xs text-slate-500 mt-1 dark:text-slate-400">
+                <div className="text-xs text-slate-500 mt-0.5 dark:text-slate-400">
                   {group.items.length} account{group.items.length > 1 ? 's' : ''}
                 </div>
               </button>

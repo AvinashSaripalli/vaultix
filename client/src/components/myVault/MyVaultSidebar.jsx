@@ -36,7 +36,7 @@ function MyVaultSidebar({
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-3 min-h-[600px] dark:bg-slate-800 dark:border-slate-700 shadow-sm flex flex-col">
+    <div className="bg-white rounded-2xl border border-slate-200 p-3 min-h-[600px] dark:bg-slate-800 dark:border-slate-700 shadow-sm flex flex-col min-w-0">
       <div className="px-2 py-1.5 mb-1">
         <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
           Personal Folders

@@ -606,16 +606,16 @@ function VaultPage() {
 
   return (
     <AppLayout>
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden dark:bg-slate-800 dark:border-slate-700 shadow-sm">
-        <div className="px-8 py-6 border-b border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
-          <div className="flex items-center justify-between gap-6">
-            <div>
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden dark:bg-slate-800 dark:border-slate-700 shadow-sm min-w-0">
+        <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5 border-b border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+            <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
                 Company Vault
               </p>
 
               <h1
-                className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 mt-1 dark:text-slate-100 truncate max-w-2xl"
+                className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-slate-900 mt-1 dark:text-slate-100 truncate max-w-2xl"
                 title={selectedFolder?.name || selectedVault?.name || 'Company Vault'}
               >
                 {selectedFolder?.name || selectedVault?.name || 'Company Vault'}
@@ -624,11 +624,11 @@ function VaultPage() {
               <FolderMembersSummary onClick={() => setUsersOpen(true)} />
             </div>
 
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center flex-wrap gap-2 shrink-0">
               {selectedFolder && canShareFolder && (
                 <button
                   onClick={() => setShareOpen(true)}
-                  className="h-10 px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 transition shadow-sm"
+                  className="h-9 sm:h-10 px-3 sm:px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-semibold dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 transition shadow-sm"
                 >
                   Share Folder
                 </button>
@@ -637,7 +637,7 @@ function VaultPage() {
               {selectedFolder && canAddPassword && (
                 <button
                   onClick={() => dispatch(openAddPasswordModal())}
-                  className="h-10 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition shadow-sm"
+                  className="h-9 sm:h-10 px-3 sm:px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold transition shadow-sm"
                 >
                   Add password
                 </button>
@@ -645,14 +645,14 @@ function VaultPage() {
 
               <button
                 onClick={() => setTrashOpen((prev) => !prev)}
-                className={`h-10 px-4 rounded-xl border text-sm font-semibold flex items-center gap-2 relative transition shadow-sm ${
+                className={`h-9 sm:h-10 px-3 sm:px-4 rounded-xl border text-xs sm:text-sm font-semibold flex items-center gap-1.5 relative transition shadow-sm ${
                   trashOpen
                     ? 'bg-red-50 border-red-300 text-red-600 dark:bg-red-900/20 dark:border-red-700 dark:text-red-400'
                     : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300'
                 }`}
               >
                 <Trash2 size={16} />
-                {trashOpen ? 'Back' : 'Trash'}
+                <span>{trashOpen ? 'Back' : 'Trash'}</span>
                 {!trashOpen && trashByVault[selectedVault?.id]?.length > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
                     {trashByVault[selectedVault.id].length}
@@ -663,14 +663,14 @@ function VaultPage() {
               <div className="relative">
                 <button
                   onClick={() => setMenuOpen((prev) => !prev)}
-                  className="w-10 h-10 rounded-xl border border-slate-200 hover:bg-slate-50 flex items-center justify-center text-slate-600 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-750 transition"
+                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-slate-200 hover:bg-slate-50 flex items-center justify-center text-slate-600 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-750 transition"
                   aria-label="More options"
                 >
                   <MoreVertical size={18} />
                 </button>
 
                 {menuOpen && (
-                  <div className="absolute right-0 top-12 w-64 bg-white border border-slate-200 rounded-2xl shadow-lg py-2 z-20 dark:bg-slate-800 dark:border-slate-600">
+                  <div className="absolute right-0 top-11 sm:top-12 w-64 bg-white border border-slate-200 rounded-2xl shadow-lg py-2 z-20 dark:bg-slate-800 dark:border-slate-600">
                     <button
                       onClick={() => {
                         setHistoryOpen(true);
@@ -902,7 +902,7 @@ function VaultPage() {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-[420px_1fr] min-h-[640px]">
+              <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] lg:grid-cols-[320px_1fr] xl:grid-cols-[360px_1fr] min-h-[640px] divide-y md:divide-y-0 md:divide-x divide-slate-200 dark:divide-slate-700 min-w-0">
                 <PasswordListPanel />
                 <PasswordDetailsPanel
                   onShareVault={() => setVaultShareOpen(true)}

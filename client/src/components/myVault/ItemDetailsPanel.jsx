@@ -315,13 +315,13 @@ function ItemDetailsPanel({
     const isSecret = field.copy || field.input === 'password';
 
     return (
-      <div key={field.key} className="border-b border-slate-200 py-4 dark:border-slate-700">
-        <div className="grid grid-cols-[140px_1fr_80px] items-center">
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{field.label}</p>
-          <p className={`text-sm text-slate-900 break-all dark:text-slate-100 ${isSecret && isRevealed ? 'font-mono tracking-wider select-all font-semibold' : ''}`}>
+      <div key={field.key} className="border-b border-slate-200 py-3.5 sm:py-4 dark:border-slate-700 min-w-0">
+        <div className="grid grid-cols-[100px_1fr_auto] sm:grid-cols-[130px_1fr_auto] gap-2 items-center min-w-0">
+          <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 shrink-0">{field.label}</p>
+          <p className={`text-xs sm:text-sm text-slate-900 break-all min-w-0 dark:text-slate-100 ${isSecret && isRevealed ? 'font-mono tracking-wider select-all font-semibold' : ''}`}>
             {display || '—'}
           </p>
-          <div className="flex justify-end items-center gap-2">
+          <div className="flex justify-end items-center gap-1.5 shrink-0">
             {field.input === 'password' && (
               <button
                 type="button"
@@ -356,10 +356,10 @@ function ItemDetailsPanel({
       : custom.value || '';
 
     return (
-      <div key={`__custom_${index}`} className="border-b border-slate-200 py-4 dark:border-slate-700">
-        <div className="grid grid-cols-[140px_1fr_80px] items-center">
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{custom.name || 'Custom Field'}</p>
-          <p className={`text-sm text-slate-900 break-all dark:text-slate-100 ${custom.sensitive && isRevealed ? 'font-mono tracking-wider select-all font-semibold' : ''}`}>
+      <div key={`__custom_${index}`} className="border-b border-slate-200 py-3.5 sm:py-4 dark:border-slate-700 min-w-0">
+        <div className="grid grid-cols-[100px_1fr_auto] sm:grid-cols-[130px_1fr_auto] gap-2 items-center min-w-0">
+          <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 shrink-0">{custom.name || 'Custom Field'}</p>
+          <p className={`text-xs sm:text-sm text-slate-900 break-all min-w-0 dark:text-slate-100 ${custom.sensitive && isRevealed ? 'font-mono tracking-wider select-all font-semibold' : ''}`}>
             {display || '—'}
           </p>
           <div className="flex justify-end items-center gap-2">
@@ -406,15 +406,15 @@ function ItemDetailsPanel({
         decrypting={decrypting}
       />
 
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 mb-6 min-w-0">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2.5 flex-wrap min-w-0">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100 truncate">
               {item.name}
             </h1>
             <ItemTypeBadge type={item.type} />
             {item.isSensitive && (
-              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium dark:bg-emerald-900/20 dark:text-emerald-400">
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium dark:bg-emerald-900/20 dark:text-emerald-400 shrink-0">
                 <Lock size={12} />
                 Secure
               </span>
@@ -423,19 +423,19 @@ function ItemDetailsPanel({
           {parent && (
             <button
               onClick={() => onSelectChild(parent.id)}
-              className="text-slate-500 mt-2 text-sm hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400"
+              className="text-slate-500 mt-1.5 text-xs sm:text-sm hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 truncate block"
             >
               Part of: {parent.name}
             </button>
           )}
           {!parent && (
-            <p className="text-slate-500 mt-2 text-sm dark:text-slate-400">
+            <p className="text-slate-500 mt-1.5 text-xs sm:text-sm dark:text-slate-400">
               {typeMeta.label} in Personal Vault
             </p>
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center flex-wrap gap-2 shrink-0">
           <button
             onClick={() => onShare(item)}
             className="w-10 h-10 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50 text-slate-600 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 transition"
@@ -476,23 +476,23 @@ function ItemDetailsPanel({
         <div>
           {hasLogin && (
             <>
-              <div className="border-b border-slate-200 py-4 dark:border-slate-700">
-                <div className="grid grid-cols-[140px_1fr_80px] items-center">
-                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Login</p>
-                  <p className="text-sm text-slate-900 truncate dark:text-slate-100">{item.login}</p>
-                  <div className="flex justify-end items-center gap-2">
+              <div className="border-b border-slate-200 py-3.5 sm:py-4 dark:border-slate-700 min-w-0">
+                <div className="grid grid-cols-[100px_1fr_auto] sm:grid-cols-[130px_1fr_auto] gap-2 items-center min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 shrink-0">Login</p>
+                  <p className="text-xs sm:text-sm text-slate-900 truncate dark:text-slate-100 min-w-0">{item.login}</p>
+                  <div className="flex justify-end items-center gap-1.5 shrink-0">
                     <CopyIconButton onCopy={() => copyText(item.login, 'Login')} title="Copy login" />
                   </div>
                 </div>
               </div>
 
-              <div className="border-b border-slate-200 py-4 dark:border-slate-700">
-                <div className="grid grid-cols-[140px_1fr_80px] items-center">
-                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Password</p>
-                  <p className={`text-sm text-slate-900 break-all dark:text-slate-100 ${showPassword ? 'font-mono tracking-wider select-all font-semibold' : ''}`}>
+              <div className="border-b border-slate-200 py-3.5 sm:py-4 dark:border-slate-700 min-w-0">
+                <div className="grid grid-cols-[100px_1fr_auto] sm:grid-cols-[130px_1fr_auto] gap-2 items-center min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 shrink-0">Password</p>
+                  <p className={`text-xs sm:text-sm text-slate-900 break-all min-w-0 dark:text-slate-100 ${showPassword ? 'font-mono tracking-wider select-all font-semibold' : ''}`}>
                     {showPassword ? decryptedPassword || '' : '••••••••••••'}
                   </p>
-                  <div className="flex justify-end items-center gap-2">
+                  <div className="flex justify-end items-center gap-1.5 shrink-0">
                     <button
                       type="button"
                       onClick={handlePasswordEye}
@@ -507,22 +507,22 @@ function ItemDetailsPanel({
                 </div>
               </div>
 
-              <div className="border-b border-slate-200 py-5 dark:border-slate-700">
-                <div className="grid grid-cols-[140px_1fr_80px] items-center">
-                  <p className="text-slate-500 dark:text-slate-400">URL</p>
+              <div className="border-b border-slate-200 py-3.5 sm:py-5 dark:border-slate-700 min-w-0">
+                <div className="grid grid-cols-[100px_1fr_auto] sm:grid-cols-[130px_1fr_auto] gap-2 items-center min-w-0">
+                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 shrink-0">URL</p>
                   {item.url ? (
                     <a
                       href={item.url.startsWith('http') ? item.url : `https://${item.url}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="truncate text-blue-600 hover:text-blue-800 hover:underline dark:text-blue-400 dark:hover:text-blue-400"
+                      className="truncate text-xs sm:text-sm text-blue-600 hover:text-blue-800 hover:underline dark:text-blue-400 dark:hover:text-blue-400 min-w-0"
                     >
                       {item.url}
                     </a>
                   ) : (
-                    <p className="text-slate-900 dark:text-slate-100">No URL</p>
+                    <p className="text-xs sm:text-sm text-slate-900 dark:text-slate-100">No URL</p>
                   )}
-                  <div className="flex justify-end items-center gap-3">
+                  <div className="flex justify-end items-center gap-2 shrink-0">
                     {item.url && (
                       <a
                         href={item.url.startsWith('http') ? item.url : `https://${item.url}`}
@@ -530,7 +530,7 @@ function ItemDetailsPanel({
                         rel="noreferrer"
                         className="text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
                       >
-                        <ExternalLink size={17} />
+                        <ExternalLink size={16} />
                       </a>
                     )}
                   </div>
@@ -553,10 +553,10 @@ function ItemDetailsPanel({
           {customFields.length > 0 && customFields.map(renderCustomField)}
 
           {(item.encryptedNote || item.type === 'SECURE_NOTE') && (
-            <div className="border-b border-slate-200 py-5 dark:border-slate-700">
-              <div className="grid grid-cols-[140px_1fr_40px] items-start">
-                <p className="text-slate-500 dark:text-slate-400">Note</p>
-                <p className="text-slate-900 break-words dark:text-slate-100">
+            <div className="border-b border-slate-200 py-3.5 sm:py-5 dark:border-slate-700 min-w-0">
+              <div className="grid grid-cols-[100px_1fr_auto] sm:grid-cols-[130px_1fr_auto] gap-2 items-start min-w-0">
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 shrink-0">Note</p>
+                <p className="text-xs sm:text-sm text-slate-900 break-words dark:text-slate-100 min-w-0">
                   {decryptedNote || '—'}
                 </p>
               </div>
@@ -564,14 +564,14 @@ function ItemDetailsPanel({
           )}
 
           {item.tags?.length > 0 && (
-            <div className="border-b border-slate-200 py-5 dark:border-slate-700">
-              <div className="grid grid-cols-[140px_1fr_40px] items-start">
-                <p className="text-slate-500 dark:text-slate-400">Tags</p>
-                <div className="flex flex-wrap gap-1.5">
+            <div className="border-b border-slate-200 py-3.5 sm:py-5 dark:border-slate-700 min-w-0">
+              <div className="grid grid-cols-[100px_1fr_auto] sm:grid-cols-[130px_1fr_auto] gap-2 items-start min-w-0">
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 shrink-0">Tags</p>
+                <div className="flex flex-wrap gap-1.5 min-w-0">
                   {item.tags.map((tagItem) => (
                     <span
                       key={tagItem.tag?.id || tagItem.tag?.name}
-                      className="inline-flex items-center px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-medium dark:bg-indigo-900/20 dark:text-indigo-400"
+                      className="inline-flex items-center px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-medium dark:bg-indigo-900/20 dark:text-indigo-400"
                     >
                       {tagItem.tag?.name}
                     </span>
