@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { KeyRound, Lock, X, Eye, EyeOff, FolderDown } from 'lucide-react';
+import { KeyRound, Lock, X, Eye, EyeOff, FolderDown, Sparkles } from 'lucide-react';
 import { useSelector } from 'react-redux';
-import TagInput from '../common/TagInput';
-import ItemFields from './ItemFields';
-import CustomFieldsInput from '../common/CustomFieldsInput';
 import ModalPortal from '../common/ModalPortal';
+import ItemFormFields from '../common/ItemFormFields';
 import { encryptText, encryptFields } from '../../utils/crypto';
+import { generatePassword } from '../../utils/passwordGenerator';
 import { estimateStrength, checkBreachedPassword } from '../../utils/breachCheck';
 import { isPasswordAtRisk } from '../../utils/passwordRisk';
 import {
@@ -235,142 +234,19 @@ function AddMyVaultPasswordModal({
         </div>
 
         <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">
-                Item Type
-              </label>
-              <select
-                value={formData.type}
-                onChange={(e) => changeType(e.target.value)}
-                className={inputClass}
-              >
-                {ITEM_TYPES.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">
-                Folder
-              </label>
-              <select
-                value={formData.folderId}
-                onChange={(e) => updateField('folderId', e.target.value)}
-                disabled={!!parent}
-                className={inputClass}
-              >
-                <option value="">Select Folder</option>
-                {folders.map((folder) => (
-                  <option key={folder.id} value={folder.id}>
-                    {folder.name}
-                  </option>
-                ))}
-              </select>
-              {parent && (
-                <p className="text-xs text-slate-400 mt-1 flex items-center gap-1 dark:text-slate-500">
-                  <FolderDown size={12} />
-                  Stored in the same folder as {parent.name}
-                </p>
-              )}
-            </div>
-          </div>
-
-          <input
-            type="text"
-            value={formData.name}
-            onChange={(e) => updateField('name', e.target.value)}
-            placeholder={getTypePlaceholder(formData.type)}
-            className={inputClass}
-          />
-
-          {formData.type === 'LOGIN' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input
-                type="text"
-                value={formData.login}
-                onChange={(e) => updateField('login', e.target.value)}
-                placeholder="Login / Email"
-                className={inputClass}
-              />
-
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.encryptedPassword}
-                  onChange={(e) => updateField('encryptedPassword', e.target.value)}
-                  placeholder="Password"
-                  className={`${inputClass} pr-10`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300"
-                >
-                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-                </button>
-              </div>
-
-              <input
-                type="text"
-                value={formData.url}
-                onChange={(e) => updateField('url', e.target.value)}
-                placeholder="URL"
-                className={inputClass}
-              />
-
-              <input
-                type="text"
-                value={formData.fields?.totpSecret || ''}
-                onChange={(e) => updateTypeField('totpSecret', e.target.value)}
-                placeholder="TOTP / Authenticator secret (optional)"
-                className={inputClass}
-              />
-            </div>
-          ) : (
-            <ItemFields
-              type={formData.type}
-              values={formData.fields}
-              onChange={updateTypeField}
-              inputClass={inputClass}
-            />
-          )}
-
-          <CustomFieldsInput
-            fields={formData.customFields}
-            onChange={(newFields) => updateField('customFields', newFields)}
+          <ItemFormFields
+            formData={formData}
+            onChange={(field, val) => updateField(field, val)}
+            onChangeType={changeType}
+            onChangeFields={updateTypeField}
+            onChangeCustomFields={(fields) => updateField('customFields', fields)}
+            folders={folders}
+            showFolderSelect={!parent}
+            showConfirmPassword={false}
+            passwordFieldName="encryptedPassword"
+            noteFieldName="encryptedNote"
             inputClass={inputClass}
           />
-
-          <TagInput
-            tags={formData.tags}
-            setTags={(newTags) => updateField('tags', newTags)}
-          />
-
-          <textarea
-            rows={2}
-            value={formData.encryptedNote}
-            onChange={(e) => updateField('encryptedNote', e.target.value)}
-            placeholder={formData.type === 'SECURE_NOTE' ? 'Note contents' : 'Note'}
-            className={`${inputClass} resize-none`}
-          />
-
-          {formData.type !== 'SECURE_NOTE' && (
-            <label className="flex items-center gap-3 cursor-pointer select-none rounded-lg border border-slate-300 px-4 py-3 dark:border-slate-600">
-              <input
-                type="checkbox"
-                checked={formData.isSensitive}
-                onChange={(e) => updateField('isSensitive', e.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-              />
-              <span className="text-sm text-slate-700 dark:text-slate-300">
-                Secure — always ask master password before revealing this item
-              </span>
-            </label>
-          )}
 
           {formError && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 dark:border-red-800 dark:bg-red-900/20">

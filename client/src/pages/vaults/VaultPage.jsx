@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
 
@@ -126,110 +126,130 @@ function VaultPage() {
     }
   }, [dispatch, trashOpen, selectedVault?.id]);
 
+  const healedItemIdsRef = useRef(new Set());
+  const isHealingRef = useRef(false);
+
   useEffect(() => {
     if (
       !selectedVault?.id ||
       !sessionRsaPrivateKey ||
-      !sessionRsaPublicKey
+      !sessionRsaPublicKey ||
+      isHealingRef.current
     ) return;
 
-    const itemsMissingMyKey = passwords.filter(
+    const unhealedItems = passwords.filter((p) => !healedItemIdsRef.current.has(p.id));
+    if (unhealedItems.length === 0) return;
+
+    const itemsMissingMyKey = unhealedItems.filter(
       (p) => !p.myWrappedKey && p.encryptedPassword
     );
-    const itemsWithMyKey = passwords.filter((p) => p.myWrappedKey);
+    const itemsWithMyKey = unhealedItems.filter((p) => p.myWrappedKey);
 
     if (itemsWithMyKey.length === 0 && itemsMissingMyKey.length === 0) return;
 
     let cancelled = false;
+    isHealingRef.current = true;
 
     const heal = async () => {
-      const updates = [];
+      try {
+        const updates = [];
 
-      // 1) Self-heal: I hold the item key — wrap it for any authorized user
-      //    who is missing an entry (admins, department members, later-added members).
-      for (const item of itemsWithMyKey) {
-        if (cancelled) return;
+        // 1) Self-heal: I hold the item key — wrap it for any authorized user
+        //    who is missing an entry (admins, department members, later-added members).
+        for (const item of itemsWithMyKey) {
+          if (cancelled) return;
+          healedItemIdsRef.current.add(item.id);
 
-        try {
-          const recipientIds = await getWrapRecipients(item.folderId, user?.id);
-          const have = new Set(item.wrappedUserIds || [user?.id]);
-          const missing = recipientIds.filter((uid) => !have.has(uid));
+          try {
+            const recipientIds = await getWrapRecipients(item.folderId, user?.id);
+            const have = new Set(item.wrappedUserIds || [user?.id]);
+            const missing = recipientIds.filter((uid) => !have.has(uid));
 
-          if (missing.length === 0) continue;
+            if (missing.length === 0) continue;
 
-          const aesKeyJwk = await unwrapItemKey(item.myWrappedKey, sessionRsaPrivateKey);
-          const additions = await wrapItemKeysForUsers(aesKeyJwk, missing);
+            const aesKeyJwk = await unwrapItemKey(item.myWrappedKey, sessionRsaPrivateKey);
+            const additions = await wrapItemKeysForUsers(aesKeyJwk, missing);
 
-          if (Object.keys(additions).length > 0) {
-            updates.push({ id: item.id, wrappedKeys: additions });
-          }
-        } catch {
-          // skip items that fail to re-wrap
-        }
-      }
-
-      // 2) Legacy migration: no wrapped key for me — try master-password
-      //    decryption (works when I created the item under the old scheme),
-      //    re-encrypt with a fresh AES key and wrap for all recipients.
-      for (const item of itemsMissingMyKey) {
-        if (cancelled || !sessionMasterPassword) break;
-
-        try {
-          const plainPassword = await safeDecryptText(
-            item.encryptedPassword, sessionMasterPassword, user?.encryptionSalt
-          );
-
-          if (!plainPassword || (isEncryptedFormat(plainPassword))) {
-            continue;
-          }
-
-          const { encryptedData: reEncrypted, aesKeyJwk } = await encryptTextWithAesKey(plainPassword);
-
-          let reEncryptedNote = undefined;
-          if (item.encryptedNote) {
-            const plainNote = await safeDecryptText(
-              item.encryptedNote, sessionMasterPassword, user?.encryptionSalt
-            );
-            if (plainNote && !isEncryptedFormat(plainNote)) {
-              const { encryptedData } = await encryptTextWithAesKey(plainNote);
-              reEncryptedNote = encryptedData;
+            if (Object.keys(additions).length > 0) {
+              updates.push({ id: item.id, wrappedKeys: additions });
             }
+          } catch {
+            // skip items that fail to re-wrap
           }
 
-          const recipientIds = await getWrapRecipients(item.folderId, user?.id);
-          const wrappedKeys = await wrapItemKeysForUsers(aesKeyJwk, recipientIds);
+          // Yield main thread so UI stays 100% smooth
+          await new Promise((resolve) => setTimeout(resolve, 60));
+        }
 
-          updates.push({
-            id: item.id,
-            encryptedPassword: reEncrypted,
-            ...(reEncryptedNote !== undefined && { encryptedNote: reEncryptedNote }),
-            wrappedKeys,
+        // 2) Legacy migration: no wrapped key for me — try master-password
+        //    decryption (works when I created the item under the old scheme),
+        //    re-encrypt with a fresh AES key and wrap for all recipients.
+        for (const item of itemsMissingMyKey) {
+          if (cancelled || !sessionMasterPassword) break;
+          healedItemIdsRef.current.add(item.id);
+
+          try {
+            const plainPassword = await safeDecryptText(
+              item.encryptedPassword, sessionMasterPassword, user?.encryptionSalt
+            );
+
+            if (!plainPassword || (isEncryptedFormat(plainPassword))) {
+              continue;
+            }
+
+            const { encryptedData: reEncrypted, aesKeyJwk } = await encryptTextWithAesKey(plainPassword);
+
+            let reEncryptedNote = undefined;
+            if (item.encryptedNote) {
+              const plainNote = await safeDecryptText(
+                item.encryptedNote, sessionMasterPassword, user?.encryptionSalt
+              );
+              if (plainNote && !isEncryptedFormat(plainNote)) {
+                const { encryptedData } = await encryptTextWithAesKey(plainNote);
+                reEncryptedNote = encryptedData;
+              }
+            }
+
+            const recipientIds = await getWrapRecipients(item.folderId, user?.id);
+            const wrappedKeys = await wrapItemKeysForUsers(aesKeyJwk, recipientIds);
+
+            updates.push({
+              id: item.id,
+              encryptedPassword: reEncrypted,
+              ...(reEncryptedNote !== undefined && { encryptedNote: reEncryptedNote }),
+              wrappedKeys,
+            });
+          } catch {
+            // skip
+          }
+
+          // Yield main thread so PBKDF2 doesn't block interactions
+          await new Promise((resolve) => setTimeout(resolve, 80));
+        }
+
+        if (cancelled || updates.length === 0) return;
+
+        try {
+          await api.post('/passwords/batch-wrap', {
+            wrappedPasswords: updates,
+          }, {
+            headers: { Authorization: `Bearer ${token}` },
           });
         } catch {
-          // skip
+          // best-effort
         }
-      }
-
-      if (cancelled || updates.length === 0) return;
-
-      try {
-        await api.post('/passwords/batch-wrap', {
-          wrappedPasswords: updates,
-        }, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!cancelled) {
-          dispatch(fetchPasswordsByVault(selectedVault.id));
-        }
-      } catch {
-        // best-effort
+      } finally {
+        isHealingRef.current = false;
       }
     };
 
     heal();
 
-    return () => { cancelled = true; };
-  }, [passwords, selectedVault?.id, sessionRsaPrivateKey, sessionRsaPublicKey, sessionMasterPassword, user, token, dispatch]);
+    return () => {
+      cancelled = true;
+      isHealingRef.current = false;
+    };
+  }, [passwords, selectedVault?.id, sessionRsaPrivateKey, sessionRsaPublicKey, sessionMasterPassword, user, token]);
 
   const folderPasswords = useMemo(() => {
     if (!selectedFolder?.id) return [];
@@ -594,7 +614,10 @@ function VaultPage() {
                 Company Vault
               </p>
 
-              <h1 className="text-[44px] leading-none font-bold text-slate-900 mt-1 dark:text-slate-100">
+              <h1
+                className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 mt-1 dark:text-slate-100 truncate max-w-2xl"
+                title={selectedFolder?.name || selectedVault?.name || 'Company Vault'}
+              >
                 {selectedFolder?.name || selectedVault?.name || 'Company Vault'}
               </h1>
 

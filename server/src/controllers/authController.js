@@ -626,17 +626,18 @@ const me = async (req, res) => {
 
 const setMasterPassword = async (req, res) => {
   try {
-    const { masterPassword, hint } = req.body;
+    const { authKey, masterPassword, hint } = req.body;
+    const valueToHash = authKey || masterPassword;
 
-    if (!masterPassword) {
-      return res.status(400).json({ message: 'Master password is required' });
+    if (!valueToHash) {
+      return res.status(400).json({ message: 'Master password or auth key is required' });
     }
 
-    if (masterPassword.length < 8) {
+    if (masterPassword && masterPassword.length < 8) {
       return res.status(400).json({ message: 'Master password must be at least 8 characters' });
     }
 
-    if (!PASSWORD_REGEX.test(masterPassword)) {
+    if (masterPassword && !PASSWORD_REGEX.test(masterPassword)) {
       return res.status(400).json({
         message: 'Master password must include uppercase, lowercase, number, and special character',
       });
@@ -646,7 +647,7 @@ const setMasterPassword = async (req, res) => {
       return res.status(400).json({ message: 'Hint must be under 100 characters' });
     }
 
-    const masterPasswordHash = await bcrypt.hash(masterPassword, 12);
+    const masterPasswordHash = await bcrypt.hash(valueToHash, 12);
 
     await prisma.user.update({
       where: { id: req.user.id },
@@ -925,10 +926,10 @@ const resetPassword = async (req, res) => {
 
 const verifyMasterPassword = async (req, res) => {
   try {
-    const { masterPassword } = req.body;
+    const { authKey, masterPassword, legacyMasterPassword } = req.body;
 
-    if (!masterPassword) {
-      return res.status(400).json({ message: 'Master password is required' });
+    if (!authKey && !masterPassword && !legacyMasterPassword) {
+      return res.status(400).json({ message: 'Master password or auth key is required' });
     }
 
     const user = await prisma.user.findUnique({
@@ -939,13 +940,32 @@ const verifyMasterPassword = async (req, res) => {
       return res.status(400).json({ message: 'Master password not set' });
     }
 
-    const isMatch = await bcrypt.compare(masterPassword, user.masterPasswordHash);
-
-    if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid master password' });
+    // 1. Zero-knowledge verification via derived authKey:
+    if (authKey) {
+      const isMatch = await bcrypt.compare(authKey, user.masterPasswordHash);
+      if (isMatch) {
+        return res.json({ verified: true });
+      }
     }
 
-    res.json({ verified: true });
+    // 2. Backward compatibility fallback for legacy accounts:
+    const candidateLegacy = legacyMasterPassword || masterPassword;
+    if (candidateLegacy) {
+      const isLegacyMatch = await bcrypt.compare(candidateLegacy, user.masterPasswordHash);
+      if (isLegacyMatch) {
+        // Transparent auto-migration: if authKey was provided, upgrade hash to zero-knowledge AuthKey!
+        if (authKey) {
+          const newHash = await bcrypt.hash(authKey, 12);
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { masterPasswordHash: newHash },
+          });
+        }
+        return res.json({ verified: true });
+      }
+    }
+
+    return res.status(401).json({ message: 'Invalid master password' });
   } catch (error) {
     console.error('Verify master password error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -954,12 +974,14 @@ const verifyMasterPassword = async (req, res) => {
 
 const changeMasterPassword = async (req, res) => {
   try {
-    const { currentMasterPassword, newMasterPassword, hint } = req.body;
+    const {
+      currentAuthKey,
+      newAuthKey,
+      currentMasterPassword,
+      newMasterPassword,
+      hint,
+    } = req.body;
     const userId = req.user.id;
-
-    if (!currentMasterPassword || !newMasterPassword) {
-      return res.status(400).json({ message: 'Current and new master password are required' });
-    }
 
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
@@ -970,22 +992,25 @@ const changeMasterPassword = async (req, res) => {
       return res.status(400).json({ message: 'Master password not set' });
     }
 
-    const isMatch = await bcrypt.compare(currentMasterPassword, user.masterPasswordHash);
+    // Verify current master password (try authKey first, legacy fallback):
+    let isMatch = false;
+    if (currentAuthKey) {
+      isMatch = await bcrypt.compare(currentAuthKey, user.masterPasswordHash);
+    }
+    if (!isMatch && currentMasterPassword) {
+      isMatch = await bcrypt.compare(currentMasterPassword, user.masterPasswordHash);
+    }
+
     if (!isMatch) {
       return res.status(400).json({ message: 'Current master password is incorrect' });
     }
 
-    if (newMasterPassword.length < 8) {
-      return res.status(400).json({ message: 'New master password must be at least 8 characters' });
+    const targetNewValue = newAuthKey || newMasterPassword;
+    if (!targetNewValue) {
+      return res.status(400).json({ message: 'New master password is required' });
     }
 
-    if (!PASSWORD_REGEX.test(newMasterPassword)) {
-      return res.status(400).json({
-        message: 'New master password must include uppercase, lowercase, number, and special character',
-      });
-    }
-
-    const masterPasswordHash = await bcrypt.hash(newMasterPassword, 12);
+    const masterPasswordHash = await bcrypt.hash(targetNewValue, 12);
     await prisma.user.update({
       where: { id: userId },
       data: {
@@ -1192,9 +1217,9 @@ const resetMasterPasswordWithRecoveryKey = async (req, res) => {
     }
 
     // Re-encrypt the same private key with the new master password so the
-    // existing key pair (and therefore all vault data) is preserved.
-    const encryptedPrivateKey = encryptEnvelope(privateKeyJwk, newMasterPassword);
-    const masterPasswordHash = await bcrypt.hash(newMasterPassword, 12);
+    const { newAuthKey } = req.body;
+    const valueToHash = newAuthKey || newMasterPassword;
+    const masterPasswordHash = await bcrypt.hash(valueToHash, 12);
 
     const encryptedPrivateKeyParsed =
       typeof encryptedPrivateKey === 'string'
@@ -1296,7 +1321,8 @@ const resetMasterPassword = async (req, res) => {
       return res.status(400).json({ message: 'Hint must be under 100 characters' });
     }
 
-    const masterPasswordHash = await bcrypt.hash(newMasterPassword, 12);
+    const valueToHash = newAuthKey || newMasterPassword;
+    const masterPasswordHash = await bcrypt.hash(valueToHash, 12);
 
     await prisma.$transaction(async (tx) => {
       await tx.user.update({

@@ -38,41 +38,44 @@ const createFolder = async (req, res) => {
     }
 
     const folderId = await generateId('folder');
+    const activityId = await generateId('activityLog');
 
-    const folder = await prisma.folder.create({
-      data: {
-        id: folderId,
-        name,
-        vaultId,
-        parentId: null,
-        wrappedKeys: wrappedKeys || null,
-      },
-      include: {
-        permissions: {
-          include: {
-            user: {
-              select: { id: true, fullName: true, email: true },
+    const folder = await prisma.$transaction(async (tx) => {
+      const createdFolder = await tx.folder.create({
+        data: {
+          id: folderId,
+          name,
+          vaultId,
+          parentId: null,
+          wrappedKeys: wrappedKeys || null,
+        },
+        include: {
+          permissions: {
+            include: {
+              user: {
+                select: { id: true, fullName: true, email: true },
+              },
             },
           },
         },
-      },
-    });
+      });
 
-    const activityId = await generateId('activityLog');
-
-    await prisma.activityLog.create({
-      data: {
-        id: activityId,
-        userId: req.user.id,
-        action: 'CREATE_FOLDER',
-        targetType: 'Folder',
-        targetId: folder.id,
-        metadata: {
-          name: folder.name,
-          vaultId,
-          folderId: folder.id,
+      await tx.activityLog.create({
+        data: {
+          id: activityId,
+          userId: req.user.id,
+          action: 'CREATE_FOLDER',
+          targetType: 'Folder',
+          targetId: createdFolder.id,
+          metadata: {
+            name: createdFolder.name,
+            vaultId,
+            folderId: createdFolder.id,
+          },
         },
-      },
+      });
+
+      return createdFolder;
     });
 
     res.status(201).json(folder);

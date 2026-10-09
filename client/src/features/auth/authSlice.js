@@ -6,6 +6,7 @@ import {
   encryptFields,
   decryptFields,
   createMasterPasswordVerifier,
+  deriveAuthKey,
   MASTER_VERIFIER_STORAGE_KEY,
   generateKeyPair,
   encryptPrivateKey,
@@ -334,9 +335,13 @@ export const changeMasterPassword = createAsyncThunk(
         await api.post('/auth/reencrypt-passwords', { passwords: reencrypted });
       }
 
+      const currentAuthKey = await deriveAuthKey(currentMasterPassword, salt);
+      const newAuthKey = await deriveAuthKey(newMasterPassword, salt);
+
       const response = await api.put('/auth/change-master-password', {
+        currentAuthKey,
+        newAuthKey,
         currentMasterPassword,
-        newMasterPassword,
         hint,
       });
 
@@ -447,11 +452,20 @@ export const setMasterPassword = createAsyncThunk(
       const token = thunkAPI.getState().auth.token || getSavedToken();
       const salt = thunkAPI.getState().auth.user?.encryptionSalt;
 
-      const response = await api.post('/auth/set-master-password', formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
+      const authKey = await deriveAuthKey(formData.masterPassword, salt);
+
+      const response = await api.post(
+        '/auth/set-master-password',
+        {
+          authKey,
+          hint: formData.hint,
         },
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       const { publicKeyJwk, privateKeyJwk } = await generateKeyPair();
       const encryptedPrivKey = await encryptPrivateKey(

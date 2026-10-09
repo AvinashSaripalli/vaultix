@@ -20,6 +20,7 @@ import {
   generateKeyPair,
   encryptPrivateKey,
   createMasterPasswordVerifier,
+  deriveAuthKey,
 } from '../../utils/crypto';
 import { setRsaPrivateKey as storeRsaPrivateKey } from '../../utils/secureSession';
 import { validateMasterPassword, validateConfirmPassword, validateHint } from '../../utils/validation';
@@ -165,10 +166,11 @@ function EnterMasterPasswordPage() {
         resetData.newMasterPassword,
         salt
       );
-
+      const newAuthKey = await deriveAuthKey(resetData.newMasterPassword, salt);
       await api.post(
         '/auth/reset-master-password',
         {
+          newAuthKey,
           newMasterPassword: resetData.newMasterPassword,
           hint: resetData.hint,
           encryptedPrivateKey,
@@ -178,9 +180,6 @@ function EnterMasterPasswordPage() {
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
-      const verifier = await createMasterPasswordVerifier(resetData.newMasterPassword, salt);
-      sessionStorage.setItem(MASTER_VERIFIER_STORAGE_KEY, verifier);
 
       storeRsaPrivateKey(privateKeyJwk);
       dispatch(setSessionMasterPassword(resetData.newMasterPassword));

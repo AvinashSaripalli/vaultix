@@ -24,20 +24,11 @@ const store = {
   })(),
 };
 
-// Restore RSA keys and session master password from sessionStorage on load.
+// Ensure no sensitive plaintext keys remain in Web Storage from previous sessions
 try {
-  const storedPrivateKey = sessionStorage.getItem(RSA_PRIVATE_KEY_KEY);
-  if (storedPrivateKey) {
-    store.rsaPrivateKey = JSON.parse(storedPrivateKey);
-  }
-  const storedPublicKey = sessionStorage.getItem(RSA_PUBLIC_KEY_KEY);
-  if (storedPublicKey) {
-    store.rsaPublicKey = JSON.parse(storedPublicKey);
-  }
-  const storedSessionMp = sessionStorage.getItem(SESSION_MASTER_PASSWORD_KEY);
-  if (storedSessionMp) {
-    store.sessionMasterPassword = storedSessionMp;
-  }
+  sessionStorage.removeItem(RSA_PRIVATE_KEY_KEY);
+  sessionStorage.removeItem(RSA_PUBLIC_KEY_KEY);
+  sessionStorage.removeItem(SESSION_MASTER_PASSWORD_KEY);
 } catch {
   // ignore
 }
@@ -64,15 +55,6 @@ export function getRsaPrivateKey() {
 
 export function setRsaPrivateKey(value) {
   store.rsaPrivateKey = value || null;
-  try {
-    if (value) {
-      sessionStorage.setItem(RSA_PRIVATE_KEY_KEY, JSON.stringify(value));
-    } else {
-      sessionStorage.removeItem(RSA_PRIVATE_KEY_KEY);
-    }
-  } catch {
-    // ignore
-  }
 }
 
 export function getRsaPublicKey() {
@@ -81,15 +63,6 @@ export function getRsaPublicKey() {
 
 export function setRsaPublicKey(value) {
   store.rsaPublicKey = value || null;
-  try {
-    if (value) {
-      sessionStorage.setItem(RSA_PUBLIC_KEY_KEY, JSON.stringify(value));
-    } else {
-      sessionStorage.removeItem(RSA_PUBLIC_KEY_KEY);
-    }
-  } catch {
-    // ignore
-  }
 }
 
 export function getSessionMasterPassword() {
@@ -98,15 +71,6 @@ export function getSessionMasterPassword() {
 
 export function setSessionMasterPassword(value) {
   store.sessionMasterPassword = value || null;
-  try {
-    if (value) {
-      sessionStorage.setItem(SESSION_MASTER_PASSWORD_KEY, value);
-    } else {
-      sessionStorage.removeItem(SESSION_MASTER_PASSWORD_KEY);
-    }
-  } catch {
-    // ignore
-  }
 }
 
 export function isMasterVerified() {

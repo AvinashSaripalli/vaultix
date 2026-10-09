@@ -2,13 +2,16 @@ import api from '../services/api';
 import {
   createMasterPasswordVerifier,
   verifyMasterPasswordLocally,
+  deriveAuthKey,
   MASTER_VERIFIER_STORAGE_KEY,
 } from './crypto';
 
+// Keep verifier in memory
+let cachedVerifier = null;
+
 async function saveVerifier(masterPassword, salt) {
   try {
-    const verifier = await createMasterPasswordVerifier(masterPassword, salt);
-    sessionStorage.setItem(MASTER_VERIFIER_STORAGE_KEY, verifier);
+    cachedVerifier = await createMasterPasswordVerifier(masterPassword, salt);
   } catch {
     // unable to persist the verifier - local fallback still applies
   }
@@ -20,9 +23,9 @@ export async function verifyMasterPassword(
   { verifier, samples = [] } = {}
 ) {
   const effectiveVerifier =
-    verifier === undefined
-      ? sessionStorage.getItem(MASTER_VERIFIER_STORAGE_KEY)
-      : verifier;
+    verifier !== undefined
+      ? verifier
+      : (cachedVerifier || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(MASTER_VERIFIER_STORAGE_KEY) : null));
 
   const local = await verifyMasterPasswordLocally(enteredPassword, salt, {
     verifier: effectiveVerifier,
@@ -44,12 +47,16 @@ export async function verifyMasterPassword(
   }
 
   try {
-    // This endpoint returns 401 when the entered master password is wrong —
-    // NOT because the session token expired. Mark it so the axios interceptor
-    // does not attempt a token refresh or force a logout on that 401.
+    // Derive Zero-Knowledge AuthKey:
+    const authKey = await deriveAuthKey(enteredPassword, salt);
+
+    // Send zero-knowledge authKey with legacy masterPassword fallback for auto-migration
     await api.post(
       '/auth/verify-master-password',
-      { masterPassword: enteredPassword },
+      {
+        authKey,
+        masterPassword: enteredPassword,
+      },
       { skipAuthRefresh: true }
     );
     await saveVerifier(enteredPassword, salt);

@@ -40,33 +40,37 @@ const getOrCreateMyVault = async (req, res) => {
     });
 
     if (!vault) {
-      vault = await prisma.vault.create({
-        data: {
-          id: await generateId('vault'),
-          name: 'My Vault',
-          type: 'PERSONAL',
-          slug: makeSlug('my-vault', req.user.id),
-          ownerId: req.user.id,
-        },
-        include: {
-          folders: true,
-          passwords: true,
-        },
-      });
-
-      await prisma.activityLog.create({
-        data: {
-          id: await generateId('activityLog'),
-          userId: req.user.id,
-          action: 'CREATE_VAULT',
-          targetType: 'Vault',
-          targetId: vault.id,
-          metadata: {
-            vaultId: vault.id,
+      vault = await prisma.$transaction(async (tx) => {
+        const newVault = await tx.vault.create({
+          data: {
+            id: await generateId('vault'),
+            name: 'My Vault',
             type: 'PERSONAL',
-            personalVault: true,
+            slug: makeSlug('my-vault', req.user.id),
+            ownerId: req.user.id,
           },
-        },
+          include: {
+            folders: true,
+            passwords: true,
+          },
+        });
+
+        await tx.activityLog.create({
+          data: {
+            id: await generateId('activityLog'),
+            userId: req.user.id,
+            action: 'CREATE_VAULT',
+            targetType: 'Vault',
+            targetId: newVault.id,
+            metadata: {
+              vaultId: newVault.id,
+              type: 'PERSONAL',
+              personalVault: true,
+            },
+          },
+        });
+
+        return newVault;
       });
     }
 
@@ -238,64 +242,68 @@ const createMyVaultPassword = async (req, res) => {
       }
     }
 
-    const passwordEntry = await prisma.passwordEntry.create({
-      data: {
-        id: await generateId('passwordEntry'),
-        name,
-        login: login || '',
-        type,
-        encryptedPassword: encryptedPassword || '',
-        encryptedFields,
-        encryptedNote,
-        url,
-        colorTag,
-        vaultId: vault.id,
-        folderId,
-        parentId: parentId || null,
-        createdById: req.user.id,
-        lastUpdatedAt: new Date(),
-        strengthScore: req.body.strengthScore ?? 40,
-        isWeak: req.body.isWeak ?? false,
-        isSensitive: req.body.isSensitive ?? false,
-        tags: {
-          create: tags.map((tagName) => ({
-            tag: {
-              connectOrCreate: {
-                where: { name: tagName },
-                create: {
-                  id: generateId('tag'),
-                  name: tagName,
-                },
-              },
-            },
-          })),
-        },
-      },
-      include: {
-        folder: true,
-        parent: true,
-        tags: {
-          include: {
-            tag: true,
-          },
-        },
-      },
-    });
-
-    await prisma.activityLog.create({
-      data: {
-        id: await generateId('activityLog'),
-        userId: req.user.id,
-        action: 'CREATE_PASSWORD',
-        targetType: 'PasswordEntry',
-        targetId: passwordEntry.id,
-        metadata: {
-          name: passwordEntry.name,
+    const passwordEntry = await prisma.$transaction(async (tx) => {
+      const entry = await tx.passwordEntry.create({
+        data: {
+          id: await generateId('passwordEntry'),
+          name,
+          login: login || '',
+          type,
+          encryptedPassword: encryptedPassword || '',
+          encryptedFields,
+          encryptedNote,
+          url,
+          colorTag,
           vaultId: vault.id,
           folderId,
-          personalVault: true,
+          parentId: parentId || null,
+          createdById: req.user.id,
+          lastUpdatedAt: new Date(),
+          strengthScore: req.body.strengthScore ?? 40,
+          isWeak: req.body.isWeak ?? false,
+          isSensitive: req.body.isSensitive ?? false,
+          tags: {
+            create: tags.map((tagName) => ({
+              tag: {
+                connectOrCreate: {
+                  where: { name: tagName },
+                  create: {
+                    id: generateId('tag'),
+                    name: tagName,
+                  },
+                },
+              },
+            })),
+          },
         },
-      },
+        include: {
+          folder: true,
+          parent: true,
+          tags: {
+            include: {
+              tag: true,
+            },
+          },
+        },
+      });
+
+      await tx.activityLog.create({
+        data: {
+          id: await generateId('activityLog'),
+          userId: req.user.id,
+          action: 'CREATE_PASSWORD',
+          targetType: 'PasswordEntry',
+          targetId: entry.id,
+          metadata: {
+            name: entry.name,
+            vaultId: vault.id,
+            folderId,
+            personalVault: true,
+          },
+        },
+      });
+
+      return entry;
     });
 
     res.status(201).json(passwordEntry);
@@ -431,24 +439,26 @@ const deleteMyVaultFolder = async (req, res) => {
       return res.status(404).json({ message: 'Folder not found' });
     }
 
-    await prisma.folder.delete({
-      where: { id: folderId },
-    });
+    await prisma.$transaction(async (tx) => {
+      await tx.folder.delete({
+        where: { id: folderId },
+      });
 
-    await prisma.activityLog.create({
-      data: {
-        id: await generateId('activityLog'),
-        userId: req.user.id,
-        action: 'DELETE_FOLDER',
-        targetType: 'Folder',
-        targetId: folder.id,
-        metadata: {
-          name: folder.name,
-          vaultId: vault.id,
-          folderId: folder.id,
-          personalVault: true,
+      await tx.activityLog.create({
+        data: {
+          id: await generateId('activityLog'),
+          userId: req.user.id,
+          action: 'DELETE_FOLDER',
+          targetType: 'Folder',
+          targetId: folder.id,
+          metadata: {
+            name: folder.name,
+            vaultId: vault.id,
+            folderId: folder.id,
+            personalVault: true,
+          },
         },
-      },
+      });
     });
 
     res.json({ message: 'Folder deleted successfully' });
@@ -584,68 +594,72 @@ const updateMyVaultPassword = async (req, res) => {
       }
     }
 
-    const updatedPassword = await prisma.passwordEntry.update({
-      where: { id: passwordId },
-      data: {
-        name,
-        login,
-        type,
-        encryptedPassword,
-        encryptedFields:
-          encryptedFields !== undefined ? encryptedFields || null : undefined,
-        encryptedNote,
-        url,
-        colorTag,
-        folderId,
-        parentId: finalParentId,
-        lastUpdatedAt: new Date(),
-        strengthScore: req.body.strengthScore ?? undefined,
-        isWeak: req.body.isWeak ?? undefined,
-        isOld: req.body.isOld ?? undefined,
-        isAtRisk: req.body.isAtRisk ?? undefined,
-        isSensitive: req.body.isSensitive ?? undefined,
-        ...(cleanTags !== undefined && {
-          tags: {
-            deleteMany: {},
-            create: cleanTags.map((tagName) => ({
-              tag: {
-                connectOrCreate: {
-                  where: { name: tagName },
-                  create: {
-                    id: generateId('tag'),
-                    name: tagName,
+    const updatedPassword = await prisma.$transaction(async (tx) => {
+      const updated = await tx.passwordEntry.update({
+        where: { id: passwordId },
+        data: {
+          name,
+          login,
+          type,
+          encryptedPassword,
+          encryptedFields:
+            encryptedFields !== undefined ? encryptedFields || null : undefined,
+          encryptedNote,
+          url,
+          colorTag,
+          folderId,
+          parentId: finalParentId,
+          lastUpdatedAt: new Date(),
+          strengthScore: req.body.strengthScore ?? undefined,
+          isWeak: req.body.isWeak ?? undefined,
+          isOld: req.body.isOld ?? undefined,
+          isAtRisk: req.body.isAtRisk ?? undefined,
+          isSensitive: req.body.isSensitive ?? undefined,
+          ...(cleanTags !== undefined && {
+            tags: {
+              deleteMany: {},
+              create: cleanTags.map((tagName) => ({
+                tag: {
+                  connectOrCreate: {
+                    where: { name: tagName },
+                    create: {
+                      id: generateId('tag'),
+                      name: tagName,
+                    },
                   },
                 },
-              },
-            })),
-          },
-        }),
-      },
-      include: {
-        folder: true,
-        parent: true,
-        tags: {
-          include: {
-            tag: true,
+              })),
+            },
+          }),
+        },
+        include: {
+          folder: true,
+          parent: true,
+          tags: {
+            include: {
+              tag: true,
+            },
           },
         },
-      },
-    });
+      });
 
-    await prisma.activityLog.create({
-      data: {
-        id: await generateId('activityLog'),
-        userId: req.user.id,
-        action: 'UPDATE_PASSWORD',
-        targetType: 'PasswordEntry',
-        targetId: password.id,
-        metadata: {
-          name: updatedPassword.name,
-          vaultId: vault.id,
-          folderId,
-          personalVault: true,
+      await tx.activityLog.create({
+        data: {
+          id: await generateId('activityLog'),
+          userId: req.user.id,
+          action: 'UPDATE_PASSWORD',
+          targetType: 'PasswordEntry',
+          targetId: password.id,
+          metadata: {
+            name: updated.name,
+            vaultId: vault.id,
+            folderId,
+            personalVault: true,
+          },
         },
-      },
+      });
+
+      return updated;
     });
 
     res.json(updatedPassword);
@@ -703,26 +717,28 @@ const deleteMyVaultPassword = async (req, res) => {
     const subtreeIds = await collectMyVaultSubtreeIds(passwordId, vault.id);
     const now = new Date();
 
-    await prisma.passwordEntry.updateMany({
-      where: { id: { in: subtreeIds } },
-      data: { deletedAt: now },
-    });
+    await prisma.$transaction(async (tx) => {
+      await tx.passwordEntry.updateMany({
+        where: { id: { in: subtreeIds } },
+        data: { deletedAt: now },
+      });
 
-    await prisma.activityLog.create({
-      data: {
-        id: await generateId('activityLog'),
-        userId: req.user.id,
-        action: 'DELETE_PASSWORD',
-        targetType: 'PasswordEntry',
-        targetId: passwordId,
-        metadata: {
-          name: password.name,
-          vaultId: vault.id,
-          folderId: password.folderId,
-          personalVault: true,
-          softDelete: true,
+      await tx.activityLog.create({
+        data: {
+          id: await generateId('activityLog'),
+          userId: req.user.id,
+          action: 'DELETE_PASSWORD',
+          targetType: 'PasswordEntry',
+          targetId: passwordId,
+          metadata: {
+            name: password.name,
+            vaultId: vault.id,
+            folderId: password.folderId,
+            personalVault: true,
+            softDelete: true,
+          },
         },
-      },
+      });
     });
 
     res.json({ message: 'Password moved to trash' });

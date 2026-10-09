@@ -334,7 +334,40 @@ export async function decryptFields(encryptedFields, masterPassword, salt) {
 
 export const MASTER_VERIFIER_MARKER = 'vaultix-master-verifier';
 
-export const MASTER_VERIFIER_STORAGE_KEY = 'masterPasswordVerifier';export async function createMasterPasswordVerifier(masterPassword, salt) {
+export const MASTER_VERIFIER_STORAGE_KEY = 'masterPasswordVerifier';
+
+/**
+ * Derives a dedicated zero-knowledge authentication key (AuthKey) from the master password.
+ * The server only receives this AuthKey (or a hash of it), NEVER the actual master password
+ * or the vault encryption key.
+ */
+export async function deriveAuthKey(masterPassword, salt) {
+  if (!masterPassword) return '';
+  const keyMaterial = await window.crypto.subtle.importKey(
+    'raw',
+    encoder.encode(masterPassword),
+    { name: 'PBKDF2' },
+    false,
+    ['deriveBits']
+  );
+
+  const authSalt = encoder.encode((salt || 'vault-salt') + '-vaultix-auth');
+  const derivedBits = await window.crypto.subtle.deriveBits(
+    {
+      name: 'PBKDF2',
+      salt: authSalt,
+      iterations: KDF_ITERATIONS_CURRENT,
+      hash: 'SHA-256',
+    },
+    keyMaterial,
+    256
+  );
+
+  const hashArray = Array.from(new Uint8Array(derivedBits));
+  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+export async function createMasterPasswordVerifier(masterPassword, salt) {
   return encryptText(MASTER_VERIFIER_MARKER, masterPassword, salt);
 }
 
