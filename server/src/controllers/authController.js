@@ -1217,6 +1217,9 @@ const resetMasterPasswordWithRecoveryKey = async (req, res) => {
     }
 
     // Re-encrypt the same private key with the new master password so the
+    // existing key pair (and therefore all vault data) is preserved.
+    const encryptedPrivateKey = encryptEnvelope(privateKeyJwk, newMasterPassword);
+
     const { newAuthKey } = req.body;
     const valueToHash = newAuthKey || newMasterPassword;
     const masterPasswordHash = await bcrypt.hash(valueToHash, 12);
@@ -1278,7 +1281,7 @@ const resetMasterPasswordWithRecoveryKey = async (req, res) => {
 
 const resetMasterPassword = async (req, res) => {
   try {
-    const { newMasterPassword, hint, encryptedPrivateKey, publicKey, salt, accountPassword } = req.body;
+    const { newAuthKey, newMasterPassword, hint, encryptedPrivateKey, publicKey, salt, accountPassword } = req.body;
     const userId = req.user.id;
 
     if (!newMasterPassword || !encryptedPrivateKey || !publicKey || !salt) {
