@@ -101,7 +101,7 @@
         color: #64748b;
       }
 
-      #list { max-height: 320px; overflow-y: auto; }
+      #list { max-height: 360px; overflow-y: auto; }
       .item {
         background: #1e293b;
         border: 1px solid #334155;
@@ -131,6 +131,64 @@
         color: white;
         border-radius: 999px;
         padding: 2px 7px;
+      }
+      .folder-line {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        margin-top: 1px;
+        margin-bottom: 5px;
+        flex-wrap: wrap;
+      }
+      .folder-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4.5px;
+        font-size: 11px;
+        font-weight: 500;
+        color: #93c5fd;
+        background: rgba(30, 58, 138, 0.35);
+        border: 1px solid rgba(59, 130, 246, 0.35);
+        border-radius: 5px;
+        padding: 1.5px 6.5px;
+        max-width: 100%;
+        line-height: 1.25;
+      }
+      .folder-icon {
+        width: 11px;
+        height: 11px;
+        flex-shrink: 0;
+        stroke: #60a5fa;
+      }
+      .folder-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .vault-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 11px;
+        font-weight: 500;
+        color: #cbd5e1;
+        background: rgba(51, 65, 85, 0.45);
+        border: 1px solid rgba(71, 85, 105, 0.45);
+        border-radius: 5px;
+        padding: 1.5px 6.5px;
+        max-width: 100%;
+        line-height: 1.25;
+      }
+      .vault-icon {
+        width: 11px;
+        height: 11px;
+        flex-shrink: 0;
+        stroke: #94a3b8;
+      }
+      .vault-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
       .item .login {
         color: #94a3b8;

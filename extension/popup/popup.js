@@ -93,10 +93,10 @@ async function init() {
     lockAt = sess.cache.ts + lockMs;
     showList();
     startLockTimer();
-    if (creds.length === 0) {
-      // A fresh-but-empty cache usually means a previous fetch/decrypt failed;
-      // refetch in the background instead of showing a false "no logins".
-      loadCreds(false);
+    const needsFolderUpgrade = creds.length > 0 && !creds.some((c) => 'folderName' in c);
+    if (creds.length === 0 || needsFolderUpgrade) {
+      // Re-fetch in the background to ensure folder names are populated
+      loadCreds(true);
     }
   } else if (token && user) {
     await chrome.storage.session.remove(['master', 'cache', 'privKey']);
@@ -299,6 +299,7 @@ async function loadCreds(force) {
     if (
       cached.cache &&
       cached.cache.creds.length > 0 &&
+      cached.cache.creds.some((c) => 'folderName' in c) &&
       Date.now() - cached.cache.ts < lockMs
     ) {
       creds = cached.cache.creds;
@@ -416,10 +417,24 @@ async function loadCreds(force) {
 
     let entries = [];
     const sourceCounts = [];
+    const folderNameById = new Map();
 
     try {
       const mine = await secureGet('/my-vault');
-      const list = mine?.passwords || [];
+      if (Array.isArray(mine?.folders)) {
+        for (const f of mine.folders) {
+          if (f?.id && f?.name) folderNameById.set(f.id, f.name);
+        }
+      }
+      const list = (mine?.passwords || []).map((p) => {
+        if (p.folder?.id && p.folder?.name) {
+          folderNameById.set(p.folder.id, p.folder.name);
+        }
+        return {
+          ...p,
+          vaultName: mine?.name || 'Personal',
+        };
+      });
       entries = entries.concat(list);
       sourceCounts.push(`personal: ${list.length}`);
     } catch (err) {
@@ -435,8 +450,12 @@ async function loadCreds(force) {
       sourceCounts.push(`shared: ${sharedList.length}`);
       for (const s of sharedList) {
         if (!s?.password) continue;
+        if (s.password.folder?.id && s.password.folder?.name) {
+          folderNameById.set(s.password.folder.id, s.password.folder.name);
+        }
         entries.push({
           ...s.password,
+          vaultName: s.password.vault?.name || '',
           shared: true,
           shareKey: s.encryptedItemKey || null,
           rePassword: s.reEncryptedPassword || null,
@@ -453,9 +472,23 @@ async function loadCreds(force) {
       const company = (vaults || []).filter((v) => v.type !== 'PERSONAL');
       sourceCounts.push(`company vaults: ${company.length}`);
       for (const vault of company) {
+        if (Array.isArray(vault?.folders)) {
+          for (const f of vault.folders) {
+            if (f?.id && f?.name) folderNameById.set(f.id, f.name);
+          }
+        }
         try {
           const vaultPasswords = await secureGet(`/passwords/vault/${vault.id}`);
-          entries = entries.concat(vaultPasswords || []);
+          const withVault = (vaultPasswords || []).map((p) => {
+            if (p.folder?.id && p.folder?.name) {
+              folderNameById.set(p.folder.id, p.folder.name);
+            }
+            return {
+              ...p,
+              vaultName: vault.name || '',
+            };
+          });
+          entries = entries.concat(withVault);
         } catch (err) {
           if (err.message === 'SESSION_EXPIRED') throw err;
           warnings.push(`${vault.name}: ${err.message}`);
@@ -465,6 +498,22 @@ async function loadCreds(force) {
       if (err.message === 'SESSION_EXPIRED') throw err;
       warnings.push(`Company vaults: ${err.message}`);
     }
+
+    const resolveFolderName = (entry) => {
+      if (entry.folder && typeof entry.folder === 'object' && entry.folder.name) {
+        return String(entry.folder.name).trim();
+      }
+      if (typeof entry.folder === 'string' && entry.folder.trim()) {
+        return entry.folder.trim();
+      }
+      if (entry.folderName && typeof entry.folderName === 'string') {
+        return entry.folderName.trim();
+      }
+      if (entry.folderId && folderNameById.has(entry.folderId)) {
+        return folderNameById.get(entry.folderId).trim();
+      }
+      return '';
+    };
 
     const byId = new Map();
     for (const e of entries) {
@@ -586,6 +635,8 @@ async function loadCreds(force) {
         name: entry.name || entry.login || 'Item',
         login: entry.login || '',
         url: entry.url || '',
+        folderName: resolveFolderName(entry),
+        vaultName: entry.vaultName || entry.vault?.name || '',
         password,
         totpSecret,
         shared: !!entry.shared,
@@ -771,6 +822,8 @@ function renderList() {
     !q ||
     c.name.toLowerCase().includes(q) ||
     c.login.toLowerCase().includes(q) ||
+    (c.folderName && c.folderName.toLowerCase().includes(q)) ||
+    (c.vaultName && c.vaultName.toLowerCase().includes(q)) ||
     urlHost(c.url).includes(q);
 
   const showEverything = !tabHost || showAllSites || !!q;
@@ -828,6 +881,24 @@ function itemRow(cred, isMatch) {
     row1.appendChild(badge);
   }
 
+  // Folder and Vault metadata pills
+  const metaElements = [];
+  if (cred.folderName) {
+    metaElements.push(makeFolderBadge(cred.folderName));
+  }
+  if (cred.vaultName && cred.vaultName !== 'Personal' && cred.vaultName !== 'My Vault') {
+    metaElements.push(makeVaultBadge(cred.vaultName));
+  }
+
+  let metaLine = null;
+  if (metaElements.length > 0) {
+    metaLine = document.createElement('div');
+    metaLine.className = 'folder-line';
+    for (const el of metaElements) {
+      metaLine.appendChild(el);
+    }
+  }
+
   const loginLine = document.createElement('div');
   loginLine.className = 'login';
   loginLine.textContent = cred.login || '(no username)';
@@ -869,8 +940,75 @@ function itemRow(cred, isMatch) {
     });
   }
 
-  row.append(row1, loginLine, passLine, actions);
+  if (metaLine) {
+    row.append(row1, metaLine, loginLine, passLine, actions);
+  } else {
+    row.append(row1, loginLine, passLine, actions);
+  }
   return row;
+}
+
+function createSvgIcon(type) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '2');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+
+  if (type === 'folder') {
+    svg.setAttribute('class', 'folder-icon');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute(
+      'd',
+      'M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z'
+    );
+    svg.appendChild(path);
+  } else if (type === 'vault') {
+    svg.setAttribute('class', 'vault-icon');
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('x', '2');
+    rect.setAttribute('y', '7');
+    rect.setAttribute('width', '20');
+    rect.setAttribute('height', '14');
+    rect.setAttribute('rx', '2');
+    rect.setAttribute('ry', '2');
+
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', 'M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16');
+
+    svg.append(rect, path);
+  }
+  return svg;
+}
+
+function makeFolderBadge(folderName) {
+  const badge = document.createElement('span');
+  badge.className = 'folder-badge';
+  badge.title = `Folder: ${folderName}`;
+
+  const icon = createSvgIcon('folder');
+  const text = document.createElement('span');
+  text.className = 'folder-name';
+  text.textContent = folderName;
+
+  badge.append(icon, text);
+  return badge;
+}
+
+function makeVaultBadge(vaultName) {
+  const badge = document.createElement('span');
+  badge.className = 'vault-badge';
+  badge.title = `Vault: ${vaultName}`;
+
+  const icon = createSvgIcon('vault');
+  const text = document.createElement('span');
+  text.className = 'vault-name';
+  text.textContent = vaultName;
+
+  badge.append(icon, text);
+  return badge;
 }
 
 function actionBtn(label, cls, onClick) {

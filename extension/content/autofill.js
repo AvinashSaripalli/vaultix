@@ -325,7 +325,8 @@
       nameEl.style.cssText =
         'font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
       const loginEl = document.createElement('div');
-      loginEl.textContent = cred.login || '(no username)';
+      const baseLogin = cred.login || '(no username)';
+      loginEl.textContent = cred.folderName ? `${baseLogin} • 📁 ${cred.folderName}` : baseLogin;
       loginEl.style.cssText =
         'font-size:11px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
       textWrap.append(nameEl, loginEl);
