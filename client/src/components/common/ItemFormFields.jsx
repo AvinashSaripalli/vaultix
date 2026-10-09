@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Eye, EyeOff, Sparkles, FolderDown } from 'lucide-react';
+import { Eye, EyeOff, Sparkles, FolderDown, SlidersHorizontal, RefreshCw } from 'lucide-react';
 import ItemFields from '../myVault/ItemFields';
 import CustomFieldsInput from './CustomFieldsInput';
 import PasswordStrengthBar from './PasswordStrengthBar';
@@ -54,6 +54,13 @@ function ItemFormFields({
 }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPasswordState, setShowConfirmPasswordState] = useState(false);
+  const [showGenOptions, setShowGenOptions] = useState(false);
+  const [genLength, setGenLength] = useState(20);
+  const [genUppercase, setGenUppercase] = useState(true);
+  const [genLowercase, setGenLowercase] = useState(true);
+  const [genNumbers, setGenNumbers] = useState(true);
+  const [genSymbols, setGenSymbols] = useState(true);
+  const [genExcludeAmbiguous, setGenExcludeAmbiguous] = useState(false);
 
   const currentType = formData.type || 'LOGIN';
   const currentPassword = formData[passwordFieldName] || '';
@@ -72,14 +79,16 @@ function ItemFormFields({
     }
   };
 
-  const handleGeneratePassword = () => {
-    const generated = generatePassword({
-      length: 16,
-      numbers: true,
-      symbols: true,
-      uppercase: true,
-      lowercase: true,
-    });
+  const handleGeneratePassword = (opts = {}) => {
+    const config = {
+      length: opts.length ?? genLength,
+      useUppercase: opts.useUppercase ?? genUppercase,
+      useLowercase: opts.useLowercase ?? genLowercase,
+      useNumbers: opts.useNumbers ?? genNumbers,
+      useSymbols: opts.useSymbols ?? genSymbols,
+      excludeAmbiguous: opts.excludeAmbiguous ?? genExcludeAmbiguous,
+    };
+    const generated = generatePassword(config);
     onChange(passwordFieldName, generated);
     if (showConfirmPassword) {
       onChange('confirmPassword', generated);
@@ -179,7 +188,7 @@ function ItemFormFields({
       {/* Primary Password / Secret */}
       {currentType !== 'SECURE_NOTE' && currentType !== 'IDENTITY' && (
         <div>
-          <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center justify-between mb-1.5">
             <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
               {currentType === 'API_TOKEN'
                 ? 'API Token / Secret Key'
@@ -187,32 +196,127 @@ function ItemFormFields({
                 ? 'Private Key / Passphrase'
                 : 'Password'}
             </label>
-            <button
-              type="button"
-              onClick={handleGeneratePassword}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 transition"
-              title="Generate strong random password"
-            >
-              <Sparkles size={13} />
-              Generate
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleGeneratePassword()}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-300 dark:hover:bg-indigo-900/50 transition"
+                title="Generate password with current settings"
+              >
+                <Sparkles size={13} />
+                Generate
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowGenOptions((prev) => !prev)}
+                className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold border transition ${
+                  showGenOptions
+                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'
+                    : 'border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800'
+                }`}
+                title="Customize generator settings"
+              >
+                <SlidersHorizontal size={13} />
+                Options
+              </button>
+            </div>
           </div>
+
           <div className="relative">
             <input
               type={showPassword ? 'text' : 'password'}
               placeholder="Enter or generate secret"
               value={currentPassword}
               onChange={(e) => onChange(passwordFieldName, e.target.value)}
-              className={`${inputClass} pr-12`}
+              className={`${inputClass} pr-12 ${showPassword ? 'font-mono tracking-wider' : ''}`}
             />
             <button
               type="button"
               onClick={() => setShowPassword((prev) => !prev)}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
               className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-200 transition"
             >
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
+
+          {/* Inline Generator Controls Drawer */}
+          {showGenOptions && (
+            <div className="mt-2.5 rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 space-y-3 dark:border-slate-700 dark:bg-slate-800/60 animate-slide-up">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-slate-700 dark:text-slate-300">Length</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400 bg-white dark:bg-slate-750 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                    {genLength}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleGeneratePassword()}
+                    className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 transition"
+                    title="Regenerate"
+                  >
+                    <RefreshCw size={13} />
+                  </button>
+                </div>
+              </div>
+              <input
+                type="range"
+                min={8}
+                max={64}
+                value={genLength}
+                onChange={(e) => {
+                  const len = Number(e.target.value);
+                  setGenLength(len);
+                  handleGeneratePassword({ length: len });
+                }}
+                className="w-full h-1.5 bg-slate-200 rounded-full appearance-none cursor-pointer accent-indigo-600 dark:bg-slate-700"
+              />
+
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {[
+                  { key: 'upper', label: 'A-Z', state: genUppercase, set: setGenUppercase, prop: 'useUppercase' },
+                  { key: 'lower', label: 'a-z', state: genLowercase, set: setGenLowercase, prop: 'useLowercase' },
+                  { key: 'nums', label: '0-9', state: genNumbers, set: setGenNumbers, prop: 'useNumbers' },
+                  { key: 'syms', label: '!@#', state: genSymbols, set: setGenSymbols, prop: 'useSymbols' },
+                ].map((item) => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => {
+                      const next = !item.state;
+                      item.set(next);
+                      handleGeneratePassword({ [item.prop]: next });
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition ${
+                      item.state
+                        ? 'border-indigo-400 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-600 dark:text-indigo-300'
+                        : 'border-slate-200 bg-white text-slate-400 dark:border-slate-700 dark:bg-slate-800'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !genExcludeAmbiguous;
+                    setGenExcludeAmbiguous(next);
+                    handleGeneratePassword({ excludeAmbiguous: next });
+                  }}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition ${
+                    genExcludeAmbiguous
+                      ? 'border-indigo-400 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-600 dark:text-indigo-300'
+                      : 'border-slate-200 bg-white text-slate-400 dark:border-slate-700 dark:bg-slate-800'
+                  }`}
+                  title="Avoid similar characters (1, l, I, 0, O)"
+                >
+                  No Ambiguous
+                </button>
+              </div>
+            </div>
+          )}
+
           {currentPassword && (
             <div className="mt-2">
               <PasswordStrengthBar password={currentPassword} />
@@ -233,11 +337,12 @@ function ItemFormFields({
               placeholder="Confirm password"
               value={formData.confirmPassword || ''}
               onChange={(e) => onChange('confirmPassword', e.target.value)}
-              className={`${inputClass} pr-12`}
+              className={`${inputClass} pr-12 ${showConfirmPasswordState ? 'font-mono tracking-wider' : ''}`}
             />
             <button
               type="button"
               onClick={() => setShowConfirmPasswordState((prev) => !prev)}
+              aria-label={showConfirmPasswordState ? 'Hide confirm password' : 'Show confirm password'}
               className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-200 transition"
             >
               {showConfirmPasswordState ? <EyeOff size={18} /> : <Eye size={18} />}

@@ -10,6 +10,7 @@ import {
   Lock,
   ShieldCheck,
   Plus,
+  Check,
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import api from '../../services/api';
@@ -130,18 +131,24 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin }) {
 
   if (!selectedPassword) {
     return (
-      <div className="p-8">
-        <div className="flex items-start justify-between gap-4">
-          <p className="text-slate-500 dark:text-slate-400">Select a password to view details.</p>
-          {user?.role === 'ADMIN' && onShareVault && selectedVault && (
-            <button
-              onClick={onShareVault}
-              className="h-10 px-5 rounded-full border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 shrink-0"
-            >
-              Share Vault
-            </button>
-          )}
+      <div className="p-8 flex flex-col items-center justify-center min-h-[460px] text-center">
+        <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-3 shadow-sm">
+          <Lock size={26} />
         </div>
+        <h3 className="text-base font-semibold text-slate-800 dark:text-slate-100 mb-1">
+          No item selected
+        </h3>
+        <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm mb-4">
+          Select an item from the list to view its credentials, secrets, and details.
+        </p>
+        {user?.role === 'ADMIN' && onShareVault && selectedVault && (
+          <button
+            onClick={onShareVault}
+            className="h-10 px-5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 transition shadow-sm"
+          >
+            Share Vault
+          </button>
+        )}
       </div>
     );
   }
@@ -499,43 +506,39 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin }) {
                       label="Login"
                       value={item.login || '-'}
                       action={
-                        <button
-                          onClick={() =>
-                            handleAction('copy-login', item)
-                          }
-                          className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
-                        >
-                          <Copy size={16} />
-                        </button>
+                        <CopyIconButton
+                          onCopy={() => handleAction('copy-login', item)}
+                          title="Copy login"
+                        />
                       }
                     />
 
                     <DetailRow
                       label="Password"
+                      isMono={isVisible}
                       value={
                         isVisible
                           ? decryptedPasswords[item.id] || ''
                           : '••••••••••••'
                       }
                       action={
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
                           <button
+                            type="button"
                             onClick={() =>
                               handleAction('view', item)
                             }
-                            className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+                            aria-label={isVisible ? 'Hide password' : 'Show password'}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-750 transition"
+                            title={isVisible ? 'Hide' : 'Reveal'}
                           >
-                            {isVisible ? <EyeOff size={17} /> : <Eye size={17} />}
+                            {isVisible ? <EyeOff size={16} /> : <Eye size={16} />}
                           </button>
 
-                          <button
-                            onClick={() =>
-                              handleAction('copy-password', item)
-                            }
-                            className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
-                          >
-                            <Copy size={16} />
-                          </button>
+                          <CopyIconButton
+                            onCopy={() => handleAction('copy-password', item)}
+                            title="Copy password"
+                          />
                         </div>
                       }
                     />
@@ -620,24 +623,24 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin }) {
                         <DetailRow
                           key={field.key}
                           label={field.label}
+                          isMono={field.copy && fieldVisible}
                           value={value}
                           action={
                             field.copy ? (
-                              <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-2">
                                 <button
+                                  type="button"
                                   onClick={() => handleSecretField('view-field')}
-                                  className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+                                  aria-label={fieldVisible ? `Hide ${field.label}` : `Show ${field.label}`}
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-750 transition"
                                   title={fieldVisible ? 'Hide' : 'Reveal'}
                                 >
-                                  {fieldVisible ? <EyeOff size={17} /> : <Eye size={17} />}
+                                  {fieldVisible ? <EyeOff size={16} /> : <Eye size={16} />}
                                 </button>
-                                <button
-                                  onClick={() => handleSecretField('copy-field')}
-                                  className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
-                                  title="Copy"
-                                >
-                                  <Copy size={16} />
-                                </button>
+                                <CopyIconButton
+                                  onCopy={() => handleSecretField('copy-field')}
+                                  title={`Copy ${field.label}`}
+                                />
                               </div>
                             ) : null
                           }
@@ -682,25 +685,25 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin }) {
                         <DetailRow
                           key={cfKey}
                           label={custom.name || 'Custom Field'}
+                          isMono={cfSensitive && cfVisible}
                           value={cfValue}
                           action={
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
                               {cfSensitive && (
                                 <button
+                                  type="button"
                                   onClick={() => handleCustomField('view-field')}
-                                  className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+                                  aria-label={cfVisible ? 'Hide custom field' : 'Show custom field'}
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-750 transition"
                                   title={cfVisible ? 'Hide' : 'Reveal'}
                                 >
-                                  {cfVisible ? <EyeOff size={17} /> : <Eye size={17} />}
+                                  {cfVisible ? <EyeOff size={16} /> : <Eye size={16} />}
                                 </button>
                               )}
-                              <button
-                                onClick={() => handleCustomField('copy-field')}
-                                className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
-                                title="Copy"
-                              >
-                                <Copy size={16} />
-                              </button>
+                              <CopyIconButton
+                                onCopy={() => handleCustomField('copy-field')}
+                                title="Copy field"
+                              />
                             </div>
                           }
                         />
@@ -835,12 +838,37 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin }) {
 }
 
 
-function DetailRow({ label, value, action }) {
+function CopyIconButton({ onCopy, title = 'Copy to clipboard' }) {
+  const [copied, setCopied] = useState(false);
+  const handle = (e) => {
+    e.stopPropagation();
+    onCopy();
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  };
   return (
-    <div className="grid grid-cols-[120px_1fr_80px] items-center border-b border-slate-200 last:border-b-0 px-4 py-4 dark:border-slate-700">
-      <p className="text-sm text-slate-500 dark:text-slate-400">{label}</p>
+    <button
+      type="button"
+      onClick={handle}
+      className={`p-1.5 rounded-lg transition-colors ${
+        copied
+          ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-400'
+          : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-750'
+      }`}
+      title={copied ? 'Copied!' : title}
+      aria-label={copied ? 'Copied' : title}
+    >
+      {copied ? <Check size={16} /> : <Copy size={16} />}
+    </button>
+  );
+}
 
-      <div className="text-sm text-slate-900 break-all dark:text-slate-100">
+function DetailRow({ label, value, action, isMono = false }) {
+  return (
+    <div className="grid grid-cols-[120px_1fr_80px] items-center border-b border-slate-200 last:border-b-0 px-4 py-3.5 dark:border-slate-700/80">
+      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{label}</p>
+
+      <div className={`text-sm text-slate-900 break-all dark:text-slate-100 ${isMono ? 'font-mono tracking-wider select-all' : ''}`}>
         {value}
       </div>
 

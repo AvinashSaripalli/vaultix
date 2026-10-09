@@ -126,8 +126,16 @@ function MyVaultPasswordWorkspace({
           {/* Right Side */}
           <div className="p-8">
             {!selectedPassword ? (
-              <div className="h-full flex items-center justify-center text-slate-400 dark:text-slate-500">
-                Select an item
+              <div className="h-full min-h-[460px] flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-3 shadow-sm">
+                  <Lock size={26} />
+                </div>
+                <h3 className="text-base font-semibold text-slate-800 dark:text-slate-100 mb-1">
+                  No item selected
+                </h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm">
+                  Select an item from the list to view its credentials, secrets, and details.
+                </p>
               </div>
             ) : (
               <>

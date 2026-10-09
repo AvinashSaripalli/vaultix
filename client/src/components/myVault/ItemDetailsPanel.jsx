@@ -10,6 +10,7 @@ import {
   Share2,
   Trash2,
   Users,
+  Check,
 } from 'lucide-react';
 import {
   decryptText,
@@ -311,28 +312,32 @@ function ItemDetailsPanel({
     const value = (decryptedFields || {})[field.key];
     const isRevealed = revealed[field.key];
     const display = field.copy ? (isRevealed ? value || '' : maskFieldValue(value, field)) : value || '';
+    const isSecret = field.copy || field.input === 'password';
 
     return (
-      <div key={field.key} className="border-b border-slate-200 py-5 dark:border-slate-700">
+      <div key={field.key} className="border-b border-slate-200 py-4 dark:border-slate-700">
         <div className="grid grid-cols-[140px_1fr_80px] items-center">
-          <p className="text-slate-500 dark:text-slate-400">{field.label}</p>
-          <p className="text-slate-900 truncate dark:text-slate-100">{display || '—'}</p>
-          <div className="flex justify-end items-center gap-3">
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{field.label}</p>
+          <p className={`text-sm text-slate-900 break-all dark:text-slate-100 ${isSecret && isRevealed ? 'font-mono tracking-wider select-all font-semibold' : ''}`}>
+            {display || '—'}
+          </p>
+          <div className="flex justify-end items-center gap-2">
             {field.input === 'password' && (
               <button
+                type="button"
                 onClick={() => handleFieldAction(field, 'reveal')}
-                className="text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400"
+                aria-label={isRevealed ? `Hide ${field.label}` : `Show ${field.label}`}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-750 transition"
+                title={isRevealed ? 'Hide' : 'Reveal'}
               >
-                {isRevealed ? <EyeOff size={18} /> : <Eye size={18} />}
+                {isRevealed ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             )}
             {field.copy && (
-              <button
-                onClick={() => handleFieldAction(field, 'copy')}
-                className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
-              >
-                <Copy size={17} />
-              </button>
+              <CopyIconButton
+                onCopy={() => handleFieldAction(field, 'copy')}
+                title={`Copy ${field.label}`}
+              />
             )}
           </div>
         </div>
@@ -351,13 +356,16 @@ function ItemDetailsPanel({
       : custom.value || '';
 
     return (
-      <div key={`__custom_${index}`} className="border-b border-slate-200 py-5 dark:border-slate-700">
+      <div key={`__custom_${index}`} className="border-b border-slate-200 py-4 dark:border-slate-700">
         <div className="grid grid-cols-[140px_1fr_80px] items-center">
-          <p className="text-slate-500 dark:text-slate-400">{custom.name || 'Custom Field'}</p>
-          <p className="text-slate-900 truncate dark:text-slate-100">{display || '—'}</p>
-          <div className="flex justify-end items-center gap-3">
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{custom.name || 'Custom Field'}</p>
+          <p className={`text-sm text-slate-900 break-all dark:text-slate-100 ${custom.sensitive && isRevealed ? 'font-mono tracking-wider select-all font-semibold' : ''}`}>
+            {display || '—'}
+          </p>
+          <div className="flex justify-end items-center gap-2">
             {custom.sensitive && (
               <button
+                type="button"
                 onClick={() => {
                   if (isRevealed) {
                     setRevealed((prev) => ({ ...prev, [`__custom_${index}`]: false }));
@@ -365,17 +373,17 @@ function ItemDetailsPanel({
                     handleCustomReveal(custom, index);
                   }
                 }}
-                className="text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400"
+                aria-label={isRevealed ? 'Hide custom field' : 'Show custom field'}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-750 transition"
+                title={isRevealed ? 'Hide' : 'Reveal'}
               >
-                {isRevealed ? <EyeOff size={18} /> : <Eye size={18} />}
+                {isRevealed ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             )}
-            <button
-              onClick={() => handleCustomCopy(custom, index)}
-              className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
-            >
-              <Copy size={17} />
-            </button>
+            <CopyIconButton
+              onCopy={() => handleCustomCopy(custom, index)}
+              title="Copy custom field"
+            />
           </div>
         </div>
       </div>
@@ -430,29 +438,32 @@ function ItemDetailsPanel({
         <div className="flex items-center gap-2">
           <button
             onClick={() => onShare(item)}
-            className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-700"
+            className="w-10 h-10 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50 text-slate-600 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 transition"
             title="Share"
+            aria-label="Share item"
           >
             <Share2 size={17} />
           </button>
           <button
             onClick={() => onEdit(item)}
-            className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-700"
+            className="w-10 h-10 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50 text-slate-600 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 transition"
             title="Edit"
+            aria-label="Edit item"
           >
             <Edit2 size={17} />
           </button>
           <button
             onClick={() => onDelete(item)}
-            className="w-10 h-10 rounded-full border border-red-200 text-red-500 flex items-center justify-center hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
+            className="w-10 h-10 rounded-xl border border-red-200 text-red-500 flex items-center justify-center hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20 transition"
             title="Delete"
+            aria-label="Delete item"
           >
             <Trash2 size={17} />
           </button>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 p-6 bg-white dark:border-slate-700 dark:bg-slate-800">
+      <div className="rounded-2xl border border-slate-200 p-6 bg-white dark:border-slate-700 dark:bg-slate-800 shadow-sm">
         {hasLogin && (
           <div className="mb-6">
             <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
@@ -465,40 +476,33 @@ function ItemDetailsPanel({
         <div>
           {hasLogin && (
             <>
-              <div className="border-b border-slate-200 py-5 dark:border-slate-700">
+              <div className="border-b border-slate-200 py-4 dark:border-slate-700">
                 <div className="grid grid-cols-[140px_1fr_80px] items-center">
-                  <p className="text-slate-500 dark:text-slate-400">Login</p>
-                  <p className="text-slate-900 truncate dark:text-slate-100">{item.login}</p>
-                  <div className="flex justify-end items-center gap-3">
-                    <button
-                      onClick={() => copyText(item.login, 'Login')}
-                      className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
-                    >
-                      <Copy size={17} />
-                    </button>
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Login</p>
+                  <p className="text-sm text-slate-900 truncate dark:text-slate-100">{item.login}</p>
+                  <div className="flex justify-end items-center gap-2">
+                    <CopyIconButton onCopy={() => copyText(item.login, 'Login')} title="Copy login" />
                   </div>
                 </div>
               </div>
 
-              <div className="border-b border-slate-200 py-5 dark:border-slate-700">
+              <div className="border-b border-slate-200 py-4 dark:border-slate-700">
                 <div className="grid grid-cols-[140px_1fr_80px] items-center">
-                  <p className="text-slate-500 dark:text-slate-400">Password</p>
-                  <p className="text-slate-900 truncate dark:text-slate-100">
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Password</p>
+                  <p className={`text-sm text-slate-900 break-all dark:text-slate-100 ${showPassword ? 'font-mono tracking-wider select-all font-semibold' : ''}`}>
                     {showPassword ? decryptedPassword || '' : '••••••••••••'}
                   </p>
-                  <div className="flex justify-end items-center gap-3">
+                  <div className="flex justify-end items-center gap-2">
                     <button
+                      type="button"
                       onClick={handlePasswordEye}
-                      className="text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-750 transition"
+                      title={showPassword ? 'Hide' : 'Reveal'}
                     >
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
-                    <button
-                      onClick={handlePasswordCopy}
-                      className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
-                    >
-                      <Copy size={17} />
-                    </button>
+                    <CopyIconButton onCopy={handlePasswordCopy} title="Copy password" />
                   </div>
                 </div>
               </div>
@@ -626,6 +630,31 @@ function ItemDetailsPanel({
         </div>
       )}
     </>
+  );
+}
+
+function CopyIconButton({ onCopy, title = 'Copy to clipboard' }) {
+  const [copied, setCopied] = useState(false);
+  const handle = (e) => {
+    e.stopPropagation();
+    onCopy();
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  };
+  return (
+    <button
+      type="button"
+      onClick={handle}
+      className={`p-1.5 rounded-lg transition-colors ${
+        copied
+          ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-400'
+          : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-750'
+      }`}
+      title={copied ? 'Copied!' : title}
+      aria-label={copied ? 'Copied' : title}
+    >
+      {copied ? <Check size={16} /> : <Copy size={16} />}
+    </button>
   );
 }
 

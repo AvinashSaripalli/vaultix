@@ -389,7 +389,7 @@ function VaultPage() {
       const file = importFileArg || importFile;
       if (!file) return;
 
-      const { rows, format, detectedSource } = await parseImportFile(file);
+      const { rows } = await parseImportFile(file);
 
       const publicKeysCache = {};
       const getPublicKeyForUser = async (uid) => {
@@ -606,11 +606,11 @@ function VaultPage() {
 
   return (
     <AppLayout>
-      <div className="bg-white rounded-[30px] border border-slate-200 overflow-hidden dark:bg-slate-800 dark:border-slate-700">
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden dark:bg-slate-800 dark:border-slate-700 shadow-sm">
         <div className="px-8 py-6 border-b border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
           <div className="flex items-center justify-between gap-6">
             <div>
-              <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+              <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
                 Company Vault
               </p>
 
@@ -624,11 +624,11 @@ function VaultPage() {
               <FolderMembersSummary onClick={() => setUsersOpen(true)} />
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
               {selectedFolder && canShareFolder && (
                 <button
                   onClick={() => setShareOpen(true)}
-                  className="h-[46px] px-5 rounded-full border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300"
+                  className="h-10 px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 transition shadow-sm"
                 >
                   Share Folder
                 </button>
@@ -637,7 +637,7 @@ function VaultPage() {
               {selectedFolder && canAddPassword && (
                 <button
                   onClick={() => dispatch(openAddPasswordModal())}
-                  className="h-[46px] px-6 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold"
+                  className="h-10 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition shadow-sm"
                 >
                   Add password
                 </button>
@@ -645,13 +645,13 @@ function VaultPage() {
 
               <button
                 onClick={() => setTrashOpen((prev) => !prev)}
-                className={`h-[46px] px-5 rounded-full border text-sm font-semibold flex items-center gap-2 relative ${
+                className={`h-10 px-4 rounded-xl border text-sm font-semibold flex items-center gap-2 relative transition shadow-sm ${
                   trashOpen
                     ? 'bg-red-50 border-red-300 text-red-600 dark:bg-red-900/20 dark:border-red-700 dark:text-red-400'
                     : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300'
                 }`}
               >
-                <Trash2 size={18} />
+                <Trash2 size={16} />
                 {trashOpen ? 'Back' : 'Trash'}
                 {!trashOpen && trashByVault[selectedVault?.id]?.length > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
@@ -663,9 +663,10 @@ function VaultPage() {
               <div className="relative">
                 <button
                   onClick={() => setMenuOpen((prev) => !prev)}
-                  className="w-10 h-10 rounded-full hover:bg-slate-100 flex items-center justify-center dark:hover:bg-slate-700"
+                  className="w-10 h-10 rounded-xl border border-slate-200 hover:bg-slate-50 flex items-center justify-center text-slate-600 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-750 transition"
+                  aria-label="More options"
                 >
-                  <MoreVertical size={20} />
+                  <MoreVertical size={18} />
                 </button>
 
                 {menuOpen && (

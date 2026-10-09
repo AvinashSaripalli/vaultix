@@ -12,19 +12,20 @@ function MyVaultHeader({ folders, onCreateFolder, onCreatePassword }) {
 
       <div className="flex items-center gap-3">
         <button
+          type="button"
           onClick={onCreateFolder}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700"
+          className="h-10 flex items-center gap-2 px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 transition shadow-sm"
         >
-          <FolderPlus size={18} />
+          <FolderPlus size={16} />
           New Folder
         </button>
 
         <button
+          type="button"
           onClick={onCreatePassword}
-          disabled={!folders.length}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
+          className="h-10 flex items-center gap-2 px-4 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 text-sm font-semibold transition shadow-sm"
         >
-          <Plus size={18} />
+          <Plus size={16} />
           Add Password
         </button>
       </div>

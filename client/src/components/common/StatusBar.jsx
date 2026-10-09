@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { subscribeToast } from '../../utils/toast';
-import { AlertTriangle, CheckCircle2, Info, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Info, XCircle, X } from 'lucide-react';
 
 const TYPE_STYLES = {
-  success: 'bg-emerald-600',
-  error: 'bg-red-600',
-  info: 'bg-indigo-600',
-  warning: 'bg-amber-500',
+  success: 'bg-emerald-600/95 border-emerald-500/50 text-white shadow-emerald-950/20',
+  error: 'bg-rose-600/95 border-rose-500/50 text-white shadow-rose-950/20',
+  info: 'bg-indigo-600/95 border-indigo-500/50 text-white shadow-indigo-950/20',
+  warning: 'bg-amber-500/95 border-amber-400/50 text-white shadow-amber-950/20',
 };
 
 const TYPE_ICONS = {
@@ -41,11 +41,20 @@ function StatusBar() {
   return (
     <div
       role="status"
-      onClick={() => setToast(null)}
-      className={`fixed top-4 left-1/2 -translate-x-1/2 z-[10000] flex items-center gap-2.5 rounded-xl px-5 py-3 text-white text-sm font-medium shadow-lg animate-toast-in cursor-pointer ${style}`}
+      className={`fixed bottom-5 right-5 z-[10000] max-w-sm sm:max-w-md flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm font-medium shadow-2xl backdrop-blur-md border animate-toast-in ${style}`}
     >
-      <Icon size={18} className="shrink-0" />
-      <span>{toast.message}</span>
+      <div className="flex items-center gap-2.5 min-w-0">
+        <Icon size={18} className="shrink-0" />
+        <span className="truncate">{toast.message}</span>
+      </div>
+      <button
+        type="button"
+        onClick={() => setToast(null)}
+        className="shrink-0 p-1 -mr-1 rounded-lg hover:bg-white/20 transition text-white/80 hover:text-white"
+        aria-label="Dismiss notification"
+      >
+        <X size={15} />
+      </button>
     </div>
   );
 }
