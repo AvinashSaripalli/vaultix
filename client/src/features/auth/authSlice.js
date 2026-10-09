@@ -27,6 +27,7 @@ import {
   getRsaPublicKey as loadRsaPublicKey,
   getSessionMasterPassword as loadSessionMasterPassword,
   setSessionMasterPassword as storeSessionMasterPassword,
+  persistEncryptedSession,
 } from '../../utils/secureSession';
 
 const saveVerifier = (verifier) => {
@@ -342,6 +343,7 @@ export const changeMasterPassword = createAsyncThunk(
         currentAuthKey,
         newAuthKey,
         currentMasterPassword,
+        newMasterPassword,
         hint,
       });
 
@@ -435,6 +437,7 @@ export const changeMasterPassword = createAsyncThunk(
 
       saveVerifier(await createMasterPasswordVerifier(newMasterPassword, salt));
       thunkAPI.dispatch(setSessionMasterPassword(newMasterPassword));
+      await persistEncryptedSession(newMasterPassword, newKeyPair.privateKeyJwk, newKeyPair.publicKeyJwk);
 
       return response.data;
     } catch (error) {
@@ -557,6 +560,7 @@ const authSlice = createSlice({
       state.sessionMasterPassword = action.payload || null;
       storeMasterPassword(action.payload || null);
       storeSessionMasterPassword(action.payload || null);
+      persistEncryptedSession(action.payload || null, state.sessionRsaPrivateKey, state.sessionRsaPublicKey);
     },
 
     setSessionAdminMasterPassword: (state, action) => {
@@ -567,11 +571,13 @@ const authSlice = createSlice({
     setSessionRsaPrivateKey: (state, action) => {
       state.sessionRsaPrivateKey = action.payload || null;
       storeRsaPrivateKey(action.payload || null);
+      persistEncryptedSession(state.sessionMasterPassword, action.payload || null, state.sessionRsaPublicKey);
     },
 
     setSessionRsaPublicKey: (state, action) => {
       state.sessionRsaPublicKey = action.payload || null;
       storeRsaPublicKeyPersist(action.payload || null);
+      persistEncryptedSession(state.sessionMasterPassword, state.sessionRsaPrivateKey, action.payload || null);
     },
 
     showSessionWarning: (state, action) => {
@@ -783,6 +789,7 @@ const authSlice = createSlice({
 
       .addCase(changeMasterPassword.fulfilled, (state) => {
         state.loading = false;
+        state.isMasterVerified = true;
       })
 
       .addCase(changeMasterPassword.rejected, (state, action) => {
@@ -810,6 +817,7 @@ const authSlice = createSlice({
         storeSessionMasterPassword(action.payload.masterPassword);
         storeRsaPrivateKey(action.payload.privateKeyJwk);
         storeRsaPublicKeyPersist(action.payload.publicKeyJwk);
+        persistEncryptedSession(action.payload.masterPassword, action.payload.privateKeyJwk, action.payload.publicKeyJwk);
         setMasterVerifiedFlag(true);
         saveUser(state.user);
       })

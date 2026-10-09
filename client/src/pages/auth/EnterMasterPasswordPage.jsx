@@ -22,7 +22,7 @@ import {
   createMasterPasswordVerifier,
   deriveAuthKey,
 } from '../../utils/crypto';
-import { setRsaPrivateKey as storeRsaPrivateKey } from '../../utils/secureSession';
+import { setRsaPrivateKey as storeRsaPrivateKey, persistEncryptedSession } from '../../utils/secureSession';
 import { validateMasterPassword, validateConfirmPassword, validateHint } from '../../utils/validation';
 import { verifyMasterPassword } from '../../utils/verifyMasterPassword';
 import logo from '../../assets/Vaultix.png';
@@ -95,17 +95,21 @@ function EnterMasterPasswordPage() {
 
       try {
         const kpRes = await api.get('/keypair');
+        let privKey = null;
+        let pubKey = null;
         if (kpRes.data?.encryptedPrivateKey) {
-          const privateKeyJwk = await decryptPrivateKey(
+          privKey = await decryptPrivateKey(
             kpRes.data.encryptedPrivateKey,
             masterPassword,
             kpRes.data.salt
           );
-          dispatch({ type: 'auth/setSessionRsaPrivateKey', payload: privateKeyJwk });
+          dispatch({ type: 'auth/setSessionRsaPrivateKey', payload: privKey });
           if (kpRes.data.publicKey) {
-            dispatch(setSessionRsaPublicKey(kpRes.data.publicKey));
+            pubKey = kpRes.data.publicKey;
+            dispatch(setSessionRsaPublicKey(pubKey));
           }
         }
+        await persistEncryptedSession(masterPassword, privKey, pubKey);
       } catch (err) {
         // Keys are mandatory for encrypting/decrypting vault items —
         // surface the failure instead of continuing with a broken session.
@@ -182,9 +186,11 @@ function EnterMasterPasswordPage() {
       );
 
       storeRsaPrivateKey(privateKeyJwk);
+      sessionStorage.removeItem('masterPasswordVerifier');
       dispatch(setSessionMasterPassword(resetData.newMasterPassword));
       dispatch(setSessionRsaPublicKey(publicKeyJwk));
       dispatch(setMasterVerified(true));
+      await persistEncryptedSession(resetData.newMasterPassword, privateKeyJwk, publicKeyJwk);
 
       navigate('/dashboard');
     } catch (err) {

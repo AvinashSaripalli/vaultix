@@ -1,7 +1,17 @@
 import { useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { dismissSessionWarning, fetchMe, refreshSession, setSessionRsaPrivateKey, setSessionRsaPublicKey } from './features/auth/authSlice';
+import {
+  dismissSessionWarning,
+  fetchMe,
+  refreshSession,
+  setSessionMasterPassword,
+  setSessionRsaPrivateKey,
+  setSessionRsaPublicKey,
+  setMasterVerified,
+  lockVault as lockVaultAction,
+} from './features/auth/authSlice';
+import { restoreEncryptedSession } from './utils/secureSession';
 import useInactivityLogout, { touchActivity } from './hooks/useInactivityLogout';
 import useKeyboardShortcuts from './hooks/useKeyboardShortcuts';
 import useLockVault from './hooks/useLockVault';
@@ -54,6 +64,25 @@ function App() {
 
   useEffect(() => {
     (async () => {
+      // Attempt silent restore of encrypted session from sessionStorage:
+      try {
+        const restored = await restoreEncryptedSession();
+        if (restored) {
+          if (restored.sessionMasterPassword) {
+            dispatch(setSessionMasterPassword(restored.sessionMasterPassword));
+            dispatch(setMasterVerified(true));
+          }
+          if (restored.rsaPrivateKey) {
+            dispatch(setSessionRsaPrivateKey(restored.rsaPrivateKey));
+          }
+          if (restored.rsaPublicKey) {
+            dispatch(setSessionRsaPublicKey(restored.rsaPublicKey));
+          }
+        }
+      } catch {
+        // ignore
+      }
+
       if (token) {
         // Access token present — refresh the profile if we haven't loaded it.
         if (!userLoaded) {
@@ -100,7 +129,7 @@ function App() {
     if (sessionRsaPublicKey && sessionRsaPrivateKey) return;
 
     if (!sessionMasterPassword) {
-      window.location.href = '/enter-master-password';
+      dispatch(lockVaultAction());
       return;
     }
 
@@ -126,7 +155,7 @@ function App() {
       } catch (err) {
         console.error('Failed to load encryption keys:', err);
         if (!cancelled) {
-          window.location.href = '/enter-master-password';
+          dispatch(lockVaultAction());
         }
       } finally {
         if (!cancelled) setKeysLoading(false);

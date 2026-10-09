@@ -15,6 +15,13 @@ const { verifyTOTP, verifyBackupCode, hashBackupCode } = require('../utils/totp'
 
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_\-+=<>?/{}[\]|~`])/;
 
+// Derives a zero-knowledge authentication key (AuthKey) matching the client algorithm
+const deriveServerAuthKey = (password, salt) => {
+  if (!password) return null;
+  const authSalt = (salt || 'vault-salt') + '-vaultix-auth';
+  return crypto.pbkdf2Sync(password, authSalt, 600000, 32, 'sha256').toString('hex');
+};
+
 // Per-account brute-force lockout (in-memory).
 // Tracks consecutive failed login attempts per email so that a single account
 // cannot be hammered regardless of the source IP(s).
@@ -627,9 +634,8 @@ const me = async (req, res) => {
 const setMasterPassword = async (req, res) => {
   try {
     const { authKey, masterPassword, hint } = req.body;
-    const valueToHash = authKey || masterPassword;
 
-    if (!valueToHash) {
+    if (!authKey && !masterPassword) {
       return res.status(400).json({ message: 'Master password or auth key is required' });
     }
 
@@ -647,13 +653,24 @@ const setMasterPassword = async (req, res) => {
       return res.status(400).json({ message: 'Hint must be under 100 characters' });
     }
 
-    const masterPasswordHash = await bcrypt.hash(valueToHash, 12);
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+    });
+
+    let userSalt = user?.encryptionSalt;
+    if (!userSalt) {
+      userSalt = crypto.randomBytes(16).toString('hex');
+    }
+
+    const canonicalAuthKey = authKey || deriveServerAuthKey(masterPassword, userSalt);
+    const masterPasswordHash = await bcrypt.hash(canonicalAuthKey, 12);
 
     await prisma.user.update({
       where: { id: req.user.id },
       data: {
         masterPasswordHash,
         masterPasswordHint: hint || null,
+        encryptionSalt: userSalt,
       },
     });
 
@@ -940,6 +957,8 @@ const verifyMasterPassword = async (req, res) => {
       return res.status(400).json({ message: 'Master password not set' });
     }
 
+    const candidateLegacy = legacyMasterPassword || masterPassword;
+
     // 1. Zero-knowledge verification via derived authKey:
     if (authKey) {
       const isMatch = await bcrypt.compare(authKey, user.masterPasswordHash);
@@ -948,20 +967,53 @@ const verifyMasterPassword = async (req, res) => {
       }
     }
 
-    // 2. Backward compatibility fallback for legacy accounts:
-    const candidateLegacy = legacyMasterPassword || masterPassword;
+    // 2. Backward compatibility fallback for legacy accounts / salt recovery:
     if (candidateLegacy) {
+      // 2a. Direct password match (legacy raw password hash)
       const isLegacyMatch = await bcrypt.compare(candidateLegacy, user.masterPasswordHash);
       if (isLegacyMatch) {
-        // Transparent auto-migration: if authKey was provided, upgrade hash to zero-knowledge AuthKey!
-        if (authKey) {
-          const newHash = await bcrypt.hash(authKey, 12);
+        let userSalt = user.encryptionSalt;
+        if (!userSalt) {
+          userSalt = crypto.randomBytes(16).toString('hex');
+        }
+        const newAuthKey = authKey || deriveServerAuthKey(candidateLegacy, userSalt);
+        if (newAuthKey) {
+          const newHash = await bcrypt.hash(newAuthKey, 12);
           await prisma.user.update({
             where: { id: user.id },
-            data: { masterPasswordHash: newHash },
+            data: { masterPasswordHash: newHash, encryptionSalt: userSalt },
           });
         }
         return res.json({ verified: true });
+      }
+
+      // 2b. Match against AuthKey derived with user's encryptionSalt
+      if (user.encryptionSalt) {
+        const derivedWithSalt = deriveServerAuthKey(candidateLegacy, user.encryptionSalt);
+        if (derivedWithSalt) {
+          const isDerivedMatch = await bcrypt.compare(derivedWithSalt, user.masterPasswordHash);
+          if (isDerivedMatch) {
+            return res.json({ verified: true });
+          }
+        }
+      }
+
+      // 2c. Match against AuthKey derived with default salt ('vault-salt')
+      const derivedWithDefault = deriveServerAuthKey(candidateLegacy, null);
+      if (derivedWithDefault) {
+        const isDefaultMatch = await bcrypt.compare(derivedWithDefault, user.masterPasswordHash);
+        if (isDefaultMatch) {
+          // Upgrade to user's encryptionSalt if present
+          if (user.encryptionSalt) {
+            const canonicalAuthKey = authKey || deriveServerAuthKey(candidateLegacy, user.encryptionSalt);
+            const newHash = await bcrypt.hash(canonicalAuthKey, 12);
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { masterPasswordHash: newHash },
+            });
+          }
+          return res.json({ verified: true });
+        }
       }
     }
 
@@ -992,20 +1044,36 @@ const changeMasterPassword = async (req, res) => {
       return res.status(400).json({ message: 'Master password not set' });
     }
 
-    // Verify current master password (try authKey first, legacy fallback):
+    // Verify current master password (try authKey first, then legacy/salt fallbacks):
     let isMatch = false;
     if (currentAuthKey) {
       isMatch = await bcrypt.compare(currentAuthKey, user.masterPasswordHash);
     }
     if (!isMatch && currentMasterPassword) {
       isMatch = await bcrypt.compare(currentMasterPassword, user.masterPasswordHash);
+      if (!isMatch && user.encryptionSalt) {
+        const derivedWithSalt = deriveServerAuthKey(currentMasterPassword, user.encryptionSalt);
+        isMatch = await bcrypt.compare(derivedWithSalt, user.masterPasswordHash);
+      }
+      if (!isMatch) {
+        const derivedWithDefault = deriveServerAuthKey(currentMasterPassword, null);
+        isMatch = await bcrypt.compare(derivedWithDefault, user.masterPasswordHash);
+      }
     }
 
     if (!isMatch) {
       return res.status(400).json({ message: 'Current master password is incorrect' });
     }
 
-    const targetNewValue = newAuthKey || newMasterPassword;
+    let userSalt = user.encryptionSalt;
+    if (!userSalt) {
+      userSalt = crypto.randomBytes(16).toString('hex');
+    }
+
+    const targetNewValue =
+      newAuthKey ||
+      (newMasterPassword ? deriveServerAuthKey(newMasterPassword, userSalt) : null);
+
     if (!targetNewValue) {
       return res.status(400).json({ message: 'New master password is required' });
     }
@@ -1016,6 +1084,7 @@ const changeMasterPassword = async (req, res) => {
       data: {
         masterPasswordHash,
         masterPasswordHint: hint || null,
+        encryptionSalt: userSalt,
       },
     });
 
@@ -1220,8 +1289,13 @@ const resetMasterPasswordWithRecoveryKey = async (req, res) => {
     // existing key pair (and therefore all vault data) is preserved.
     const encryptedPrivateKey = encryptEnvelope(privateKeyJwk, newMasterPassword);
 
+    let userSalt = user.encryptionSalt;
+    if (!userSalt) {
+      userSalt = crypto.randomBytes(16).toString('hex');
+    }
+
     const { newAuthKey } = req.body;
-    const valueToHash = newAuthKey || newMasterPassword;
+    const valueToHash = newAuthKey || deriveServerAuthKey(newMasterPassword, userSalt);
     const masterPasswordHash = await bcrypt.hash(valueToHash, 12);
 
     const encryptedPrivateKeyParsed =
@@ -1235,6 +1309,7 @@ const resetMasterPasswordWithRecoveryKey = async (req, res) => {
         data: {
           masterPasswordHash,
           masterPasswordHint: hint || null,
+          encryptionSalt: userSalt,
           // Recovery key is single-use — clear it once used.
           recoveryKey: null,
           recoveryKeyEscrow: null,
@@ -1324,7 +1399,12 @@ const resetMasterPassword = async (req, res) => {
       return res.status(400).json({ message: 'Hint must be under 100 characters' });
     }
 
-    const valueToHash = newAuthKey || newMasterPassword;
+    let userSalt = user.encryptionSalt || salt;
+    if (!userSalt) {
+      userSalt = crypto.randomBytes(16).toString('hex');
+    }
+
+    const valueToHash = newAuthKey || deriveServerAuthKey(newMasterPassword, userSalt);
     const masterPasswordHash = await bcrypt.hash(valueToHash, 12);
 
     await prisma.$transaction(async (tx) => {
@@ -1333,6 +1413,7 @@ const resetMasterPassword = async (req, res) => {
         data: {
           masterPasswordHash,
           masterPasswordHint: hint || null,
+          encryptionSalt: userSalt,
         },
       });
 

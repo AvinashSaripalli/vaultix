@@ -84,6 +84,9 @@ function ForgotMasterPasswordPage() {
         newMasterPassword,
         hint,
       });
+      sessionStorage.removeItem('masterPasswordVerifier');
+      sessionStorage.removeItem('vaultix-enc-session');
+      sessionStorage.removeItem('vaultix-master-verified');
       setDone(true);
     } catch (err) {
       setErrors({
