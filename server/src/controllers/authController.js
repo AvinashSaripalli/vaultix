@@ -97,6 +97,7 @@ const signToken = (user) => {
       id: user.id,
       email: user.email,
       role: user.role,
+      tokenVersion: user.tokenVersion ?? 0,
       type: 'access',
     },
     process.env.JWT_ACCESS_SECRET,
@@ -1052,6 +1053,7 @@ const changeMasterPassword = async (req, res) => {
   try {
     const {
       currentAuthKey,
+      currentAuthKeyDefaultSalt,
       newAuthKey,
       currentMasterPassword,
       newMasterPassword,
@@ -1072,6 +1074,9 @@ const changeMasterPassword = async (req, res) => {
     let isMatch = false;
     if (currentAuthKey) {
       isMatch = await bcrypt.compare(currentAuthKey, user.masterPasswordHash);
+    }
+    if (!isMatch && currentAuthKeyDefaultSalt) {
+      isMatch = await bcrypt.compare(currentAuthKeyDefaultSalt, user.masterPasswordHash);
     }
     if (!isMatch && currentMasterPassword) {
       isMatch = await bcrypt.compare(currentMasterPassword, user.masterPasswordHash);

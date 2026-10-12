@@ -204,7 +204,7 @@ function AddMyVaultPasswordModal({
         tags: formData.tags,
         isSensitive: formData.isSensitive,
         strengthScore,
-        isWeak: strengthScore <= 2,
+        isWeak: isLogin ? strengthScore <= 2 : false,
         isOld: false,
         isAtRisk: atRisk,
       };

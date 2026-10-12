@@ -2,7 +2,10 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import api from '../../services/api';
 import {
   decryptText,
-  encryptTextWithAesKey,
+  decryptFields,
+  generateItemAesKey,
+  encryptValueWithAesKey,
+  encryptFieldsWithAesKey,
   rsaEncrypt,
 } from '../../utils/crypto';
 import { getMasterPassword, getRsaPrivateKey } from '../../utils/secureSession';
@@ -50,34 +53,58 @@ export const sharePasswordToUser = createAsyncThunk(
         }
 
         const salt = thunkAPI.getState().auth.user?.encryptionSalt;
-        const decryptedPassword = await decryptText(
-          password.encryptedPassword,
-          masterPassword,
-          salt
-        );
-
-        const { encryptedData: reEncryptedPwd, aesKeyJwk } = await encryptTextWithAesKey(decryptedPassword);
-        reEncryptedPassword = reEncryptedPwd;
+        const { aesKeyJwk } = await generateItemAesKey();
         encryptedItemKey = await rsaEncrypt(aesKeyJwk, recipientPublicKey);
 
-        if (!encryptedItemKey || !reEncryptedPassword) {
-          return thunkAPI.rejectWithValue(
-            'Failed to encrypt this item for the recipient. Share not created.'
+        if (password.encryptedPassword) {
+          const decryptedPassword = await decryptText(
+            password.encryptedPassword,
+            masterPassword,
+            salt
           );
+          if (decryptedPassword) {
+            reEncryptedPassword = await encryptValueWithAesKey(
+              decryptedPassword,
+              aesKeyJwk
+            );
+          }
         }
 
         if (password.encryptedNote) {
-          const decryptedNote = await decryptText(password.encryptedNote, masterPassword, salt);
-          const { encryptedData: reEncryptedNt } = await encryptTextWithAesKey(decryptedNote);
-          reEncryptedNote = reEncryptedNt;
+          const decryptedNote = await decryptText(
+            password.encryptedNote,
+            masterPassword,
+            salt
+          );
+          if (decryptedNote) {
+            reEncryptedNote = await encryptValueWithAesKey(
+              decryptedNote,
+              aesKeyJwk
+            );
+          }
         }
 
         if (password.encryptedFields) {
-          const decryptedFields = await decryptText(password.encryptedFields, masterPassword, salt);
+          const decryptedFields = await decryptFields(
+            password.encryptedFields,
+            masterPassword,
+            salt
+          );
           if (decryptedFields) {
-            const { encryptedData: reEncryptedFlds } = await encryptTextWithAesKey(decryptedFields);
-            reEncryptedFields = reEncryptedFlds;
+            reEncryptedFields = await encryptFieldsWithAesKey(
+              decryptedFields,
+              aesKeyJwk
+            );
           }
+        }
+
+        if (
+          !encryptedItemKey ||
+          (!reEncryptedPassword && !reEncryptedNote && !reEncryptedFields)
+        ) {
+          return thunkAPI.rejectWithValue(
+            'Failed to encrypt this item for the recipient. Share not created.'
+          );
         }
       } catch (err) {
         console.error('Share re-encryption failed:', err);

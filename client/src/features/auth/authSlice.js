@@ -10,6 +10,7 @@ import {
   MASTER_VERIFIER_STORAGE_KEY,
   generateKeyPair,
   encryptPrivateKey,
+  decryptPrivateKey,
   generateRecoveryKey,
   reWrapItemKey,
   rsaDecrypt,
@@ -234,6 +235,7 @@ export const changeMasterPassword = createAsyncThunk(
       const salt = auth.user.encryptionSalt;
       const userId = auth.user.id;
       const oldPrivateKey = thunkAPI.getState().auth.sessionRsaPrivateKey;
+      const oldPublicKey = thunkAPI.getState().auth.sessionRsaPublicKey;
 
       const ownedRes = await api.get('/passwords/owned');
       const ownedPasswords = ownedRes.data;
@@ -241,7 +243,7 @@ export const changeMasterPassword = createAsyncThunk(
       // A master-encrypted envelope carries v2/PBKDF2 markers. Items using the
       // per-item AES-key (wrapped-keys) scheme store a bare {iv, content}
       // envelope with no KDF markers and are NOT derived from the master
-      // password — their wrapped keys are re-wrapped separately below.
+      // password — their wrapped keys are re-wrapped separately if needed.
       const isMasterEncrypted = (value) => {
         if (!value || typeof value !== 'string') return false;
         try {
@@ -252,29 +254,62 @@ export const changeMasterPassword = createAsyncThunk(
         }
       };
 
+      const hasMasterEncryptedFields = (encryptedFields) => {
+        if (!encryptedFields) return false;
+        if (isMasterEncrypted(encryptedFields)) return true;
+        try {
+          const parsed =
+            typeof encryptedFields === 'string'
+              ? JSON.parse(encryptedFields)
+              : encryptedFields;
+          if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+            return false;
+          }
+          const fieldValues = Object.values(parsed).filter(
+            (v) => typeof v === 'string' && v.length > 0
+          );
+          return fieldValues.length > 0 && fieldValues.every((v) => isMasterEncrypted(v));
+        } catch {
+          return false;
+        }
+      };
+
       const reencrypted = [];
       for (const pw of ownedPasswords) {
-        if (!isMasterEncrypted(pw.encryptedPassword)) {
+        const hasMasterPw = isMasterEncrypted(pw.encryptedPassword);
+        const hasMasterNote = isMasterEncrypted(pw.encryptedNote);
+        const hasMasterFlds = hasMasterEncryptedFields(pw.encryptedFields);
+
+        if (!hasMasterPw && !hasMasterNote && !hasMasterFlds) {
           continue;
         }
 
-        let decrypted;
-        try {
-          decrypted = await decryptText(
-            pw.encryptedPassword,
-            currentMasterPassword,
-            salt
-          );
-        } catch {
-          // Not decryptable with the current master password — leave as-is.
-          continue;
+        const update = {
+          id: pw.id,
+          encryptedPassword: pw.encryptedPassword || '',
+        };
+        let didReencryptAny = false;
+
+        if (hasMasterPw) {
+          try {
+            const decrypted = await decryptText(
+              pw.encryptedPassword,
+              currentMasterPassword,
+              salt
+            );
+            update.encryptedPassword = await encryptText(
+              decrypted,
+              newMasterPassword,
+              salt
+            );
+            didReencryptAny = true;
+          } catch {
+            // Not decryptable with the current master password — leave item as-is.
+            continue;
+          }
         }
 
-        const newEncrypted = await encryptText(decrypted, newMasterPassword, salt);
-
-        const update = { id: pw.id, encryptedPassword: newEncrypted };
-
-        if (pw.encryptedNote && isMasterEncrypted(pw.encryptedNote)) {
+        if (hasMasterNote) {
           try {
             const decryptedNote = await decryptText(
               pw.encryptedNote,
@@ -286,35 +321,14 @@ export const changeMasterPassword = createAsyncThunk(
               newMasterPassword,
               salt
             );
+            didReencryptAny = true;
           } catch {
             // skip note that cannot be decrypted
           }
         }
 
-        if (pw.encryptedFields) {
-          // Personal vault items store per-field master-encrypted envelopes
-          // (a dict of v2 strings). Wrapped-key items store bare {iv, content}
-          // AES envelopes that must NOT be re-encrypted here — their item key
-          // is re-wrapped separately below.
-          let parsedFields = null;
+        if (hasMasterFlds) {
           try {
-            parsedFields = JSON.parse(pw.encryptedFields);
-          } catch {
-            parsedFields = null;
-          }
-          const fieldValues =
-            parsedFields &&
-            typeof parsedFields === 'object' &&
-            !Array.isArray(parsedFields)
-              ? Object.values(parsedFields).filter(
-                  (v) => typeof v === 'string' && v.length > 0
-                )
-              : [];
-
-          if (
-            fieldValues.length > 0 &&
-            fieldValues.every((v) => isMasterEncrypted(v))
-          ) {
             const decryptedFields = await decryptFields(
               pw.encryptedFields,
               currentMasterPassword,
@@ -326,11 +340,16 @@ export const changeMasterPassword = createAsyncThunk(
                 newMasterPassword,
                 salt
               );
+              didReencryptAny = true;
             }
+          } catch {
+            // skip fields that cannot be decrypted
           }
         }
 
-        reencrypted.push(update);
+        if (didReencryptAny) {
+          reencrypted.push(update);
+        }
       }
 
       if (reencrypted.length > 0) {
@@ -338,34 +357,63 @@ export const changeMasterPassword = createAsyncThunk(
       }
 
       const currentAuthKey = await deriveAuthKey(currentMasterPassword, salt);
+      const currentAuthKeyDefaultSalt = await deriveAuthKey(currentMasterPassword, 'vault-salt');
       const newAuthKey = await deriveAuthKey(newMasterPassword, salt);
 
       const response = await api.put('/auth/change-master-password', {
         currentAuthKey,
+        currentAuthKeyDefaultSalt,
         newAuthKey,
-        currentMasterPassword,
-        newMasterPassword,
         hint,
       });
 
-      const newKeyPair = await generateKeyPair();
+      // Preserve the existing RSA keypair so wrapped keys & recoveryKeyEscrow stay valid.
+      let privateKeyToEncrypt = oldPrivateKey;
+      let publicKeyToStore = oldPublicKey;
+
+      if (!privateKeyToEncrypt || !publicKeyToStore) {
+        try {
+          const kpRes = await api.get('/keypair');
+          if (kpRes.data?.encryptedPrivateKey && kpRes.data?.publicKey) {
+            privateKeyToEncrypt =
+              privateKeyToEncrypt ||
+              (await decryptPrivateKey(
+                kpRes.data.encryptedPrivateKey,
+                currentMasterPassword,
+                kpRes.data.salt || salt
+              ));
+            publicKeyToStore = publicKeyToStore || kpRes.data.publicKey;
+          }
+        } catch {
+          // Will generate a new keypair below if existing keypair could not be recovered
+        }
+      }
+
+      let rotatedKeyPair = false;
+      if (!privateKeyToEncrypt || !publicKeyToStore) {
+        const newKeyPair = await generateKeyPair();
+        privateKeyToEncrypt = newKeyPair.privateKeyJwk;
+        publicKeyToStore = newKeyPair.publicKeyJwk;
+        rotatedKeyPair = true;
+      }
+
       const newEncryptedPrivateKey = await encryptPrivateKey(
-        newKeyPair.privateKeyJwk,
+        privateKeyToEncrypt,
         newMasterPassword,
         salt
       );
 
       await api.post('/keypair', {
         encryptedPrivateKey: newEncryptedPrivateKey,
-        publicKey: newKeyPair.publicKeyJwk,
+        publicKey: publicKeyToStore,
         salt,
       });
 
-      storeRsaPrivateKey(newKeyPair.privateKeyJwk);
+      storeRsaPrivateKey(privateKeyToEncrypt);
+      thunkAPI.dispatch(setSessionRsaPrivateKey(privateKeyToEncrypt));
+      thunkAPI.dispatch(setSessionRsaPublicKey(publicKeyToStore));
 
-      thunkAPI.dispatch(setSessionRsaPublicKey(newKeyPair.publicKeyJwk));
-
-      if (oldPrivateKey) {
+      if (rotatedKeyPair && oldPrivateKey) {
         const wrappedKeysRes = await api.get('/keypair/me/wrapped-keys');
         const wrappedKeys = wrappedKeysRes.data;
 
@@ -377,7 +425,7 @@ export const changeMasterPassword = createAsyncThunk(
               const newEncryptedItemKey = await reWrapItemKey(
                 item.encryptedItemKey,
                 oldPrivateKey,
-                newKeyPair.publicKeyJwk
+                publicKeyToStore
               );
               reWrappedKeys.push({
                 shareId: item.id,
@@ -401,7 +449,7 @@ export const changeMasterPassword = createAsyncThunk(
           for (const item of vaultKeys.folders || []) {
             try {
               const aesKeyJson = await rsaDecrypt(item.wrappedKey, oldPrivateKey);
-              const newWrappedKey = await rsaEncrypt(aesKeyJson, newKeyPair.publicKeyJwk);
+              const newWrappedKey = await rsaEncrypt(aesKeyJson, publicKeyToStore);
               reWrappedFolders.push({
                 id: item.id,
                 wrappedKeys: { [userId]: newWrappedKey },
@@ -415,7 +463,7 @@ export const changeMasterPassword = createAsyncThunk(
           for (const item of vaultKeys.passwords || []) {
             try {
               const aesKeyJson = await rsaDecrypt(item.wrappedKey, oldPrivateKey);
-              const newWrappedKey = await rsaEncrypt(aesKeyJson, newKeyPair.publicKeyJwk);
+              const newWrappedKey = await rsaEncrypt(aesKeyJson, publicKeyToStore);
               reWrappedPasswords.push({
                 id: item.id,
                 wrappedKeys: { [userId]: newWrappedKey },
@@ -438,7 +486,7 @@ export const changeMasterPassword = createAsyncThunk(
 
       saveVerifier(await createMasterPasswordVerifier(newMasterPassword, salt));
       thunkAPI.dispatch(setSessionMasterPassword(newMasterPassword));
-      await persistEncryptedSession(newMasterPassword, newKeyPair.privateKeyJwk, newKeyPair.publicKeyJwk);
+      await persistEncryptedSession(newMasterPassword, privateKeyToEncrypt, publicKeyToStore);
 
       return response.data;
     } catch (error) {

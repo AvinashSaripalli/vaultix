@@ -1111,6 +1111,7 @@ const getPasswordsOwnedByUser = async (req, res) => {
         id: true,
         encryptedPassword: true,
         encryptedNote: true,
+        encryptedFields: true,
       },
     });
 

@@ -17,6 +17,7 @@ const config = {
   departmentMember: 'DPERM',
   departmentPermission: 'DACCESS',
   keyPair: 'KPAIR',
+  webauthn: 'WEBAUTH',
 };
 
 function generateId(model) {

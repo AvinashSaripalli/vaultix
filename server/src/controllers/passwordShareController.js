@@ -56,7 +56,7 @@ const sharePassword = async (req, res) => {
       },
       update: {
         ...(encryptedItemKey && { encryptedItemKey }),
-        ...(reEncryptedPassword && { reEncryptedPassword }),
+        ...(reEncryptedPassword !== undefined && { reEncryptedPassword: reEncryptedPassword || null }),
         ...(reEncryptedNote !== undefined && { reEncryptedNote: reEncryptedNote || null }),
         ...(reEncryptedFields !== undefined && { reEncryptedFields: reEncryptedFields || null }),
       },
@@ -89,6 +89,7 @@ const sharePassword = async (req, res) => {
           select: {
             id: true,
             name: true,
+            type: true,
             login: true,
             url: true,
           },

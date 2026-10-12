@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import api from '../../services/api';
+import { sharePasswordToUser } from '../sharedPasswords/sharedPasswordsSlice';
 
 export const fetchMyVault = createAsyncThunk(
   'myVault/fetchMyVault',
@@ -73,10 +74,26 @@ export const createMyVaultPassword = createAsyncThunk(
 
 export const updateMyVaultPassword = createAsyncThunk(
   'myVault/updateMyVaultPassword',
-  async ({ passwordId, data }, { rejectWithValue }) => {
+  async ({ passwordId, data }, { dispatch, rejectWithValue }) => {
     try {
       const res = await api.put(`/my-vault/passwords/${passwordId}`, data);
-      return res.data;
+      const updated = res.data;
+
+      if (Array.isArray(updated?.shares) && updated.shares.length > 0) {
+        for (const share of updated.shares) {
+          if (share.sharedWithId) {
+            dispatch(
+              sharePasswordToUser({
+                passwordId: updated.id,
+                userId: share.sharedWithId,
+                password: updated,
+              })
+            ).catch(() => {});
+          }
+        }
+      }
+
+      return updated;
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 'Failed to update password'

@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
+const prisma = require('../config/prisma');
 
-const authenticate = (req, res, next) => {
+const authenticate = async (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -18,7 +19,34 @@ const authenticate = (req, res, next) => {
       return res.status(401).json({ message: 'Invalid token type' });
     }
 
-    req.user = decoded;
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        isActive: true,
+        tokenVersion: true,
+      },
+    });
+
+    if (!user || user.isActive === false) {
+      return res.status(401).json({ message: 'Account is deactivated or no longer exists' });
+    }
+
+    if (
+      decoded.tokenVersion !== undefined &&
+      user.tokenVersion !== undefined &&
+      decoded.tokenVersion !== user.tokenVersion
+    ) {
+      return res.status(401).json({ message: 'Session expired. Please log in again.' });
+    }
+
+    req.user = {
+      ...decoded,
+      email: user.email,
+      role: user.role,
+    };
     next();
   } catch (error) {
     return res.status(401).json({ message: 'Invalid token' });

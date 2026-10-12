@@ -257,7 +257,7 @@ function EditMyVaultPasswordModal({
         tags: formData.tags,
         isSensitive: formData.isSensitive,
         strengthScore,
-        isWeak: strengthScore <= 2,
+        isWeak: isLogin ? strengthScore <= 2 : false,
         isOld: isLogin ? isPasswordOld(password.lastUpdatedAt, password.createdAt) : false,
         isAtRisk: atRisk,
       });

@@ -3,13 +3,28 @@ import { useState } from 'react';
 import api from '../../services/api';
 import { secureCopyText } from '../../utils/clipboard';
 import ModalPortal from '../../components/common/ModalPortal';
+import {
+  CUSTOM_FIELDS_KEY,
+  TYPE_FIELDS,
+  getItemTypeMeta,
+  isFieldMasked,
+  maskFieldValue,
+  parseCustomFields,
+} from '../../utils/itemTypes';
 
 function ViewSharedPasswordModal({ open, item, decryptedData, onClose }) {
   const [showPw, setShowPw] = useState(false);
+  const [revealedFields, setRevealedFields] = useState({});
 
   if (!open || !item) return null;
 
   const password = item.password;
+  const itemType = password?.type || 'LOGIN';
+  const typeMeta = getItemTypeMeta(itemType);
+  const typeFieldDefs = TYPE_FIELDS[itemType] || [];
+  const fieldsObj = decryptedData?.fields || {};
+  const customFields = parseCustomFields(fieldsObj?.[CUSTOM_FIELDS_KEY]);
+
   const displayPassword = decryptedData?.password || '';
   const displayNote = decryptedData?.note || 'No note';
 
@@ -19,6 +34,10 @@ function ViewSharedPasswordModal({ open, item, decryptedData, onClose }) {
     api.post(`/passwords/${password.id}/copy-log`).catch(() => {});
   };
 
+  const toggleFieldReveal = (key) => {
+    setRevealedFields((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
   return (
     <ModalPortal open={open} onClose={onClose}>
       <div
@@ -26,17 +45,19 @@ function ViewSharedPasswordModal({ open, item, decryptedData, onClose }) {
         onClick={onClose}
       >
         <div
-          className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden dark:bg-slate-800 my-auto"
+          className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden dark:bg-slate-800 my-auto max-h-[90vh] flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
-        <div className="px-4 sm:px-6 pt-4 sm:pt-5 pb-4 border-b border-slate-100 dark:border-slate-700">
+        <div className="px-4 sm:px-6 pt-4 sm:pt-5 pb-4 border-b border-slate-100 dark:border-slate-700 shrink-0">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3 sm:gap-4 min-w-0">
               <div className="h-11 w-11 sm:h-12 sm:w-12 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 dark:bg-indigo-900/40 dark:border-indigo-800 dark:text-indigo-300">
                 <KeyRound size={22} />
               </div>
               <div className="space-y-0.5 min-w-0">
-                <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wider dark:text-indigo-400">Shared Password</p>
+                <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wider dark:text-indigo-400">
+                  Shared {typeMeta?.label || 'Password'}
+                </p>
                 <h2 className="text-lg sm:text-xl font-bold text-slate-900 truncate dark:text-slate-100">{password?.name}</h2>
                 <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 truncate">
                   Shared by <span className="font-medium text-slate-700 dark:text-slate-300">{item.sharedBy?.fullName || 'a user'}</span>
@@ -49,7 +70,7 @@ function ViewSharedPasswordModal({ open, item, decryptedData, onClose }) {
           </div>
         </div>
 
-        <div className="px-4 sm:px-6 py-4 space-y-4">
+        <div className="px-4 sm:px-6 py-4 space-y-4 overflow-y-auto flex-1">
           <div className="rounded-xl bg-slate-50 border border-slate-200 overflow-hidden dark:bg-slate-700/50 dark:border-slate-600">
             <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-slate-200 dark:divide-slate-600">
               <div className="p-3.5 sm:p-4 space-y-3">
@@ -64,26 +85,77 @@ function ViewSharedPasswordModal({ open, item, decryptedData, onClose }) {
           </div>
 
           <div className="rounded-xl border border-slate-200 overflow-hidden divide-y divide-slate-100 dark:border-slate-600 dark:divide-slate-700">
-            <Row label="Login" value={password?.login} onCopy={() => handleCopy(password?.login)} copyIcon />
+            {(itemType === 'LOGIN' || password?.login) && (
+              <Row label="Login" value={password?.login || '-'} onCopy={password?.login ? () => handleCopy(password?.login) : undefined} copyIcon />
+            )}
 
-            <Row label="Password" value={showPw ? displayPassword : '••••••••••••'}>
-              <IconBtn onClick={() => setShowPw((p) => !p)}>
-                {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
-              </IconBtn>
-              <IconBtn onClick={() => handleCopy(displayPassword)}>
-                <Copy size={15} />
-              </IconBtn>
-            </Row>
+            {(itemType === 'LOGIN' || displayPassword) && (
+              <Row label="Password" value={showPw ? displayPassword : '••••••••••••'}>
+                <IconBtn onClick={() => setShowPw((p) => !p)}>
+                  {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
+                </IconBtn>
+                <IconBtn onClick={() => handleCopy(displayPassword)}>
+                  <Copy size={15} />
+                </IconBtn>
+              </Row>
+            )}
 
-            <Row label="URL" value={password?.url || 'No URL'} link onCopy={() => handleCopy(password?.url)} external />
+            {typeFieldDefs.map((field) => {
+              const rawValue = fieldsObj?.[field.key];
+              if (!rawValue) return null;
+              const masked = isFieldMasked(field);
+              const isRevealed = Boolean(revealedFields[field.key]);
+              const shownValue = masked && !isRevealed ? maskFieldValue(rawValue, field) : rawValue;
+              const isUrlField = field.key === 'url' || field.key === 'baseUrl';
 
-            <Row label="Note" value={displayNote || 'No note'} />
+              return (
+                <Row
+                  key={field.key}
+                  label={field.label}
+                  value={shownValue}
+                  link={isUrlField}
+                  onCopy={() => handleCopy(rawValue)}
+                >
+                  {masked && (
+                    <IconBtn onClick={() => toggleFieldReveal(field.key)}>
+                      {isRevealed ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </IconBtn>
+                  )}
+                </Row>
+              );
+            })}
+
+            {customFields.map((cf, idx) => {
+              const cfKey = `custom_${idx}`;
+              const isRevealed = Boolean(revealedFields[cfKey]);
+              const shownValue = cf.sensitive && !isRevealed ? '••••••••••••' : cf.value;
+              return (
+                <Row
+                  key={cfKey}
+                  label={cf.name || `Field ${idx + 1}`}
+                  value={shownValue || '-'}
+                  onCopy={cf.value ? () => handleCopy(cf.value) : undefined}
+                >
+                  {cf.sensitive && (
+                    <IconBtn onClick={() => toggleFieldReveal(cfKey)}>
+                      {isRevealed ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </IconBtn>
+                  )}
+                </Row>
+              );
+            })}
+
+            {(itemType === 'LOGIN' || password?.url) && (
+              <Row label="URL" value={password?.url || 'No URL'} link onCopy={password?.url ? () => handleCopy(password?.url) : undefined} external />
+            )}
+
+            <Row label="Note" value={displayNote || 'No note'} onCopy={decryptedData?.note ? () => handleCopy(decryptedData.note) : undefined} />
 
             <Row label="Tags" value={password?.tags?.length ? password.tags.map((t) => t.tag?.name).filter(Boolean).join(', ') : 'No tags'} />
           </div>
         </div>
 
-        <div className="px-4 sm:px-6 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between dark:bg-slate-700/50 dark:border-slate-700">
+        <div className="px-4 sm:px-6 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between dark:bg-slate-700/50 dark:border-slate-700 shrink-0">
           <p className="text-xs text-slate-400 dark:text-slate-500">Securely shared via Vaultix</p>
           <button onClick={onClose} className="h-9 px-4 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-white transition-colors dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700">Close</button>
         </div>
@@ -109,7 +181,7 @@ function Row({ label, value, children, link, onCopy, copyIcon, external }) {
   const isUrl = link && value && value !== 'No URL';
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-3 px-4 sm:px-5 py-3.5 sm:py-4 min-h-[52px]">
-      <p className="text-xs sm:text-sm font-medium sm:font-normal text-slate-500 shrink-0 sm:w-20 dark:text-slate-400">{label}</p>
+      <p className="text-xs sm:text-sm font-medium sm:font-normal text-slate-500 shrink-0 sm:w-36 dark:text-slate-400">{label}</p>
       <div className="flex items-center justify-between sm:justify-end gap-1.5 min-w-0 flex-1">
         {isUrl ? (
           <a href={value.startsWith('http') ? value : `https://${value}`} target="_blank" rel="noreferrer" className="text-sm text-blue-600 hover:text-blue-800 hover:underline truncate flex items-center gap-1 min-w-0 dark:text-blue-400 dark:hover:text-blue-300">

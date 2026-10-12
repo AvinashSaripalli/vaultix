@@ -341,6 +341,12 @@ const getMyVaultPasswords = async (req, res) => {
             tag: true,
           },
         },
+        shares: {
+          select: {
+            id: true,
+            sharedWithId: true,
+          },
+        },
       },
       orderBy: {
         createdAt: 'desc',
@@ -641,6 +647,12 @@ const updateMyVaultPassword = async (req, res) => {
           tags: {
             include: {
               tag: true,
+            },
+          },
+          shares: {
+            select: {
+              id: true,
+              sharedWithId: true,
             },
           },
         },

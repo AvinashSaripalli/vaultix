@@ -188,10 +188,6 @@ function AddPasswordModal({ prefill, prefillName, onPrefillConsumed }) {
       if (formData.encryptedPassword.length < 6) {
         return 'Password must be at least 6 characters';
       }
-      if (!formData.confirmPassword) return 'Confirm password is required';
-      if (formData.encryptedPassword !== formData.confirmPassword) {
-        return 'Password and confirm password do not match';
-      }
     } else if (formData.type !== 'SECURE_NOTE') {
       const f = formData.fields || {};
       const requiredDefs = (TYPE_FIELDS[formData.type] || []).filter((field) => field.required);
@@ -341,7 +337,7 @@ function AddPasswordModal({ prefill, prefillName, onPrefillConsumed }) {
           tags: payload.tags,
           isSensitive: payload.isSensitive,
           strengthScore,
-          isWeak: strengthScore <= 2,
+          isWeak: isLogin ? strengthScore <= 2 : false,
           isOld: false,
           isAtRisk: atRisk,
         })
@@ -419,7 +415,7 @@ function AddPasswordModal({ prefill, prefillName, onPrefillConsumed }) {
                 setLocalError('');
                 setFormData((prev) => ({ ...prev, customFields }));
               }}
-              showConfirmPassword={formData.type === 'LOGIN'}
+              showConfirmPassword={false}
               passwordFieldName="encryptedPassword"
               noteFieldName="encryptedNote"
               inputClass={inputClass}

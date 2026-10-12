@@ -6,7 +6,16 @@ import ViewSharedPasswordModal from './ViewSharedPasswordModal';
 import ModalPortal from '../../components/common/ModalPortal';
 import VerifyMasterPasswordModal from '../../components/security/VerifyMasterPasswordModal';
 import { fetchSharedWithMe } from '../../features/sharedPasswords/sharedPasswordsSlice';
-import { decryptText, isEncryptedFormat, rsaDecrypt, decryptTextWithAesKey, decryptPrivateKey } from '../../utils/crypto';
+import {
+  decryptText,
+  decryptFields,
+  isEncryptedFormat,
+  rsaDecrypt,
+  decryptTextWithAesKey,
+  decryptFieldsWithAesKey,
+  decryptPrivateKey,
+} from '../../utils/crypto';
+import { getItemTypeMeta } from '../../utils/itemTypes';
 import api from '../../services/api';
 import { setSessionRsaPrivateKey, setSessionRsaPublicKey } from '../../features/auth/authSlice';
 
@@ -45,14 +54,22 @@ function SharedWithMePage() {
 
   const handleRequestDecrypt = async (item) => {
     const password = item.password;
-    const isEncrypted = isEncryptedFormat(password?.encryptedPassword);
+    const isEncrypted =
+      Boolean(item.encryptedItemKey) ||
+      isEncryptedFormat(password?.encryptedPassword) ||
+      isEncryptedFormat(password?.encryptedNote) ||
+      Boolean(password?.encryptedFields);
 
     if (!isEncrypted) {
       setDecryptedData((prev) => ({
         ...prev,
-        [item.id]: { password: password.encryptedPassword, note: password.encryptedNote || null },
+        [item.id]: {
+          password: password?.encryptedPassword || '',
+          note: password?.encryptedNote || null,
+          fields: null,
+        },
       }));
-      return password.encryptedPassword;
+      return true;
     }
 
     if (!sessionMasterPassword) {
@@ -91,16 +108,25 @@ function SharedWithMePage() {
     try {
       setDecryptError('');
 
-      let decrypted, noteText = null;
+      let decrypted = '';
+      let noteText = null;
+      let fieldsObj = null;
 
       if (item.encryptedItemKey && rsaPrivateKey) {
         const aesKeyJwk = await rsaDecrypt(item.encryptedItemKey, rsaPrivateKey);
-        const encryptedData = item.reEncryptedPassword || password.encryptedPassword;
-        decrypted = await decryptTextWithAesKey(encryptedData, aesKeyJwk);
+        const encryptedData = item.reEncryptedPassword || password?.encryptedPassword;
+        if (encryptedData) {
+          decrypted = await decryptTextWithAesKey(encryptedData, aesKeyJwk);
+        }
 
-        if (item.reEncryptedNote || (password.encryptedNote && isEncryptedFormat(password.encryptedNote))) {
+        if (item.reEncryptedNote || (password?.encryptedNote && isEncryptedFormat(password.encryptedNote))) {
           const noteData = item.reEncryptedNote || password.encryptedNote;
           noteText = await decryptTextWithAesKey(noteData, aesKeyJwk);
+        }
+
+        if (item.reEncryptedFields || password?.encryptedFields) {
+          const fieldsData = item.reEncryptedFields || password.encryptedFields;
+          fieldsObj = await decryptFieldsWithAesKey(fieldsData, aesKeyJwk);
         }
       } else {
         const ownerSalt = password?.vault?.owner?.encryptionSalt;
@@ -108,20 +134,26 @@ function SharedWithMePage() {
           setDecryptError('Encryption salt not available');
           return null;
         }
-        decrypted = await decryptText(password.encryptedPassword, sessionMasterPassword, ownerSalt);
+        if (password?.encryptedPassword) {
+          decrypted = await decryptText(password.encryptedPassword, sessionMasterPassword, ownerSalt);
+        }
 
-        if (password.encryptedNote && isEncryptedFormat(password.encryptedNote)) {
+        if (password?.encryptedNote && isEncryptedFormat(password.encryptedNote)) {
           noteText = await decryptText(password.encryptedNote, sessionMasterPassword, ownerSalt);
+        }
+
+        if (password?.encryptedFields) {
+          fieldsObj = await decryptFields(password.encryptedFields, sessionMasterPassword, ownerSalt);
         }
       }
 
       setDecryptedData((prev) => ({
         ...prev,
-        [item.id]: { password: decrypted, note: noteText },
+        [item.id]: { password: decrypted || '', note: noteText, fields: fieldsObj },
       }));
 
       api.post(`/passwords/${password.id}/view-log`).catch(() => {});
-      return decrypted;
+      return true;
     } catch {
       setDecryptError('Decryption failed. Your master password may be incorrect or the item was not re-encrypted for you.');
       return null;
@@ -208,7 +240,10 @@ function SharedWithMePage() {
                         <p className="text-sm font-semibold text-slate-800 truncate dark:text-slate-200">{item.password?.name}</p>
                         <p className="text-xs text-slate-500 truncate flex items-center gap-1 mt-0.5 dark:text-slate-400">
                           <User size={11} />
-                          {item.password?.login || 'No login'}
+                          {item.password?.login ||
+                            (item.password?.type && item.password.type !== 'LOGIN'
+                              ? getItemTypeMeta(item.password.type)?.label
+                              : 'No login')}
                         </p>
                       </div>
                     </div>

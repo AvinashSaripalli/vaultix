@@ -39,6 +39,7 @@ const getPasswordHealth = async (req, res) => {
       select: {
         id: true,
         name: true,
+        type: true,
         login: true,
         url: true,
         isWeak: true,
@@ -53,34 +54,42 @@ const getPasswordHealth = async (req, res) => {
       },
     });
 
-    const total = passwords.length;
+    const loginPasswords = passwords.filter((p) => !p.type || p.type === 'LOGIN');
+    const total = loginPasswords.length;
 
-    const weak = passwords.filter((p) => p.isWeak);
-    const old = passwords.filter((p) => p.isOld);
-    const atRisk = passwords.filter((p) => p.isAtRisk);
+    const isEntryOld = (p) => {
+      if (p.isOld) return true;
+      const d = new Date(p.lastUpdatedAt || p.updatedAt || p.createdAt);
+      const ageDays = (Date.now() - d.getTime()) / (24 * 60 * 60 * 1000);
+      return ageDays >= OLD_DAYS_THRESHOLD;
+    };
+
+    const weak = loginPasswords.filter((p) => p.isWeak);
+    const old = loginPasswords.filter(isEntryOld);
+    const atRisk = loginPasswords.filter((p) => p.isAtRisk);
     const sensitive = passwords.filter((p) => p.isSensitive);
 
     const strengthDistribution = {
-      weak: passwords.filter((p) => (p.strengthScore ?? 0) <= 2).length,
-      medium: passwords.filter((p) => (p.strengthScore ?? 0) > 2 && (p.strengthScore ?? 0) <= 4).length,
-      strong: passwords.filter((p) => (p.strengthScore ?? 0) > 4).length,
-      unknown: passwords.filter((p) => p.strengthScore == null).length,
+      weak: loginPasswords.filter((p) => (p.strengthScore ?? 0) <= 2).length,
+      medium: loginPasswords.filter((p) => (p.strengthScore ?? 0) > 2 && (p.strengthScore ?? 0) <= 4).length,
+      strong: loginPasswords.filter((p) => (p.strengthScore ?? 0) > 4).length,
+      unknown: loginPasswords.filter((p) => p.strengthScore == null).length,
     };
 
     const ageDistribution = {
-      fresh: passwords.filter((p) => {
+      fresh: loginPasswords.filter((p) => {
         const d = new Date(p.lastUpdatedAt || p.updatedAt || p.createdAt);
         return (Date.now() - d.getTime()) < 30 * 24 * 60 * 60 * 1000;
       }).length,
-      months3: passwords.filter((p) => {
+      months3: loginPasswords.filter((p) => {
         const d = new Date(p.lastUpdatedAt || p.updatedAt || p.createdAt);
         const age = (Date.now() - d.getTime()) / (24 * 60 * 60 * 1000);
         return age >= 30 && age < 90;
       }).length,
-      months6: passwords.filter((p) => {
+      months6: loginPasswords.filter((p) => {
         const d = new Date(p.lastUpdatedAt || p.updatedAt || p.createdAt);
         const age = (Date.now() - d.getTime()) / (24 * 60 * 60 * 1000);
-        return age >= 90 && age < 180;
+        return age >= 90 && age < OLD_DAYS_THRESHOLD;
       }).length,
       over6m: old.length,
     };

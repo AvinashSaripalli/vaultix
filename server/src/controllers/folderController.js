@@ -614,7 +614,9 @@ const deleteFolder = async (req, res) => {
     const folder = await prisma.folder.findUnique({
       where: { id: folderId },
       include: {
-        passwords: true,
+        passwords: {
+          where: { deletedAt: null },
+        },
         permissions: true,
       },
     });

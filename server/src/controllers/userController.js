@@ -164,6 +164,7 @@ const updateUser = async (req, res) => {
         fullName,
         role,
         isActive,
+        ...(isActive === false && { tokenVersion: { increment: 1 } }),
       },
       select: {
         id: true,
@@ -174,6 +175,13 @@ const updateUser = async (req, res) => {
         createdAt: true,
       },
     });
+
+    if (isActive === false) {
+      await prisma.refreshToken.updateMany({
+        where: { userId: req.params.id, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+    }
 
     res.json(updatedUser);
   } catch (error) {
