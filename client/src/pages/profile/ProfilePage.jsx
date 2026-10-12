@@ -49,14 +49,20 @@ function ProfilePage() {
 
   return (
     <AppLayout>
-      <div className="max-w-3xl mx-auto space-y-6">
-        <div className="flex items-center gap-4">
-          <div className="h-14 w-14 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-700 text-xl font-bold">
-            {user?.fullName?.charAt(0)?.toUpperCase() || 'U'}
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Profile</h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Manage your account and security settings</p>
+      <div className="w-full min-w-0 space-y-5 sm:space-y-6 pb-8">
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-7 shadow-sm">
+          <div className="flex items-center gap-3.5 sm:gap-4">
+            <div className="h-11 w-11 sm:h-12 sm:w-12 rounded-2xl bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-700 dark:text-indigo-300 text-lg sm:text-xl font-bold shrink-0">
+              {user?.fullName?.charAt(0)?.toUpperCase() || 'U'}
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100 truncate">
+                Profile
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                Manage your account and security settings
+              </p>
+            </div>
           </div>
         </div>
 

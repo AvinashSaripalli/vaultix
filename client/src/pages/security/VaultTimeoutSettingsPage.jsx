@@ -66,14 +66,20 @@ function VaultTimeoutSettingsPage() {
 
   return (
     <AppLayout>
-      <div className="max-w-3xl mx-auto space-y-6">
-        <div className="flex items-center gap-4">
-          <div className="h-14 w-14 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-700 text-xl">
-            <Clock size={26} />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Vault Timeout</h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Set how long your vault stays unlocked after inactivity</p>
+      <div className="w-full min-w-0 space-y-5 sm:space-y-6 pb-8">
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-7 shadow-sm">
+          <div className="flex items-center gap-3.5 sm:gap-4">
+            <div className="h-11 w-11 sm:h-12 sm:w-12 rounded-2xl bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-700 dark:text-indigo-300 shrink-0">
+              <Clock size={22} />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100 truncate">
+                Vault Timeout
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                Set how long your vault stays unlocked after inactivity
+              </p>
+            </div>
           </div>
         </div>
 
@@ -90,7 +96,7 @@ function VaultTimeoutSettingsPage() {
           </div>
         )}
 
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8">
+        <div className="rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 sm:p-6 lg:p-8 shadow-sm">
           {loading ? (
             <p className="text-center text-slate-500 dark:text-slate-400 py-8">Loading...</p>
           ) : (
@@ -103,7 +109,7 @@ function VaultTimeoutSettingsPage() {
                   Your vault will automatically re-lock after this period of inactivity. You'll need to enter your master password again to unlock it.
                 </p>
 
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                   {TIMEOUT_OPTIONS.map((opt) => (
                     <button
                       key={opt.value}
@@ -137,10 +143,10 @@ function VaultTimeoutSettingsPage() {
                   type="button"
                   onClick={handleSave}
                   disabled={saving}
-                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 disabled:opacity-60 transition"
+                  className="inline-flex items-center justify-center gap-2 h-10 sm:h-11 px-6 rounded-xl bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 disabled:opacity-60 transition shadow-sm"
                 >
                   <Save size={16} />
-                  {saving ? 'Saving...' : 'Save Settings'}
+                  <span>{saving ? 'Saving...' : 'Save Settings'}</span>
                 </button>
               </div>
             </div>

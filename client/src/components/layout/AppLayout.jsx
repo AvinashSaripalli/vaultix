@@ -14,7 +14,7 @@ function AppLayoutContent({ children }) {
         <VerifyEmailBanner />
 
         {/* Main content with responsive padding and overflow-x protection */}
-        <main className="p-3 sm:p-5 lg:p-6 flex-1 min-w-0 overflow-x-hidden">
+        <main className="px-4 sm:px-6 lg:px-8 py-5 sm:py-6 flex-1 min-w-0 overflow-x-hidden">
           {children}
         </main>
 

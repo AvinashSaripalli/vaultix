@@ -672,152 +672,156 @@ function ActivityLogPage() {
             </div>
 
             {/* Filters */}
-            <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
-              <div className="relative w-full sm:w-[340px]">
-                <Search
-                  size={18}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"
-                />
-                <input
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setCurrentPage(1);
-                    setExpandedLogin(null);
-                  }}
-                  placeholder={
-                    activeTab === 'actions'
-                      ? 'Search by user, action, target...'
-                      : activeTab === 'login'
-                      ? 'Search by user, IP, status...'
-                      : 'Search activity...'
-                  }
-                  className="h-11 w-full rounded-xl border border-slate-300 bg-white pl-11 pr-4 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-indigo-500/30"
-                />
-              </div>
-
-              {activeTab === 'actions' && (
-                <>
-                  <select
-                    value={actionFilter}
+            <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3">
+              <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
+                <div className="relative w-full sm:w-[300px] lg:w-[340px]">
+                  <Search
+                    size={17}
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"
+                  />
+                  <input
+                    value={search}
                     onChange={(e) => {
-                      setActionFilter(e.target.value);
+                      setSearch(e.target.value);
                       setCurrentPage(1);
+                      setExpandedLogin(null);
                     }}
-                    className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-indigo-500/30"
-                  >
-                    {ACTION_FILTERS.map((item) => (
-                      <option key={item.value} value={item.value}>
-                        {item.label}
-                      </option>
-                    ))}
-                  </select>
+                    placeholder={
+                      activeTab === 'actions'
+                        ? 'Search by user, action, target...'
+                        : activeTab === 'login'
+                        ? 'Search by user, IP, status...'
+                        : 'Search activity...'
+                    }
+                    className="h-10 sm:h-11 w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-indigo-500/30"
+                  />
+                </div>
 
-                  <select
-                    value={typeFilter}
-                    onChange={(e) => {
-                      setTypeFilter(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                    className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-indigo-500/30"
-                  >
-                    {TYPE_FILTERS.map((item) => (
-                      <option key={item.value} value={item.value}>
-                        {item.label}
-                      </option>
-                    ))}
-                  </select>
-
-                  {departments.length > 0 && (
+                {activeTab === 'actions' && (
+                  <>
                     <select
-                      value={deptFilter}
+                      value={actionFilter}
                       onChange={(e) => {
-                        setDeptFilter(e.target.value);
+                        setActionFilter(e.target.value);
                         setCurrentPage(1);
                       }}
-                      className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-indigo-500/30"
+                      className="h-10 sm:h-11 rounded-xl border border-slate-300 bg-white px-3.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-indigo-500/30"
                     >
-                      <option value="ALL">All Departments</option>
-                      {departments.map((dept) => (
-                        <option key={dept.id} value={dept.id}>
-                          {dept.name}
+                      {ACTION_FILTERS.map((item) => (
+                        <option key={item.value} value={item.value}>
+                          {item.label}
                         </option>
                       ))}
                     </select>
-                  )}
-                </>
-              )}
 
-              {activeTab === 'login' && (
-                <select
-                  value={loginStatusFilter}
-                  onChange={(e) => {
-                    setLoginStatusFilter(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-indigo-500/30"
-                >
-                  {LOGIN_STATUS_FILTERS.map((item) => (
-                    <option key={item.value} value={item.value}>
-                      {item.label}
-                    </option>
-                  ))}
-                </select>
-              )}
-
-              {activeTab === 'unread' && (
-                <div className="flex gap-2">
-                  {UNREAD_TYPE_FILTERS.map((f) => (
-                    <button
-                      key={f.value}
-                      onClick={() => {
-                        setUnreadTypeFilter(f.value);
+                    <select
+                      value={typeFilter}
+                      onChange={(e) => {
+                        setTypeFilter(e.target.value);
                         setCurrentPage(1);
                       }}
-                      className={`h-11 px-4 rounded-xl text-sm font-semibold border transition ${
-                        unreadTypeFilter === f.value
-                          ? 'bg-indigo-600 text-white border-indigo-600'
-                          : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-700'
-                      }`}
+                      className="h-10 sm:h-11 rounded-xl border border-slate-300 bg-white px-3.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-indigo-500/30"
                     >
-                      {f.label}
-                    </button>
-                  ))}
-                </div>
-              )}
+                      {TYPE_FILTERS.map((item) => (
+                        <option key={item.value} value={item.value}>
+                          {item.label}
+                        </option>
+                      ))}
+                    </select>
 
-              <button
-                type="button"
-                onClick={resetFilters}
-                className="inline-flex h-11 items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-              >
-                <RotateCcw size={16} />
-                Reset
-              </button>
+                    {departments.length > 0 && (
+                      <select
+                        value={deptFilter}
+                        onChange={(e) => {
+                          setDeptFilter(e.target.value);
+                          setCurrentPage(1);
+                        }}
+                        className="h-10 sm:h-11 rounded-xl border border-slate-300 bg-white px-3.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-indigo-500/30"
+                      >
+                        <option value="ALL">All Departments</option>
+                        {departments.map((dept) => (
+                          <option key={dept.id} value={dept.id}>
+                            {dept.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </>
+                )}
 
-              {(activeTab === 'login' || activeTab === 'unread') && (
+                {activeTab === 'login' && (
+                  <select
+                    value={loginStatusFilter}
+                    onChange={(e) => {
+                      setLoginStatusFilter(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="h-10 sm:h-11 rounded-xl border border-slate-300 bg-white px-3.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-indigo-500/30"
+                  >
+                    {LOGIN_STATUS_FILTERS.map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
+
+                {activeTab === 'unread' && (
+                  <div className="flex flex-wrap gap-2">
+                    {UNREAD_TYPE_FILTERS.map((f) => (
+                      <button
+                        key={f.value}
+                        onClick={() => {
+                          setUnreadTypeFilter(f.value);
+                          setCurrentPage(1);
+                        }}
+                        className={`h-10 sm:h-11 px-3.5 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold border transition ${
+                          unreadTypeFilter === f.value
+                            ? 'bg-indigo-600 text-white border-indigo-600'
+                            : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-700'
+                        }`}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center flex-wrap gap-2 sm:gap-2.5 shrink-0">
                 <button
                   type="button"
-                  onClick={handleRefresh}
-                  disabled={loginLoading || notifLoading}
-                  className="inline-flex h-11 items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                  onClick={resetFilters}
+                  className="inline-flex h-10 sm:h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3.5 sm:px-4 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition shadow-sm"
                 >
-                  <RefreshCw
-                    size={16}
-                    className={loginLoading || notifLoading ? 'animate-spin' : ''}
-                  />
-                  Refresh
+                  <RotateCcw size={15} />
+                  <span>Reset</span>
                 </button>
-              )}
 
-              <button
-                type="button"
-                onClick={handleExportCSV}
-                className="inline-flex h-11 items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-              >
-                <Download size={16} />
-                Export CSV
-              </button>
+                {(activeTab === 'login' || activeTab === 'unread') && (
+                  <button
+                    type="button"
+                    onClick={handleRefresh}
+                    disabled={loginLoading || notifLoading}
+                    className="inline-flex h-10 sm:h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3.5 sm:px-4 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition shadow-sm"
+                  >
+                    <RefreshCw
+                      size={15}
+                      className={loginLoading || notifLoading ? 'animate-spin' : ''}
+                    />
+                    <span>Refresh</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleExportCSV}
+                  className="inline-flex h-10 sm:h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3.5 sm:px-4 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition shadow-sm"
+                >
+                  <Download size={15} />
+                  <span>Export CSV</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

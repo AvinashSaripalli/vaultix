@@ -84,15 +84,17 @@ function PasswordHealthPage() {
     <AppLayout>
       <div className="w-full min-w-0 space-y-6 pb-8">
         {/* Header */}
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 lg:p-7">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-2xl bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center shrink-0">
-                <ShieldCheck size={20} className="text-emerald-600" />
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-7 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className="h-11 w-11 sm:h-12 sm:w-12 rounded-2xl bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center shrink-0">
+                <ShieldCheck size={22} className="text-emerald-600 dark:text-emerald-400" />
               </div>
-              <div>
-                <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100">Password Health</h1>
-                <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">
+              <div className="min-w-0">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100 truncate">
+                  Password Health
+                </h1>
+                <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-0.5">
                   Monitor password strength, detect breaches, and get recommendations
                 </p>
               </div>
@@ -100,10 +102,10 @@ function PasswordHealthPage() {
             <button
               onClick={() => dispatch(fetchPasswordHealth())}
               disabled={loading}
-              className="h-10 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 transition disabled:opacity-50"
+              className="h-9 sm:h-10 px-4 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 inline-flex items-center justify-center gap-2 transition disabled:opacity-50 self-start sm:self-auto shrink-0 shadow-sm"
             >
               <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-              Refresh
+              <span>Refresh</span>
             </button>
           </div>
         </div>

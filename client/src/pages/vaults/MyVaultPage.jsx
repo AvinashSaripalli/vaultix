@@ -243,57 +243,45 @@ function MyVaultPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <MyVaultHeader
-              folders={folders}
-              onCreateFolder={() => setFolderModalOpen(true)}
-              onCreatePassword={() => openAddPasswordModal()}
-            />
-          </div>
-          <button
-            onClick={handleToggleTrash}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-medium ${
-              trashOpen
-                ? 'bg-red-50 border-red-300 text-red-600 dark:bg-red-900/20 dark:border-red-700 dark:text-red-400'
-                : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300'
-            }`}
-          >
-            <Trash2 size={18} />
-            {trashOpen ? 'Back to Vault' : 'Trash'}
-          </button>
-        </div>
+      <div className="space-y-5 sm:space-y-6 min-w-0">
+        <MyVaultHeader
+          folders={folders}
+          onCreateFolder={() => setFolderModalOpen(true)}
+          onCreatePassword={() => openAddPasswordModal()}
+          trashOpen={trashOpen}
+          trashCount={trash?.length || 0}
+          onToggleTrash={handleToggleTrash}
+        />
 
         {trashOpen ? (
-          <div className="bg-white rounded-[30px] border border-slate-200 overflow-hidden dark:bg-slate-800 dark:border-slate-700">
-            <div className="px-8 py-6">
-              <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-200">
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm dark:bg-slate-800 dark:border-slate-700">
+            <div className="px-5 sm:px-8 py-5 sm:py-6 border-b border-slate-100 dark:border-slate-700">
+              <h2 className="text-lg sm:text-xl font-semibold text-slate-800 dark:text-slate-200">
                 Trash
               </h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
                 Deleted passwords can be restored or permanently removed.
               </p>
             </div>
 
             {trashLoading && (
-              <div className="px-8 pb-6 text-slate-500 dark:text-slate-400 text-sm">
+              <div className="px-5 sm:px-8 py-6 text-slate-500 dark:text-slate-400 text-sm">
                 Loading trash...
               </div>
             )}
 
             {!trashLoading && trash.length === 0 && (
-              <div className="px-8 pb-8 text-center text-slate-500 dark:text-slate-400 text-sm">
+              <div className="px-5 sm:px-8 py-12 text-center text-slate-500 dark:text-slate-400 text-sm">
                 Trash is empty.
               </div>
             )}
 
             {!trashLoading && trash.length > 0 && (
-              <div className="px-8 pb-6 space-y-2">
+              <div className="p-4 sm:p-6 space-y-2.5">
                 {trash.map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3.5 rounded-xl border border-slate-200 dark:border-slate-700"
                   >
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">
@@ -305,17 +293,17 @@ function MyVaultPage() {
                         </p>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 shrink-0 ml-4">
+                    <div className="flex items-center gap-2 shrink-0">
                       <button
                         onClick={() => handleRestoreTrashItem(item)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:hover:bg-emerald-900/30"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:hover:bg-emerald-900/30"
                       >
                         <RotateCcw size={14} />
                         Restore
                       </button>
                       <button
                         onClick={() => handlePurgeTrashItem(item)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
                       >
                         <Trash2 size={14} />
                         Delete permanently
@@ -327,30 +315,28 @@ function MyVaultPage() {
             )}
           </div>
         ) : (
-          <>
-            <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-4 sm:gap-5 min-w-0">
-              <MyVaultSidebar
-                folders={folders}
-                selectedFolderId={selectedFolderId}
-                onSelectFolder={(id) => dispatch(setSelectedFolderId(id))}
-                onEditFolder={handleEditFolder}
-                onDeleteFolder={handleDeleteFolder}
-              />
+          <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-4 sm:gap-5 items-stretch min-w-0">
+            <MyVaultSidebar
+              folders={folders}
+              selectedFolderId={selectedFolderId}
+              onSelectFolder={(id) => dispatch(setSelectedFolderId(id))}
+              onEditFolder={handleEditFolder}
+              onDeleteFolder={handleDeleteFolder}
+            />
 
-              <MyVaultPasswordWorkspace
-                loading={loading}
-                passwords={filteredPasswords}
-                selectedPasswordId={selectedPasswordId}
-                onSelectPassword={setSelectedPasswordId}
-                onViewPassword={handleViewPassword}
-                onSharePassword={handleOpenShare}
-                onEditPassword={handleEditPassword}
-                onDeletePassword={handleDeletePassword}
-                onManageShares={handleManageShares}
-                onAddChild={openAddPasswordModal}
-              />
-            </div>
-          </>
+            <MyVaultPasswordWorkspace
+              loading={loading}
+              passwords={filteredPasswords}
+              selectedPasswordId={selectedPasswordId}
+              onSelectPassword={setSelectedPasswordId}
+              onViewPassword={handleViewPassword}
+              onSharePassword={handleOpenShare}
+              onEditPassword={handleEditPassword}
+              onDeletePassword={handleDeletePassword}
+              onManageShares={handleManageShares}
+              onAddChild={openAddPasswordModal}
+            />
+          </div>
         )}
 
         <CreateFolderModal

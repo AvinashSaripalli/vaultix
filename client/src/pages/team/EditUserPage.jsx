@@ -144,20 +144,20 @@ function EditUserPage() {
   return (
     <AppLayout>
       <div className="relative">
-        <div className="bg-white border border-slate-200 rounded-2xl p-8 dark:bg-slate-800 dark:border-slate-700">
-          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between mb-8">
-            <div>
-              <h1 className="text-4xl font-bold text-slate-900 dark:text-slate-100">
+        <div className="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 dark:bg-slate-800 dark:border-slate-700 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 truncate">
                 Team Management
               </h1>
-              <p className="text-slate-500 mt-2 dark:text-slate-400">
+              <p className="text-xs sm:text-sm text-slate-500 mt-1 dark:text-slate-400">
                 Manage users, roles, and access
               </p>
             </div>
 
             <button
-              onClick={() => navigate('/team-management/add')}
-              className="h-11 px-5 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700"
+              onClick={() => navigate('/team-management/invite')}
+              className="h-10 px-4 sm:px-5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 inline-flex items-center justify-center self-start sm:self-auto shrink-0 shadow-sm transition"
             >
               Add User
             </button>

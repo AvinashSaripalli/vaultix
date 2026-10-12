@@ -130,19 +130,25 @@ function SharedWithMePage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <div className="h-12 w-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0 dark:bg-indigo-900/20">
-            <Share2 size={22} className="text-indigo-600 dark:text-indigo-400" />
-          </div>
-          <div className="space-y-0.5">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Shared With Me</h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Passwords shared with you by other users</p>
+      <div className="space-y-5 sm:space-y-6 min-w-0">
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-7 shadow-sm">
+          <div className="flex items-center gap-3.5 sm:gap-4">
+            <div className="h-11 w-11 sm:h-12 sm:w-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0 dark:bg-indigo-900/30 dark:border-indigo-800">
+              <Share2 size={22} className="text-indigo-600 dark:text-indigo-400" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100 truncate">
+                Shared With Me
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                Passwords shared with you by other users
+              </p>
+            </div>
           </div>
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden dark:bg-slate-800 dark:border-slate-700">
-          <div className="p-5 border-b border-slate-100 dark:border-slate-700">
+          <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-700">
             <div className="relative max-w-sm">
               <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none dark:text-slate-500" />
               <input
@@ -184,16 +190,16 @@ function SharedWithMePage() {
             </div>
           ) : (
             <div>
-              <div className="hidden lg:grid grid-cols-[2fr_1.2fr_1fr_1.2fr_100px] gap-4 px-6 py-3.5 bg-slate-50 border-b border-slate-100 text-xs font-semibold uppercase tracking-wider text-slate-400 sticky top-0 dark:bg-slate-800/50 dark:border-slate-700 dark:text-slate-500">
+              <div className="hidden lg:grid grid-cols-[2fr_1.2fr_1fr_1.2fr_110px] gap-4 px-6 py-3.5 bg-slate-50 border-b border-slate-100 text-xs font-semibold uppercase tracking-wider text-slate-400 sticky top-0 dark:bg-slate-800/50 dark:border-slate-700 dark:text-slate-500">
                 <p>Password</p>
                 <p>URL</p>
                 <p>Shared By</p>
                 <p>Location</p>
-                <p className="text-center">Action</p>
+                <p className="text-right">Action</p>
               </div>
               <div className="divide-y divide-slate-100 dark:divide-slate-700">
                 {filteredItems.map((item) => (
-                  <div key={item.id} className="grid grid-cols-1 lg:grid-cols-[2fr_1.2fr_1fr_1.2fr_100px] gap-4 items-center px-6 py-4.5 hover:bg-slate-50 transition-colors group dark:hover:bg-slate-700">
+                  <div key={item.id} className="grid grid-cols-1 lg:grid-cols-[2fr_1.2fr_1fr_1.2fr_110px] gap-4 items-center px-4 sm:px-6 py-4 hover:bg-slate-50 transition-colors group dark:hover:bg-slate-700/60">
                     <div className="flex items-center gap-3.5 min-w-0">
                       <div className="h-10 w-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 group-hover:bg-indigo-100 transition-colors dark:bg-indigo-900/20 dark:text-indigo-400">
                         <KeyRound size={17} />
@@ -238,13 +244,15 @@ function SharedWithMePage() {
                       </p>
                     </div>
 
-                    <button
-                      onClick={() => handleView(item)}
-                      className="flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 text-white px-3.5 py-2 text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm w-full lg:w-auto"
-                    >
-                      <Eye size={14} />
-                      View
-                    </button>
+                    <div className="flex lg:justify-end">
+                      <button
+                        onClick={() => handleView(item)}
+                        className="h-9 inline-flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 text-white px-3.5 text-xs sm:text-sm font-semibold hover:bg-indigo-700 transition-colors shadow-sm w-full lg:w-auto"
+                      >
+                        <Eye size={14} />
+                        <span>View</span>
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

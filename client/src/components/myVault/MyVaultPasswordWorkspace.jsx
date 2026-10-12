@@ -44,7 +44,7 @@ function MyVaultPasswordWorkspace({
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 min-h-[600px] overflow-hidden dark:bg-slate-800 dark:border-slate-700">
+    <div className="bg-white rounded-2xl border border-slate-200 min-h-[600px] h-full overflow-hidden shadow-sm dark:bg-slate-800 dark:border-slate-700">
       {loading ? (
         <div className="p-5 space-y-3">
           {[1, 2, 3].map((i) => (

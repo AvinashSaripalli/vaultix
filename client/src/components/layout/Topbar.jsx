@@ -161,7 +161,7 @@ function Topbar() {
   };
 
   return (
-    <div className="h-16 sm:h-[72px] bg-[var(--bg-topbar)] border-b border-[var(--border-primary)] flex items-center justify-between px-3 sm:px-6 lg:px-8 transition-colors duration-200">
+    <div className="h-16 sm:h-[72px] bg-[var(--bg-topbar)] border-b border-[var(--border-primary)] flex items-center justify-between px-4 sm:px-6 lg:px-8 transition-colors duration-200">
       {/* Left side: drawer/collapse toggles + title */}
       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         {/* Mobile drawer toggle */}

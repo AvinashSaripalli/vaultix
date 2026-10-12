@@ -626,11 +626,11 @@ function VaultPage() {
               <FolderMembersSummary onClick={() => setUsersOpen(true)} />
             </div>
 
-            <div className="flex items-center flex-wrap gap-2 shrink-0">
+            <div className="flex items-center flex-wrap gap-2 sm:gap-2.5 shrink-0">
               {selectedFolder && canShareFolder && (
                 <button
                   onClick={() => setShareOpen(true)}
-                  className="h-9 sm:h-10 px-3 sm:px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-semibold dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 transition shadow-sm"
+                  className="h-9 sm:h-10 inline-flex items-center justify-center px-3.5 sm:px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-semibold dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 transition shadow-sm"
                 >
                   Share Folder
                 </button>
@@ -639,7 +639,7 @@ function VaultPage() {
               {selectedFolder && canAddPassword && (
                 <button
                   onClick={() => dispatch(openAddPasswordModal())}
-                  className="h-9 sm:h-10 px-3 sm:px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold transition shadow-sm"
+                  className="h-9 sm:h-10 inline-flex items-center justify-center px-3.5 sm:px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold transition shadow-sm"
                 >
                   Add password
                 </button>
@@ -647,16 +647,16 @@ function VaultPage() {
 
               <button
                 onClick={() => setTrashOpen((prev) => !prev)}
-                className={`h-9 sm:h-10 px-3 sm:px-4 rounded-xl border text-xs sm:text-sm font-semibold flex items-center gap-1.5 relative transition shadow-sm ${
+                className={`h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl border text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-1.5 relative transition shadow-sm ${
                   trashOpen
                     ? 'bg-red-50 border-red-300 text-red-600 dark:bg-red-900/20 dark:border-red-700 dark:text-red-400'
-                    : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300'
+                    : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200'
                 }`}
               >
-                <Trash2 size={16} />
+                <Trash2 size={16} className="shrink-0" />
                 <span>{trashOpen ? 'Back' : 'Trash'}</span>
                 {!trashOpen && trashByVault[selectedVault?.id]?.length > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                  <span className="ml-0.5 h-5 min-w-5 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold inline-flex items-center justify-center">
                     {trashByVault[selectedVault.id].length}
                   </span>
                 )}
@@ -665,7 +665,7 @@ function VaultPage() {
               <div className="relative">
                 <button
                   onClick={() => setMenuOpen((prev) => !prev)}
-                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-slate-200 hover:bg-slate-50 flex items-center justify-center text-slate-600 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-750 transition"
+                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 inline-flex items-center justify-center text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition shadow-sm"
                   aria-label="More options"
                 >
                   <MoreVertical size={18} />
