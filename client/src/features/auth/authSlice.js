@@ -155,15 +155,22 @@ export const fetchMe = createAsyncThunk('auth/fetchMe', async (_, thunkAPI) => {
 
 // Silent session restore on app boot: asks the server to exchange the
 // httpOnly refresh cookie for a fresh access token.
+// Deduplicate concurrent calls (e.g., React StrictMode double-invoking mount effects)
+// so we never send two parallel rotation requests with the same refresh token.
+let inFlightRefreshPromise = null;
+
 export const refreshSession = createAsyncThunk(
   'auth/refreshSession',
   async (_, thunkAPI) => {
     try {
-      const response = await api.post(
-        '/auth/refresh',
-        {},
-        { skipAuthRefresh: true }
-      );
+      if (!inFlightRefreshPromise) {
+        inFlightRefreshPromise = api
+          .post('/auth/refresh', {}, { skipAuthRefresh: true })
+          .finally(() => {
+            inFlightRefreshPromise = null;
+          });
+      }
+      const response = await inFlightRefreshPromise;
       return response.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
