@@ -56,6 +56,7 @@ function VaultPage() {
   const { slug } = useParams();
 
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [vaultShareOpen, setVaultShareOpen] = useState(false);
   const [usersOpen, setUsersOpen] = useState(false);
@@ -68,6 +69,24 @@ function VaultPage() {
   const [confirmPurge, setConfirmPurge] = useState({ open: false, item: null });
   const [policyOpen, setPolicyOpen] = useState(false);
   const [auditExportOpen, setAuditExportOpen] = useState(false);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [menuOpen]);
 
   const { user, token, sessionMasterPassword, sessionRsaPrivateKey, sessionRsaPublicKey } = useSelector(
     (state) => state.auth
@@ -608,8 +627,8 @@ function VaultPage() {
 
   return (
     <AppLayout>
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden dark:bg-slate-800 dark:border-slate-700 shadow-sm min-w-0">
-        <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5 border-b border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
+      <div className="bg-white rounded-2xl border border-slate-200 dark:bg-slate-800 dark:border-slate-700 shadow-sm min-w-0">
+        <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5 border-b border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800 rounded-t-2xl">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
             <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
@@ -626,7 +645,7 @@ function VaultPage() {
               <FolderMembersSummary onClick={() => setUsersOpen(true)} />
             </div>
 
-            <div className="flex items-center flex-wrap gap-2 sm:gap-2.5 shrink-0">
+            <div className="relative flex items-center flex-wrap gap-2 sm:gap-2.5 shrink-0" ref={menuRef}>
               {selectedFolder && canShareFolder && (
                 <button
                   onClick={() => setShareOpen(true)}
@@ -662,7 +681,7 @@ function VaultPage() {
                 )}
               </button>
 
-              <div className="relative">
+              <div className="sm:relative">
                 <button
                   onClick={() => setMenuOpen((prev) => !prev)}
                   className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 inline-flex items-center justify-center text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition shadow-sm"
@@ -672,7 +691,7 @@ function VaultPage() {
                 </button>
 
                 {menuOpen && (
-                  <div className="absolute right-0 top-11 sm:top-12 w-64 bg-white border border-slate-200 rounded-2xl shadow-lg py-2 z-20 dark:bg-slate-800 dark:border-slate-600">
+                  <div className="absolute left-0 right-0 sm:left-auto sm:right-0 top-full mt-2 sm:top-12 sm:mt-0 w-full sm:w-64 min-w-[220px] bg-white border border-slate-200 rounded-2xl shadow-xl py-2 z-30 dark:bg-slate-800 dark:border-slate-600">
                     <button
                       onClick={() => {
                         setHistoryOpen(true);
@@ -819,40 +838,40 @@ function VaultPage() {
         </div>
 
         {(vaultsLoading || passwordsLoading) && (
-          <div className="p-8 text-slate-500 dark:text-slate-400">Loading vault...</div>
+          <div className="p-4 sm:p-8 text-slate-500 dark:text-slate-400">Loading vault...</div>
         )}
 
-        {error && <div className="p-8 text-red-600 dark:text-red-400">{error}</div>}
+        {error && <div className="p-4 sm:p-8 text-red-600 dark:text-red-400">{error}</div>}
 
         {!vaultsLoading && !passwordsLoading && !error && trashOpen && (
           <div className="min-h-[640px]">
-            <div className="px-8 py-6 border-b border-slate-200 dark:border-slate-700">
-              <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-200">
+            <div className="px-4 sm:px-8 py-4 sm:py-6 border-b border-slate-200 dark:border-slate-700">
+              <h2 className="text-lg sm:text-xl font-semibold text-slate-800 dark:text-slate-200">
                 Trash
               </h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
                 Deleted passwords in this vault can be restored or permanently removed.
               </p>
             </div>
 
             {trashLoading && (
-              <div className="px-8 py-6 text-slate-500 dark:text-slate-400 text-sm">
+              <div className="px-4 sm:px-8 py-6 text-slate-500 dark:text-slate-400 text-sm">
                 Loading trash...
               </div>
             )}
 
             {!trashLoading && (!trashByVault[selectedVault?.id] || trashByVault[selectedVault?.id]?.length === 0) && (
-              <div className="px-8 py-10 text-center text-slate-500 dark:text-slate-400 text-sm">
+              <div className="px-4 sm:px-8 py-10 text-center text-slate-500 dark:text-slate-400 text-sm">
                 Trash is empty.
               </div>
             )}
 
             {!trashLoading && trashByVault[selectedVault?.id]?.length > 0 && (
-              <div className="px-8 py-6 space-y-2">
+              <div className="px-4 sm:px-8 py-4 sm:py-6 space-y-2.5">
                 {trashByVault[selectedVault?.id].map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3.5 rounded-xl border border-slate-200 dark:border-slate-700"
                   >
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">
@@ -864,17 +883,17 @@ function VaultPage() {
                         </p>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 shrink-0 ml-4">
+                    <div className="flex items-center flex-wrap gap-2 shrink-0">
                       <button
                         onClick={() => handleRestoreTrashItem(item)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:hover:bg-emerald-900/30"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:hover:bg-emerald-900/30"
                       >
                         <RotateCcw size={14} />
                         Restore
                       </button>
                       <button
                         onClick={() => handlePurgeTrashItem(item)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
                       >
                         <Trash2 size={14} />
                         Delete permanently

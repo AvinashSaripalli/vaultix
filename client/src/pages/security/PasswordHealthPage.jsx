@@ -131,7 +131,7 @@ function PasswordHealthPage() {
         {!loading && !error && (
           <>
             {/* Stats Row */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <div className="relative rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 overflow-hidden">
                 <div className="absolute inset-0 opacity-[0.03] bg-gradient-to-br from-indigo-500 to-purple-600" />
                 <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white mb-2">
@@ -170,12 +170,12 @@ function PasswordHealthPage() {
             </div>
 
             {/* Security Score + Recommendations */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6">
               {/* Security Score Gauge */}
-              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 flex flex-col">
+              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl sm:rounded-3xl p-4 sm:p-6 flex flex-col">
                 <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">Security Score</h3>
                 <div className="flex-1 flex items-center justify-center py-4">
-                  <div className="relative w-48 h-48">
+                  <div className="relative w-44 h-44 sm:w-48 sm:h-48">
                     <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
                       <circle cx="60" cy="60" r="50" fill="none" stroke="var(--border-primary)" strokeWidth="10" />
                       <circle
@@ -196,7 +196,7 @@ function PasswordHealthPage() {
               </div>
 
               {/* Strength Distribution */}
-              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-6">
+              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
                 <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">Strength Distribution</h3>
                 {strengthData.length > 0 ? (
                   <div className="h-[250px]">
@@ -228,7 +228,7 @@ function PasswordHealthPage() {
               </div>
 
               {/* Age Distribution */}
-              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-6">
+              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
                 <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">Password Age</h3>
                 {ageData.length > 0 ? (
                   <div className="h-[250px]">
@@ -264,7 +264,7 @@ function PasswordHealthPage() {
 
             {/* Recommendations */}
             {recommendations.length > 0 && (
-              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-6">
+              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <Sparkles size={18} className="text-indigo-600" />
                   <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Recommendations</h3>
@@ -292,13 +292,13 @@ function PasswordHealthPage() {
             )}
 
             {/* Detailed Tabs */}
-            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl overflow-hidden">
-              <div className="flex gap-1 p-2 border-b border-slate-200 dark:border-slate-700 overflow-x-auto">
+            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl sm:rounded-3xl overflow-hidden">
+              <div className="flex gap-1 p-2 border-b border-slate-200 dark:border-slate-700 overflow-x-auto no-scrollbar">
                 {tabs.map((tab) => (
                   <button
                     key={tab.key}
                     onClick={() => setActiveTab(tab.key)}
-                    className={`px-4 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap ${
+                    className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition whitespace-nowrap ${
                       activeTab === tab.key
                         ? 'bg-indigo-600 text-white shadow-sm'
                         : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
@@ -309,7 +309,7 @@ function PasswordHealthPage() {
                 ))}
               </div>
 
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 {activeTab === 'overview' && (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 p-5">

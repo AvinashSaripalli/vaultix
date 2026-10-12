@@ -394,7 +394,7 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
   const canAddLogin = user?.role === 'ADMIN' || ['ADMINISTRATOR', 'READ_WRITE'].includes(selectedFolderAccess);
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 min-w-0">
+    <div className="p-3.5 sm:p-6 lg:p-8 min-w-0">
       {onBackToList && (
         <button
           type="button"
@@ -405,7 +405,7 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
           Back to passwords
         </button>
       )}
-      <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 min-w-0">
+      <div className="mb-5 sm:mb-8 flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 min-w-0">
         <div className="min-w-0 flex-1">
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Selected password group</p>
           <div className="flex items-center gap-2.5 mt-1 flex-wrap min-w-0">
@@ -479,23 +479,23 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
           return (
             <div
               key={item.id}
-              className="rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800 min-w-0"
+              className="rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-3.5 sm:p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800 min-w-0"
             >
-              <div className="flex items-start justify-between gap-5 mb-5">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-bold text-slate-900 tracking-tight dark:text-slate-100">
+              <div className="flex items-start justify-between gap-2.5 sm:gap-5 mb-4 sm:mb-5">
+                <div className="flex items-center gap-2 flex-wrap min-w-0">
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight dark:text-slate-100">
                     {getItemTypeMeta(item.type).label}
                     {sameNamePasswords.length > 1 ? ` #${index + 1}` : ''}
                   </h3>
                   {item.isSensitive && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2.5 py-0.5 text-[11px] font-semibold dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2.5 py-0.5 text-[11px] font-semibold dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shrink-0">
                       <ShieldCheck size={12} />
                       Secured
                     </span>
                   )}
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                   {canEdit && (
                     <button
                       onClick={() => handleAction('edit', item)}
@@ -943,14 +943,16 @@ function CopyIconButton({ onCopy, title = 'Copy to clipboard' }) {
 
 function DetailRow({ label, value, action, isMono = false }) {
   return (
-    <div className="grid grid-cols-[90px_1fr_auto] sm:grid-cols-[120px_1fr_auto] gap-2 items-center border-b border-slate-200 last:border-b-0 px-3 sm:px-4 py-3 sm:py-3.5 dark:border-slate-700/80 min-w-0">
-      <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 shrink-0">{label}</p>
+    <div className="flex flex-col gap-1 sm:grid sm:grid-cols-[130px_1fr_auto] sm:gap-3 sm:items-center border-b border-slate-200 last:border-b-0 px-3 sm:px-4 py-3 sm:py-3.5 dark:border-slate-700/80 min-w-0">
+      <p className="text-[11px] sm:text-sm font-medium text-slate-500 dark:text-slate-400 shrink-0">{label}</p>
 
-      <div className={`text-xs sm:text-sm text-slate-900 break-all min-w-0 dark:text-slate-100 ${isMono ? 'font-mono tracking-wider select-all' : ''}`}>
-        {value}
+      <div className="flex items-center justify-between gap-2 min-w-0 sm:contents">
+        <div className={`text-xs sm:text-sm text-slate-900 break-all min-w-0 flex-1 dark:text-slate-100 ${isMono ? 'font-mono tracking-wider select-all' : ''}`}>
+          {value}
+        </div>
+
+        {action ? <div className="flex justify-end shrink-0">{action}</div> : <div className="hidden sm:block" />}
       </div>
-
-      <div className="flex justify-end shrink-0">{action}</div>
     </div>
   );
 }

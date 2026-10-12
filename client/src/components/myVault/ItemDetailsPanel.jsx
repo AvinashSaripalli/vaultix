@@ -389,41 +389,43 @@ function ItemDetailsPanel({
       : formattedPlain;
 
     return (
-      <div key={field.key} className="border-b border-slate-200 py-3.5 sm:py-4 dark:border-slate-700 min-w-0">
-        <div className="grid grid-cols-[110px_1fr_auto] sm:grid-cols-[160px_1fr_auto] gap-2 items-center min-w-0">
-          <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 shrink-0">{field.label}</p>
-          {field.key === 'url' && display ? (
-            <a
-              href={display.startsWith('http') ? display : `https://${display}`}
-              target="_blank"
-              rel="noreferrer"
-              className="truncate text-xs sm:text-sm text-blue-600 hover:text-blue-800 hover:underline dark:text-blue-400 min-w-0"
-            >
-              {display}
-            </a>
-          ) : (
-            <p className={`text-xs sm:text-sm text-slate-900 break-all whitespace-pre-wrap min-w-0 dark:text-slate-100 ${isSecret && isRevealed ? 'font-mono tracking-wider select-all font-semibold' : ''}`}>
-              {display || '—'}
-            </p>
-          )}
-          <div className="flex justify-end items-center gap-1.5 shrink-0">
-            {isSecret && value && (
-              <button
-                type="button"
-                onClick={() => handleFieldAction(field, 'reveal')}
-                aria-label={isRevealed ? `Hide ${field.label}` : `Show ${field.label}`}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-750 transition"
-                title={isRevealed ? 'Hide' : 'Reveal'}
+      <div key={field.key} className="border-b border-slate-200 py-3 sm:py-4 dark:border-slate-700 min-w-0">
+        <div className="flex flex-col gap-1 sm:grid sm:grid-cols-[150px_1fr_auto] sm:gap-3 sm:items-center min-w-0">
+          <p className="text-[11px] sm:text-sm font-medium text-slate-500 dark:text-slate-400 shrink-0">{field.label}</p>
+          <div className="flex items-center justify-between gap-2 min-w-0 sm:contents">
+            {field.key === 'url' && display ? (
+              <a
+                href={display.startsWith('http') ? display : `https://${display}`}
+                target="_blank"
+                rel="noreferrer"
+                className="truncate text-xs sm:text-sm text-blue-600 hover:text-blue-800 hover:underline dark:text-blue-400 min-w-0 flex-1"
               >
-                {isRevealed ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
+                {display}
+              </a>
+            ) : (
+              <p className={`text-xs sm:text-sm text-slate-900 break-all whitespace-pre-wrap min-w-0 flex-1 dark:text-slate-100 ${isSecret && isRevealed ? 'font-mono tracking-wider select-all font-semibold' : ''}`}>
+                {display || '—'}
+              </p>
             )}
-            {field.copy && value && (
-              <CopyIconButton
-                onCopy={() => handleFieldAction(field, 'copy')}
-                title={`Copy ${field.label}`}
-              />
-            )}
+            <div className="flex justify-end items-center gap-1.5 shrink-0">
+              {isSecret && value && (
+                <button
+                  type="button"
+                  onClick={() => handleFieldAction(field, 'reveal')}
+                  aria-label={isRevealed ? `Hide ${field.label}` : `Show ${field.label}`}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-750 transition"
+                  title={isRevealed ? 'Hide' : 'Reveal'}
+                >
+                  {isRevealed ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              )}
+              {field.copy && value && (
+                <CopyIconButton
+                  onCopy={() => handleFieldAction(field, 'copy')}
+                  title={`Copy ${field.label}`}
+                />
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -441,34 +443,36 @@ function ItemDetailsPanel({
       : custom.value || '';
 
     return (
-      <div key={`__custom_${index}`} className="border-b border-slate-200 py-3.5 sm:py-4 dark:border-slate-700 min-w-0">
-        <div className="grid grid-cols-[110px_1fr_auto] sm:grid-cols-[160px_1fr_auto] gap-2 items-center min-w-0">
-          <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 shrink-0">{custom.name || 'Custom Field'}</p>
-          <p className={`text-xs sm:text-sm text-slate-900 break-all min-w-0 dark:text-slate-100 ${custom.sensitive && isRevealed ? 'font-mono tracking-wider select-all font-semibold' : ''}`}>
-            {display || '—'}
-          </p>
-          <div className="flex justify-end items-center gap-2">
-            {custom.sensitive && (
-              <button
-                type="button"
-                onClick={() => {
-                  if (isRevealed) {
-                    setRevealed((prev) => ({ ...prev, [`__custom_${index}`]: false }));
-                  } else {
-                    handleCustomReveal(custom, index);
-                  }
-                }}
-                aria-label={isRevealed ? 'Hide custom field' : 'Show custom field'}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-750 transition"
-                title={isRevealed ? 'Hide' : 'Reveal'}
-              >
-                {isRevealed ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            )}
-            <CopyIconButton
-              onCopy={() => handleCustomCopy(custom, index)}
-              title="Copy custom field"
-            />
+      <div key={`__custom_${index}`} className="border-b border-slate-200 py-3 sm:py-4 dark:border-slate-700 min-w-0">
+        <div className="flex flex-col gap-1 sm:grid sm:grid-cols-[150px_1fr_auto] sm:gap-3 sm:items-center min-w-0">
+          <p className="text-[11px] sm:text-sm font-medium text-slate-500 dark:text-slate-400 shrink-0">{custom.name || 'Custom Field'}</p>
+          <div className="flex items-center justify-between gap-2 min-w-0 sm:contents">
+            <p className={`text-xs sm:text-sm text-slate-900 break-all min-w-0 flex-1 dark:text-slate-100 ${custom.sensitive && isRevealed ? 'font-mono tracking-wider select-all font-semibold' : ''}`}>
+              {display || '—'}
+            </p>
+            <div className="flex justify-end items-center gap-2 shrink-0">
+              {custom.sensitive && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isRevealed) {
+                      setRevealed((prev) => ({ ...prev, [`__custom_${index}`]: false }));
+                    } else {
+                      handleCustomReveal(custom, index);
+                    }
+                  }}
+                  aria-label={isRevealed ? 'Hide custom field' : 'Show custom field'}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-750 transition"
+                  title={isRevealed ? 'Hide' : 'Reveal'}
+                >
+                  {isRevealed ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              )}
+              <CopyIconButton
+                onCopy={() => handleCustomCopy(custom, index)}
+                title="Copy custom field"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -506,7 +510,7 @@ function ItemDetailsPanel({
         }}
       />
 
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 mb-6 min-w-0">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 mb-5 sm:mb-6 min-w-0">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2.5 flex-wrap min-w-0">
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100 truncate">
@@ -563,76 +567,82 @@ function ItemDetailsPanel({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 p-6 bg-white dark:border-slate-700 dark:bg-slate-800 shadow-sm">
+      <div className="rounded-2xl border border-slate-200 p-4 sm:p-6 bg-white dark:border-slate-700 dark:bg-slate-800 shadow-sm min-w-0">
         {hasLogin && (
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
+          <div className="mb-4 sm:mb-6">
+            <h2 className="text-lg sm:text-xl font-semibold text-slate-900 dark:text-slate-100 break-all">
               {item.login}
             </h2>
-            <p className="text-sm text-slate-500 mt-1 dark:text-slate-400">Account details</p>
+            <p className="text-xs sm:text-sm text-slate-500 mt-1 dark:text-slate-400">Account details</p>
           </div>
         )}
 
         <div>
           {hasLogin && (
             <>
-              <div className="border-b border-slate-200 py-3.5 sm:py-4 dark:border-slate-700 min-w-0">
-                <div className="grid grid-cols-[100px_1fr_auto] sm:grid-cols-[130px_1fr_auto] gap-2 items-center min-w-0">
-                  <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 shrink-0">Login</p>
-                  <p className="text-xs sm:text-sm text-slate-900 truncate dark:text-slate-100 min-w-0">{item.login}</p>
-                  <div className="flex justify-end items-center gap-1.5 shrink-0">
-                    <CopyIconButton onCopy={() => copyText(item.login, 'Login')} title="Copy login" />
+              <div className="border-b border-slate-200 py-3 sm:py-4 dark:border-slate-700 min-w-0">
+                <div className="flex flex-col gap-1 sm:grid sm:grid-cols-[130px_1fr_auto] sm:gap-3 sm:items-center min-w-0">
+                  <p className="text-[11px] sm:text-sm font-medium text-slate-500 dark:text-slate-400 shrink-0">Login</p>
+                  <div className="flex items-center justify-between gap-2 min-w-0 sm:contents">
+                    <p className="text-xs sm:text-sm text-slate-900 break-all dark:text-slate-100 min-w-0 flex-1">{item.login}</p>
+                    <div className="flex justify-end items-center gap-1.5 shrink-0">
+                      <CopyIconButton onCopy={() => copyText(item.login, 'Login')} title="Copy login" />
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="border-b border-slate-200 py-3.5 sm:py-4 dark:border-slate-700 min-w-0">
-                <div className="grid grid-cols-[100px_1fr_auto] sm:grid-cols-[130px_1fr_auto] gap-2 items-center min-w-0">
-                  <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 shrink-0">Password</p>
-                  <p className={`text-xs sm:text-sm text-slate-900 break-all min-w-0 dark:text-slate-100 ${showPassword ? 'font-mono tracking-wider select-all font-semibold' : ''}`}>
-                    {showPassword ? decryptedPassword || '' : '••••••••••••'}
-                  </p>
-                  <div className="flex justify-end items-center gap-1.5 shrink-0">
-                    <button
-                      type="button"
-                      onClick={handlePasswordEye}
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-750 transition"
-                      title={showPassword ? 'Hide' : 'Reveal'}
-                    >
-                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                    <CopyIconButton onCopy={handlePasswordCopy} title="Copy password" />
+              <div className="border-b border-slate-200 py-3 sm:py-4 dark:border-slate-700 min-w-0">
+                <div className="flex flex-col gap-1 sm:grid sm:grid-cols-[130px_1fr_auto] sm:gap-3 sm:items-center min-w-0">
+                  <p className="text-[11px] sm:text-sm font-medium text-slate-500 dark:text-slate-400 shrink-0">Password</p>
+                  <div className="flex items-center justify-between gap-2 min-w-0 sm:contents">
+                    <p className={`text-xs sm:text-sm text-slate-900 break-all min-w-0 flex-1 dark:text-slate-100 ${showPassword ? 'font-mono tracking-wider select-all font-semibold' : ''}`}>
+                      {showPassword ? decryptedPassword || '' : '••••••••••••'}
+                    </p>
+                    <div className="flex justify-end items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={handlePasswordEye}
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-750 transition"
+                        title={showPassword ? 'Hide' : 'Reveal'}
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                      <CopyIconButton onCopy={handlePasswordCopy} title="Copy password" />
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="border-b border-slate-200 py-3.5 sm:py-5 dark:border-slate-700 min-w-0">
-                <div className="grid grid-cols-[100px_1fr_auto] sm:grid-cols-[130px_1fr_auto] gap-2 items-center min-w-0">
-                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 shrink-0">URL</p>
-                  {item.url ? (
-                    <a
-                      href={item.url.startsWith('http') ? item.url : `https://${item.url}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="truncate text-xs sm:text-sm text-blue-600 hover:text-blue-800 hover:underline dark:text-blue-400 dark:hover:text-blue-400 min-w-0"
-                    >
-                      {item.url}
-                    </a>
-                  ) : (
-                    <p className="text-xs sm:text-sm text-slate-900 dark:text-slate-100">No URL</p>
-                  )}
-                  <div className="flex justify-end items-center gap-2 shrink-0">
-                    {item.url && (
+              <div className="border-b border-slate-200 py-3 sm:py-5 dark:border-slate-700 min-w-0">
+                <div className="flex flex-col gap-1 sm:grid sm:grid-cols-[130px_1fr_auto] sm:gap-3 sm:items-center min-w-0">
+                  <p className="text-[11px] sm:text-sm text-slate-500 dark:text-slate-400 shrink-0">URL</p>
+                  <div className="flex items-center justify-between gap-2 min-w-0 sm:contents">
+                    {item.url ? (
                       <a
                         href={item.url.startsWith('http') ? item.url : `https://${item.url}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
+                        className="truncate text-xs sm:text-sm text-blue-600 hover:text-blue-800 hover:underline dark:text-blue-400 dark:hover:text-blue-400 min-w-0 flex-1"
                       >
-                        <ExternalLink size={16} />
+                        {item.url}
                       </a>
+                    ) : (
+                      <p className="text-xs sm:text-sm text-slate-900 dark:text-slate-100 flex-1">No URL</p>
                     )}
+                    <div className="flex justify-end items-center gap-2 shrink-0">
+                      {item.url && (
+                        <a
+                          href={item.url.startsWith('http') ? item.url : `https://${item.url}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
+                        >
+                          <ExternalLink size={16} />
+                        </a>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -653,9 +663,9 @@ function ItemDetailsPanel({
           {customFields.length > 0 && customFields.map(renderCustomField)}
 
           {(item.encryptedNote || item.type === 'SECURE_NOTE') && (
-            <div className="border-b border-slate-200 py-3.5 sm:py-5 dark:border-slate-700 min-w-0">
-              <div className="grid grid-cols-[100px_1fr_auto] sm:grid-cols-[130px_1fr_auto] gap-2 items-start min-w-0">
-                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 shrink-0">Note</p>
+            <div className="border-b border-slate-200 py-3 sm:py-5 dark:border-slate-700 min-w-0">
+              <div className="flex flex-col gap-1 sm:grid sm:grid-cols-[130px_1fr_auto] sm:gap-3 sm:items-start min-w-0">
+                <p className="text-[11px] sm:text-sm text-slate-500 dark:text-slate-400 shrink-0">Note</p>
                 <p className="text-xs sm:text-sm text-slate-900 break-words dark:text-slate-100 min-w-0">
                   {decryptedNote || '—'}
                 </p>
@@ -664,9 +674,9 @@ function ItemDetailsPanel({
           )}
 
           {item.tags?.length > 0 && (
-            <div className="border-b border-slate-200 py-3.5 sm:py-5 dark:border-slate-700 min-w-0">
-              <div className="grid grid-cols-[100px_1fr_auto] sm:grid-cols-[130px_1fr_auto] gap-2 items-start min-w-0">
-                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 shrink-0">Tags</p>
+            <div className="border-b border-slate-200 py-3 sm:py-5 dark:border-slate-700 min-w-0">
+              <div className="flex flex-col gap-1.5 sm:grid sm:grid-cols-[130px_1fr_auto] sm:gap-3 sm:items-start min-w-0">
+                <p className="text-[11px] sm:text-sm text-slate-500 dark:text-slate-400 shrink-0">Tags</p>
                 <div className="flex flex-wrap gap-1.5 min-w-0">
                   {item.tags.map((tagItem) => (
                     <span
@@ -682,17 +692,17 @@ function ItemDetailsPanel({
           )}
         </div>
 
-        <div className="flex flex-wrap gap-3 mt-7">
+        <div className="flex flex-wrap gap-2.5 sm:gap-3 mt-5 sm:mt-7">
           <button
             onClick={onAddChild}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+            className="flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-lg bg-indigo-600 text-white text-xs sm:text-sm font-medium hover:bg-indigo-700"
           >
             <FolderPlus size={16} />
             Add Password
           </button>
           <button
             onClick={() => onManageShares(item)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-100 text-slate-700 text-sm hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+            className="flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-lg bg-slate-100 text-slate-700 text-xs sm:text-sm hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
           >
             <Users size={16} />
             Manage Access
@@ -701,8 +711,8 @@ function ItemDetailsPanel({
       </div>
 
       {children.length > 0 && (
-        <div className="rounded-2xl border border-slate-200 p-6 mt-6 dark:border-slate-700 dark:bg-slate-800">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4 dark:text-slate-100">
+        <div className="rounded-2xl border border-slate-200 p-4 sm:p-6 mt-5 sm:mt-6 dark:border-slate-700 dark:bg-slate-800">
+          <h2 className="text-base sm:text-lg font-semibold text-slate-900 mb-3 sm:mb-4 dark:text-slate-100">
             Inside this password ({children.length})
           </h2>
           <div className="space-y-2">
@@ -710,15 +720,15 @@ function ItemDetailsPanel({
               <button
                 key={child.id}
                 onClick={() => onSelectChild(child.id)}
-                className="w-full text-left rounded-xl border border-slate-200 px-4 py-3 hover:bg-slate-50 flex items-center justify-between dark:border-slate-700 dark:hover:bg-slate-700"
+                className="w-full text-left rounded-xl border border-slate-200 px-3.5 sm:px-4 py-3 hover:bg-slate-50 flex items-center justify-between dark:border-slate-700 dark:hover:bg-slate-700"
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <ItemTypeBadge type={child.type} />
                   <div className="min-w-0">
-                    <p className="font-semibold text-slate-900 truncate dark:text-slate-100">
+                    <p className="font-semibold text-slate-900 truncate dark:text-slate-100 text-sm sm:text-base">
                       {child.name}
                     </p>
-                    <p className="text-sm text-slate-500 truncate dark:text-slate-400">
+                    <p className="text-xs sm:text-sm text-slate-500 truncate dark:text-slate-400">
                       {child.login || '—'}
                     </p>
                   </div>

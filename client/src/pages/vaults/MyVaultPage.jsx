@@ -319,7 +319,10 @@ function MyVaultPage() {
             <MyVaultSidebar
               folders={folders}
               selectedFolderId={selectedFolderId}
-              onSelectFolder={(id) => dispatch(setSelectedFolderId(id))}
+              onSelectFolder={(id) => {
+                dispatch(setSelectedFolderId(id));
+                setSelectedPasswordId(null);
+              }}
               onEditFolder={handleEditFolder}
               onDeleteFolder={handleDeleteFolder}
             />

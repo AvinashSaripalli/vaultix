@@ -365,24 +365,24 @@ function AddPasswordModal({ prefill, prefillName, onPrefillConsumed }) {
   return (
     <ModalPortal open={isAddPasswordModalOpen} onClose={handleClose}>
       <div
-        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 overflow-y-auto"
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-3 sm:p-4 overflow-y-auto"
         onClick={handleClose}
       >
         <div
-          className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl p-6 dark:bg-slate-800 max-h-[90vh] overflow-y-auto my-auto"
+          className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl p-4 sm:p-6 dark:bg-slate-800 max-h-[92vh] overflow-y-auto my-auto"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+          <div className="flex items-start justify-between gap-3 mb-5 sm:mb-6">
+            <div className="min-w-0">
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">
                 Add Password
               </h2>
-              <p className="text-sm text-slate-500 mt-1 dark:text-slate-400">
+              <p className="text-xs sm:text-sm text-slate-500 mt-1 dark:text-slate-400 truncate">
                 Add password to {selectedFolder?.name || 'selected folder'}
               </p>
             </div>
 
-            <button onClick={handleClose} className="text-slate-500 dark:text-slate-400">
+            <button onClick={handleClose} className="text-slate-500 dark:text-slate-400 p-1 shrink-0">
               <X size={22} />
             </button>
           </div>
@@ -425,11 +425,11 @@ function AddPasswordModal({ prefill, prefillName, onPrefillConsumed }) {
               inputClass={inputClass}
             />
 
-            <div className="flex justify-end gap-3 pt-2">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2.5 sm:gap-3 pt-2">
               <button
                 type="button"
                 onClick={handleClose}
-                className="px-5 py-3 rounded-xl border border-slate-300 dark:border-slate-600"
+                className="w-full sm:w-auto px-5 py-2.5 sm:py-3 rounded-xl border border-slate-300 dark:border-slate-600 text-sm font-medium"
               >
                 Cancel
               </button>
@@ -437,7 +437,7 @@ function AddPasswordModal({ prefill, prefillName, onPrefillConsumed }) {
               <button
                 type="submit"
                 disabled={actionLoading}
-                className="px-6 py-3 rounded-xl bg-indigo-600 text-white font-medium disabled:opacity-50"
+                className="w-full sm:w-auto px-6 py-2.5 sm:py-3 rounded-xl bg-indigo-600 text-white text-sm font-medium disabled:opacity-50"
               >
                 {actionLoading ? 'Saving...' : 'Save Password'}
               </button>

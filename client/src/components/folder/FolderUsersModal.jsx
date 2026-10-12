@@ -230,14 +230,14 @@ function FolderUsersModal({ open, onClose, folderId, folderName, onSaved }) {
           className="w-full max-w-2xl bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden max-h-[90vh] flex flex-col my-auto"
           onClick={(e) => e.stopPropagation()}
         >
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-800 shrink-0">
+        <div className="px-4 sm:px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-800 shrink-0">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400 text-xs font-semibold mb-2">
                 <Users size={12} />
                 Folder permissions
               </div>
-              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 truncate">
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100 truncate">
                 {folderName || activeFolder?.name || 'Folder'}
               </h2>
               <p className="text-slate-500 dark:text-slate-400 mt-0.5 text-xs">
@@ -253,15 +253,15 @@ function FolderUsersModal({ open, onClose, folderId, folderName, onSaved }) {
           </div>
         </div>
 
-        <div className="px-6 py-4 overflow-y-auto flex-1 min-h-0">
+        <div className="px-4 sm:px-6 py-4 overflow-y-auto flex-1 min-h-0">
           {error && (
             <div className="mb-3 rounded-lg bg-red-50 border border-red-200 text-red-600 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400 px-3 py-2 text-xs">
               {error}
             </div>
           )}
 
-          <div className="flex items-center gap-3 mb-3">
-            <div className="flex-1 relative">
+          <div className="flex items-center gap-2 sm:gap-3 mb-3 flex-wrap">
+            <div className="flex-1 min-w-[160px] relative">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
               <input
                 type="text"
@@ -287,52 +287,54 @@ function FolderUsersModal({ open, onClose, folderId, folderName, onSaved }) {
             )}
 
             {!loading && filteredMembers.length > 0 && (
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 {filteredMembers.map((item) => {
                   const accessMeta = getAccessMeta(item.accessLevel);
                   const AccessIcon = accessMeta.icon;
                   return (
                     <div
                       key={item.id}
-                      className={`flex items-center gap-3 py-2 px-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition ${
-                        item.isOwner ? 'bg-indigo-50/40' : ''
+                      className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 py-2.5 px-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition ${
+                        item.isOwner ? 'bg-indigo-50/40 dark:bg-indigo-900/10' : ''
                       }`}
                     >
-                      <div className="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400 text-xs font-bold flex items-center justify-center shrink-0">
-                        {getInitials(item.user?.fullName || item.user?.email || 'U')}
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400 text-xs font-bold flex items-center justify-center shrink-0">
+                          {getInitials(item.user?.fullName || item.user?.email || 'U')}
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-medium text-slate-900 dark:text-slate-100 flex items-center gap-1.5 flex-wrap">
+                            <span className="truncate">{item.user?.fullName || 'Unknown user'}</span>
+                            {item.isOwner && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 font-semibold shrink-0">
+                                Owner
+                              </span>
+                            )}
+                            {item.viaDepartment && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 font-semibold shrink-0">
+                                {item.departmentName}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                            {item.user?.email || '-'}
+                          </div>
+                        </div>
                       </div>
 
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate flex items-center gap-1.5">
-                          <span>{item.user?.fullName || 'Unknown user'}</span>
-                          {item.isOwner && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 font-semibold">
-                              Owner
-                            </span>
-                          )}
-                          {item.viaDepartment && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 font-semibold">
-                              {item.departmentName}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                          {item.user?.email || '-'}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center justify-end gap-2 shrink-0 pl-12 sm:pl-0">
                         {item.isOwner ? (
                           <div className="h-8 px-3 rounded-lg border border-indigo-200 bg-indigo-50 dark:border-indigo-800 dark:bg-indigo-900/20 flex items-center gap-1.5 text-xs font-semibold text-indigo-700 dark:text-indigo-400">
                             <Crown size={13} />
                             <span>Administrator</span>
                           </div>
                         ) : canManageMembers ? (
-                          <div className="relative">
+                          <div className="relative flex-1 sm:flex-initial">
                             <select
                               value={item.accessLevel}
                               onChange={(e) => handleAccessChange(item.id, e.target.value)}
-                              className="appearance-none h-8 rounded-lg border border-slate-200 dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 bg-white pl-3 pr-8 text-xs font-medium text-slate-700 dark:text-slate-300 outline-none hover:border-slate-300 dark:hover:border-slate-600"
+                              className="w-full sm:w-auto appearance-none h-8 rounded-lg border border-slate-200 dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 bg-white pl-3 pr-8 text-xs font-medium text-slate-700 dark:text-slate-300 outline-none hover:border-slate-300 dark:hover:border-slate-600"
                             >
                               {ACCESS_OPTIONS.map((option) => (
                                 <option key={option.value} value={option.value}>
@@ -352,7 +354,7 @@ function FolderUsersModal({ open, onClose, folderId, folderName, onSaved }) {
                         {canManageMembers && !item.isOwner && (
                           <button
                             onClick={() => handleRemoveMember(item.id)}
-                            className="w-8 h-8 rounded-lg border border-red-200 dark:border-red-800 bg-white dark:bg-slate-800 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center justify-center"
+                            className="w-8 h-8 rounded-lg border border-red-200 dark:border-red-800 bg-white dark:bg-slate-800 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center justify-center shrink-0"
                             title="Remove access"
                           >
                             <CircleX size={14} />
@@ -377,7 +379,7 @@ function FolderUsersModal({ open, onClose, folderId, folderName, onSaved }) {
           </div>
         </div>
 
-        <div className="px-6 py-3 border-t border-slate-200 dark:border-slate-700 flex items-center justify-end gap-2 shrink-0">
+        <div className="px-4 sm:px-6 py-3 border-t border-slate-200 dark:border-slate-700 flex items-center justify-end gap-2 shrink-0">
           <button
             onClick={onClose}
             className="h-9 px-4 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700"

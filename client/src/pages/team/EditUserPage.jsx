@@ -178,7 +178,7 @@ function EditUserPage() {
 
           {!tableLoading && (
             <div className="overflow-x-auto border border-slate-200 rounded-xl dark:border-slate-700">
-              <table className="w-full">
+              <table className="w-full min-w-[600px]">
                 <thead className="bg-slate-50 dark:bg-slate-700/50">
                   <tr className="text-left text-slate-600 dark:text-slate-400">
                     <th className="px-5 py-4 font-semibold">Name</th>

@@ -18,36 +18,40 @@ function PasswordListPanel() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(8);
 
-  const filteredPasswords = passwords.filter((item) => {
+  const filteredPasswords = useMemo(() => {
     const q = searchTerm.toLowerCase();
 
-    const matchesSearch =
-      item.name?.toLowerCase().includes(q) ||
-      item.login?.toLowerCase().includes(q) ||
-      item.url?.toLowerCase().includes(q);
+    return passwords.filter((item) => {
+      const matchesSearch =
+        item.name?.toLowerCase().includes(q) ||
+        item.login?.toLowerCase().includes(q) ||
+        item.url?.toLowerCase().includes(q);
 
-    const matchesFolder = selectedFolderId
-      ? item.folderId === selectedFolderId
-      : true;
+      const matchesFolder = selectedFolderId
+        ? item.folderId === selectedFolderId
+        : true;
 
-    return matchesSearch && matchesFolder;
-  });
+      return matchesSearch && matchesFolder;
+    });
+  }, [passwords, searchTerm, selectedFolderId]);
 
-  const groupedPasswords = Object.values(
-    filteredPasswords.reduce((acc, item) => {
-      const key = item.name?.trim().toLowerCase() || 'untitled';
+  const groupedPasswords = useMemo(() => {
+    return Object.values(
+      filteredPasswords.reduce((acc, item) => {
+        const key = item.name?.trim().toLowerCase() || 'untitled';
 
-      if (!acc[key]) {
-        acc[key] = {
-          name: item.name || 'Untitled',
-          items: [],
-        };
-      }
+        if (!acc[key]) {
+          acc[key] = {
+            name: item.name || 'Untitled',
+            items: [],
+          };
+        }
 
-      acc[key].items.push(item);
-      return acc;
-    }, {})
-  );
+        acc[key].items.push(item);
+        return acc;
+      }, {})
+    );
+  }, [filteredPasswords]);
 
   // Reset to page 1 whenever search query or folder selection changes
   useEffect(() => {
@@ -68,13 +72,20 @@ function PasswordListPanel() {
   }, [groupedPasswords, startIndex, endIndex]);
 
   useEffect(() => {
-    if (!selectedFolderId) {
-      dispatch(selectPassword(null));
+    if (!selectedFolderId || !paginatedGroups.length) {
+      if (selectedPasswordId !== null) {
+        dispatch(selectPassword(null));
+      }
       return;
     }
 
-    if (!paginatedGroups.length) {
-      dispatch(selectPassword(null));
+    const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768;
+
+    // On mobile (< 768px), keep selectedPasswordId as null when returning to the list
+    if (!selectedPasswordId) {
+      if (isDesktop) {
+        dispatch(selectPassword(paginatedGroups[0].items[0].id));
+      }
       return;
     }
 
@@ -82,11 +93,12 @@ function PasswordListPanel() {
       group.items.some((item) => item.id === selectedPasswordId)
     );
 
-    // If current selected password is not on this page, select the first on this page
+    // If current selected password is not on this page, select the first on desktop or return to list on mobile
     if (!stillVisible) {
-      dispatch(selectPassword(paginatedGroups[0].items[0].id));
+      dispatch(selectPassword(isDesktop ? paginatedGroups[0].items[0].id : null));
     }
-  }, [paginatedGroups, selectedPasswordId, selectedFolderId, dispatch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paginatedGroups, selectedFolderId, dispatch]);
 
   return (
     <div className="bg-white p-3.5 sm:p-5 border-r border-slate-200 dark:bg-slate-800 dark:border-slate-700 flex flex-col justify-between min-h-[640px] min-w-0">

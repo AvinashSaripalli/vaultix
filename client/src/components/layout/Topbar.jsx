@@ -236,7 +236,7 @@ function Topbar() {
           </button>
 
           {open && (
-            <div className="absolute right-0 top-12 w-[calc(100vw-24px)] sm:w-[400px] max-w-[400px] bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-2xl shadow-xl z-50 overflow-hidden">
+            <div className="fixed left-3 right-3 top-[68px] w-auto sm:absolute sm:left-auto sm:right-0 sm:top-12 sm:w-[400px] max-w-[400px] bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-2xl shadow-xl z-50 overflow-hidden">
               {/* Header */}
               <div className="px-4 sm:px-5 py-3.5 border-b border-[var(--border-primary)] flex items-center justify-between">
                 <div className="flex items-center gap-2">

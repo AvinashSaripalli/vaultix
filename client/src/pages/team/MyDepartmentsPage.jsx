@@ -264,14 +264,14 @@ function MyDepartmentsPage() {
       </div>
 
       {selectedDept && (
-        <>
+        <ModalPortal open={!!selectedDept} onClose={closeDrawer}>
           <div
-            className="fixed inset-0 z-40 bg-black/40"
+            className="fixed inset-0 z-[9998] bg-slate-900/50 backdrop-blur-xs"
             onClick={closeDrawer}
           />
 
-          <aside className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white shadow-2xl overflow-y-auto dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700">
-            <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 px-5 py-4 z-10">
+          <aside className="fixed inset-y-0 right-0 z-[9999] w-full max-w-md bg-white shadow-2xl overflow-y-auto dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700">
+            <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 px-4 sm:px-5 py-4 z-10">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
@@ -312,7 +312,7 @@ function MyDepartmentsPage() {
               </div>
             </div>
 
-            <div className="px-5 py-4 space-y-6">
+            <div className="px-4 sm:px-5 py-4 space-y-6">
               <section className="space-y-3">
                 <div className="flex items-center gap-2">
                   <Users size={15} className="text-slate-400" />
@@ -379,7 +379,7 @@ function MyDepartmentsPage() {
                         )}
                       </div>
 
-<span className="rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 shrink-0 ml-3">
+                      <span className="rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 shrink-0 ml-3">
                         {DEPT_ACCESS_LABELS[grant.accessLevel] || grant.accessLevel}
                       </span>
                     </div>
@@ -394,7 +394,7 @@ function MyDepartmentsPage() {
               </section>
             </div>
           </aside>
-        </>
+        </ModalPortal>
       )}
     </AppLayout>
   );

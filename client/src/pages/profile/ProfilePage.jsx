@@ -80,7 +80,7 @@ function ProfilePage() {
         )}
 
         {/* Tabs */}
-        <div className="flex gap-1 rounded-xl bg-slate-100 dark:bg-slate-700 p-1">
+        <div className="flex gap-1 rounded-xl bg-slate-100 dark:bg-slate-700 p-1 overflow-x-auto no-scrollbar">
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.key;
@@ -88,13 +88,13 @@ function ProfilePage() {
               <button
                 key={tab.key}
                 onClick={() => { setActiveTab(tab.key); clearMessages(); }}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all flex-1 justify-center ${
+                className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all flex-1 justify-center whitespace-nowrap ${
                   active
                     ? 'bg-white dark:bg-slate-800 text-indigo-700 shadow-sm'
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                 }`}
               >
-                <Icon size={16} />
+                <Icon size={15} className="shrink-0" />
                 {tab.label}
               </button>
             );
@@ -198,11 +198,11 @@ function InfoTab({ user, loading, dispatch, onSuccess, onError }) {
     }`;
 
   return (
-    <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8">
+    <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 sm:p-6 lg:p-8">
       <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="flex items-center gap-4 pb-5 border-b border-slate-100 dark:border-slate-700">
-          <User size={20} className="text-slate-400 dark:text-slate-500" />
-          <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">Personal Information</p>
+        <div className="flex items-center gap-3 sm:gap-4 pb-4 sm:pb-5 border-b border-slate-100 dark:border-slate-700">
+          <User size={20} className="text-slate-400 dark:text-slate-500 shrink-0" />
+          <p className="text-base sm:text-lg font-semibold text-slate-900 dark:text-slate-100">Personal Information</p>
         </div>
 
         <div className="grid grid-cols-1 gap-5">
@@ -250,24 +250,24 @@ function InfoTab({ user, loading, dispatch, onSuccess, onError }) {
         </div>
 
         <div className="rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 p-4 text-sm text-slate-600 dark:text-slate-300 space-y-2">
-          <div className="flex justify-between">
+          <div className="flex justify-between gap-2">
             <span className="text-slate-500 dark:text-slate-400">Role</span>
             <span className="font-medium text-slate-800 dark:text-slate-200">{user?.role || 'USER'}</span>
           </div>
-          <div className="flex justify-between">
+          <div className="flex justify-between gap-2">
             <span className="text-slate-500 dark:text-slate-400">Account Created</span>
             <span className="font-medium text-slate-800 dark:text-slate-200">
               {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : '-'}
             </span>
           </div>
-          <div className="flex justify-between">
+          <div className="flex justify-between gap-2">
             <span className="text-slate-500 dark:text-slate-400">Master Password</span>
             <span className={`font-medium ${user?.hasMasterPassword ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`}>
               {user?.hasMasterPassword ? 'Enabled' : 'Not Set'}
             </span>
           </div>
           {myDepartments.length > 0 && (
-            <div className="flex justify-between items-start">
+            <div className="flex justify-between items-start gap-2">
               <span className="text-slate-500 dark:text-slate-400 shrink-0">Departments</span>
               <div className="flex flex-wrap gap-1 justify-end">
                 {myDepartments.map((dept) => (
@@ -287,7 +287,7 @@ function InfoTab({ user, loading, dispatch, onSuccess, onError }) {
           <button
             type="submit"
             disabled={loading}
-            className="flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 disabled:opacity-60 transition"
+            className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 rounded-xl bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 disabled:opacity-60 transition"
           >
             <Save size={16} />
             {loading ? 'Saving...' : 'Save Changes'}
@@ -379,15 +379,15 @@ function SecurityTab({ user, loading, dispatch, onSuccess, onError }) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       {/* Change Login Password */}
-      <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8">
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 sm:p-6 lg:p-8">
         <form onSubmit={handleChangePassword} className="space-y-5">
-          <div className="flex items-center gap-4 pb-5 border-b border-slate-100 dark:border-slate-700">
-            <Lock size={20} className="text-slate-400 dark:text-slate-500" />
+          <div className="flex items-center gap-3 sm:gap-4 pb-4 sm:pb-5 border-b border-slate-100 dark:border-slate-700">
+            <Lock size={20} className="text-slate-400 dark:text-slate-500 shrink-0" />
             <div>
-              <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">Change Password</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Update your account login password</p>
+              <p className="text-base sm:text-lg font-semibold text-slate-900 dark:text-slate-100">Change Password</p>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Update your account login password</p>
             </div>
           </div>
 
@@ -431,7 +431,7 @@ function SecurityTab({ user, loading, dispatch, onSuccess, onError }) {
             <button
               type="submit"
               disabled={loading}
-              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 disabled:opacity-60 transition"
+              className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 rounded-xl bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 disabled:opacity-60 transition"
             >
               <Save size={16} />
               {loading ? 'Changing...' : 'Change Password'}
@@ -441,13 +441,13 @@ function SecurityTab({ user, loading, dispatch, onSuccess, onError }) {
       </div>
 
       {/* Change Master Password */}
-      <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8">
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 sm:p-6 lg:p-8">
         <form onSubmit={handleChangeMasterPassword} className="space-y-5">
-          <div className="flex items-center gap-4 pb-5 border-b border-slate-100 dark:border-slate-700">
-            <KeyRound size={20} className="text-slate-400 dark:text-slate-500" />
+          <div className="flex items-center gap-3 sm:gap-4 pb-4 sm:pb-5 border-b border-slate-100 dark:border-slate-700">
+            <KeyRound size={20} className="text-slate-400 dark:text-slate-500 shrink-0" />
             <div>
-              <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">Change Master Password</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Update the key used to encrypt your vault data</p>
+              <p className="text-base sm:text-lg font-semibold text-slate-900 dark:text-slate-100">Change Master Password</p>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Update the key used to encrypt your vault data</p>
             </div>
           </div>
 
@@ -508,7 +508,7 @@ function SecurityTab({ user, loading, dispatch, onSuccess, onError }) {
             <button
               type="submit"
               disabled={loading || !user?.hasMasterPassword}
-              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 disabled:opacity-60 transition"
+              className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 rounded-xl bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 disabled:opacity-60 transition"
             >
               <Save size={16} />
               {loading ? 'Changing...' : 'Change Master Password'}
@@ -526,12 +526,12 @@ function SecurityTab({ user, loading, dispatch, onSuccess, onError }) {
       />
 
       {/* Security Quick Links */}
-      <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8">
-        <div className="flex items-center gap-4 pb-5 border-b border-slate-100 dark:border-slate-700">
-          <Shield size={20} className="text-slate-400 dark:text-slate-500" />
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 sm:p-6 lg:p-8">
+        <div className="flex items-center gap-3 sm:gap-4 pb-4 sm:pb-5 border-b border-slate-100 dark:border-slate-700">
+          <Shield size={20} className="text-slate-400 dark:text-slate-500 shrink-0" />
           <div>
-            <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">Account Security</p>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Manage additional security settings</p>
+            <p className="text-base sm:text-lg font-semibold text-slate-900 dark:text-slate-100">Account Security</p>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Manage additional security settings</p>
           </div>
         </div>
 
@@ -540,10 +540,10 @@ function SecurityTab({ user, loading, dispatch, onSuccess, onError }) {
             to="/security/2fa"
             className="flex items-center gap-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-4 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
           >
-            <div className="h-10 w-10 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+            <div className="h-10 w-10 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
               <Smartphone size={18} />
             </div>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Two-Factor Authentication</p>
               <p className="text-xs text-slate-500 dark:text-slate-400">Add an extra layer of security</p>
             </div>
@@ -554,10 +554,10 @@ function SecurityTab({ user, loading, dispatch, onSuccess, onError }) {
             to="/security/vault-timeout"
             className="flex items-center gap-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-4 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
           >
-            <div className="h-10 w-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+            <div className="h-10 w-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
               <Clock size={18} />
             </div>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Vault Timeout</p>
               <p className="text-xs text-slate-500 dark:text-slate-400">Set auto-lock after inactivity</p>
             </div>
@@ -611,7 +611,7 @@ function RecoveryKeySetup({ user, privateKey, onSuccess, onError }) {
 
   if (status === 'loading') {
     return (
-      <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8 text-center text-slate-500 dark:text-slate-400">
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 sm:p-6 lg:p-8 text-center text-slate-500 dark:text-slate-400">
         Loading recovery key status...
       </div>
     );
@@ -620,12 +620,12 @@ function RecoveryKeySetup({ user, privateKey, onSuccess, onError }) {
   const enabled = !!user?.hasMasterPassword;
 
   return (
-    <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8">
-      <div className="flex items-center gap-4 pb-5 border-b border-slate-100 dark:border-slate-700">
-        <KeyRound size={20} className="text-slate-400 dark:text-slate-500" />
+    <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 sm:p-6 lg:p-8">
+      <div className="flex items-center gap-3 sm:gap-4 pb-4 sm:pb-5 border-b border-slate-100 dark:border-slate-700">
+        <KeyRound size={20} className="text-slate-400 dark:text-slate-500 shrink-0" />
         <div>
-          <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">Master Password Recovery Key</p>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-base sm:text-lg font-semibold text-slate-900 dark:text-slate-100">Master Password Recovery Key</p>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
             Create a recovery key so you can recover your vault if you forget your master password.
           </p>
         </div>
@@ -645,9 +645,9 @@ function RecoveryKeySetup({ user, privateKey, onSuccess, onError }) {
             </p>
           </div>
 
-          <div className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/70 dark:bg-blue-900/20 p-5 text-center">
+          <div className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/70 dark:bg-blue-900/20 p-4 sm:p-5 text-center">
             <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">Your recovery key</p>
-            <p className="text-2xl font-black tracking-[2px] text-blue-700 dark:text-blue-300 font-mono">
+            <p className="text-base sm:text-2xl font-black tracking-[2px] text-blue-700 dark:text-blue-300 font-mono break-all">
               {showRecoveryKey ? recoveryKey : '••••-••••-••••'}
             </p>
             <button
@@ -680,7 +680,7 @@ function RecoveryKeySetup({ user, privateKey, onSuccess, onError }) {
             type="button"
             disabled={busy}
             onClick={handleGenerate}
-            className="flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 disabled:opacity-60 transition"
+            className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 rounded-xl bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 disabled:opacity-60 transition"
           >
             <KeyRound size={16} />
             {busy ? 'Generating...' : 'Generate Recovery Key'}
@@ -711,7 +711,7 @@ function ActivityTab() {
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8 text-center text-slate-500 dark:text-slate-400">
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 sm:p-6 lg:p-8 text-center text-slate-500 dark:text-slate-400">
         Loading...
       </div>
     );
@@ -719,37 +719,37 @@ function ActivityTab() {
 
   if (!activities.length) {
     return (
-      <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8 text-center text-slate-400 dark:text-slate-500">
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 sm:p-6 lg:p-8 text-center text-slate-400 dark:text-slate-500">
         No login activity recorded
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8">
-      <div className="flex items-center gap-4 pb-5 border-b border-slate-100 dark:border-slate-700">
-        <LogIn size={20} className="text-slate-400 dark:text-slate-500" />
+    <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 sm:p-6 lg:p-8">
+      <div className="flex items-center gap-3 sm:gap-4 pb-4 sm:pb-5 border-b border-slate-100 dark:border-slate-700">
+        <LogIn size={20} className="text-slate-400 dark:text-slate-500 shrink-0" />
         <div>
-          <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">Recent Login Activity</p>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Your last {activities.length} login attempts</p>
+          <p className="text-base sm:text-lg font-semibold text-slate-900 dark:text-slate-100">Recent Login Activity</p>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Your last {activities.length} login attempts</p>
         </div>
       </div>
 
-      <div className="mt-4 space-y-2">
+      <div className="mt-4 space-y-2.5">
         {activities.slice(0, 20).map((item) => (
           <div
             key={item.id}
-            className="flex items-center justify-between rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30 px-4 py-3"
+            className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30 px-3.5 sm:px-4 py-3"
           >
-            <div className="flex items-center gap-3">
-              <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${
+            <div className="flex items-center gap-3 min-w-0">
+              <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${
                 item.status === 'SUCCESS' ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' :
                 item.status === 'FAILED' ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400' :
                 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'
               }`}>
                 <LogIn size={14} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className={`text-sm font-medium ${
                   item.status === 'SUCCESS' ? 'text-green-700 dark:text-green-400' :
                   item.status === 'FAILED' ? 'text-red-700 dark:text-red-400' :
@@ -762,10 +762,10 @@ function ActivityTab() {
                 </p>
               </div>
             </div>
-            <div className="text-right text-xs text-slate-400 dark:text-slate-500">
+            <div className="sm:text-right text-xs text-slate-400 dark:text-slate-500 pl-11 sm:pl-0 min-w-0">
               {item.ipAddress && <p>{item.ipAddress}</p>}
               {item.userAgent && (
-                <p className="max-w-[200px] truncate" title={item.userAgent}>{item.userAgent}</p>
+                <p className="max-w-full sm:max-w-[200px] truncate" title={item.userAgent}>{item.userAgent}</p>
               )}
             </div>
           </div>

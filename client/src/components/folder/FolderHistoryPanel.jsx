@@ -172,28 +172,28 @@ function FolderHistoryPanel({ open, onClose, folderId }) {
           className="w-full max-w-3xl bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden max-h-[85vh] flex flex-col my-auto"
           onClick={(e) => e.stopPropagation()}
         >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+        <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Folder History
             </p>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 truncate mt-1">
+            <h2 className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-slate-100 truncate mt-0.5 sm:mt-1">
               {selectedFolder?.name || 'Folder'}
             </h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 sm:mt-1">
               Members and activity details
             </p>
           </div>
 
           <button
             onClick={onClose}
-            className="w-10 h-10 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 shrink-0"
           >
             <X size={18} />
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto flex-1 bg-slate-50 dark:bg-slate-800/50">
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1 bg-slate-50 dark:bg-slate-800/50">
           {error && (
             <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
               {error}

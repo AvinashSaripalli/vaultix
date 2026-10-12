@@ -357,10 +357,12 @@ const vaultSlice = createSlice({
     },
     selectFolder: (state, action) => {
       state.selectedFolderId = action.payload;
+      state.selectedPasswordId = null;
       state.searchTerm = '';
     },
     clearSelectedFolder: (state) => {
       state.selectedFolderId = null;
+      state.selectedPasswordId = null;
     },
     setSearchTerm: (state, action) => {
       state.searchTerm = action.payload;
@@ -429,7 +431,8 @@ const vaultSlice = createSlice({
         state.passwordsLoading = false;
         state.passwords = action.payload;
 
-        if (state.selectedFolderId) {
+        const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768;
+        if (state.selectedFolderId && isDesktop) {
           const folderPasswords = action.payload.filter(
             (item) => item.folderId === state.selectedFolderId
           );
@@ -520,8 +523,12 @@ const vaultSlice = createSlice({
         state.passwords = state.passwords.filter((item) => item.id !== action.payload);
 
         if (state.selectedPasswordId === action.payload) {
-          state.selectedPasswordId = state.passwords.length
-            ? state.passwords[0].id
+          const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768;
+          const folderPasswords = state.selectedFolderId
+            ? state.passwords.filter((item) => item.folderId === state.selectedFolderId)
+            : state.passwords;
+          state.selectedPasswordId = isDesktop && folderPasswords.length
+            ? folderPasswords[0].id
             : null;
         }
       })
