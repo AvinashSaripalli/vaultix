@@ -12,25 +12,28 @@ export function detectCardNetwork(cardNumber) {
 
   const cleaned = cardNumber.replace(/[\s-]/g, '');
 
-  if (/^4[0-9]{6,}$/.test(cleaned)) {
+  if (/^4[0-9]{5,}$/.test(cleaned)) {
     return { name: 'Visa', icon: 'visa', pattern: /^4/ };
   }
-  if (/^5[1-5][0-9]{14}$/.test(cleaned) || /^2[2-7][0-9]{14}$/.test(cleaned)) {
-    return { name: 'Mastercard', icon: 'mastercard', pattern: /^5[1-5]/ };
+  if (/^5[1-5][0-9]{4,}$/.test(cleaned) || /^2[2-7][0-9]{4,}$/.test(cleaned)) {
+    return { name: 'Mastercard', icon: 'mastercard', pattern: /^(?:5[1-5]|2[2-7])/ };
   }
-  if (/^3[47][0-9]{13}$/.test(cleaned)) {
+  if (/^3[47][0-9]{4,}$/.test(cleaned)) {
     return { name: 'Amex', icon: 'amex', pattern: /^3[47]/ };
   }
-  if (/^3(?:0[0-5]|[68][0-9])[0-9]{11,}$/.test(cleaned)) {
+  if (/^(?:60|6521|6522|508[5-9]|353|356|81|82)[0-9]{4,}$/.test(cleaned)) {
+    return { name: 'RuPay', icon: 'rupay', pattern: /^(?:60|6521|6522|508[5-9]|353|356|81|82)/ };
+  }
+  if (/^3(?:0[0-5]|[68][0-9])[0-9]{4,}$/.test(cleaned)) {
     return { name: 'Diners Club', icon: 'diners', pattern: /^3(?:0[0-5]|[68])/ };
   }
-  if (/^6(?:011|5[0-9]{2})[0-9]{12,}$/.test(cleaned)) {
+  if (/^6(?:011|5[0-9]{2})[0-9]{4,}$/.test(cleaned)) {
     return { name: 'Discover', icon: 'discover', pattern: /^6(?:011|5)/ };
   }
-  if (/^(?:2131|1800|35\d{3})\d{11}$/.test(cleaned)) {
+  if (/^(?:2131|1800|35\d{3})\d{4,}$/.test(cleaned)) {
     return { name: 'JCB', icon: 'jcb', pattern: /^(?:2131|1800|35)/ };
   }
-  if (/^63[7-9][0-9]{13,}$/.test(cleaned)) {
+  if (/^63[7-9][0-9]{4,}$/.test(cleaned)) {
     return { name: 'UnionPay', icon: 'unionpay', pattern: /^63[7-9]/ };
   }
 
@@ -86,7 +89,7 @@ export function validateExpiry(expiry) {
   const year = parseInt(match[2], 10);
 
   if (month < 1 || month > 12) {
-    return { valid: false, message: 'Invalid month', expired: false };
+    return { valid: false, message: 'Invalid month (01-12)', expired: false };
   }
 
   const fullYear = 2000 + year;
@@ -101,11 +104,23 @@ export function validateExpiry(expiry) {
 }
 
 /**
+ * Auto-format MM/YY input as user types.
+ */
+export function formatExpiryInput(raw) {
+  if (!raw) return '';
+  const digits = String(raw).replace(/\D/g, '').slice(0, 4);
+  if (digits.length >= 3) {
+    return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  }
+  return digits;
+}
+
+/**
  * Validate CVV (3 or 4 digits).
  */
 export function validateCVV(cvv) {
   if (!cvv) return { valid: false, message: 'CVV is required' };
-  if (!/^\d{3,4}$/.test(cvv)) {
+  if (!/^\d{3,4}$/.test(String(cvv).trim())) {
     return { valid: false, message: 'CVV must be 3 or 4 digits' };
   }
   return { valid: true, message: '' };
@@ -115,8 +130,8 @@ export function validateCVV(cvv) {
  * Validate PIN (typically 4-6 digits).
  */
 export function validatePIN(pin) {
-  if (!pin) return { valid: false, message: 'PIN is required' };
-  if (!/^\d{4,6}$/.test(pin)) {
+  if (!pin) return { valid: true, message: '' };
+  if (!/^\d{4,6}$/.test(String(pin).trim())) {
     return { valid: false, message: 'PIN must be 4-6 digits' };
   }
   return { valid: true, message: '' };
@@ -127,14 +142,14 @@ export function validatePIN(pin) {
  */
 export function formatCardNumber(cardNumber) {
   if (!cardNumber) return '';
-  const cleaned = cardNumber.replace(/[\s-]/g, '');
+  const cleaned = String(cardNumber).replace(/\D/g, '').slice(0, 19);
   return cleaned.replace(/(.{4})/g, '$1 ').trim();
 }
 
 /**
  * Full card validation. Returns an object with field-level errors.
  */
-export function validateCard(fields) {
+export function validateCard(fields = {}) {
   const errors = {};
 
   if (!fields.cardholderName?.trim()) {
@@ -155,9 +170,11 @@ export function validateCard(fields) {
     errors.cvv = cvvResult.message;
   }
 
-  const pinResult = validatePIN(fields.pin);
-  if (!pinResult.valid) {
-    errors.pin = pinResult.message;
+  if (fields.pin) {
+    const pinResult = validatePIN(fields.pin);
+    if (!pinResult.valid) {
+      errors.pin = pinResult.message;
+    }
   }
 
   return {

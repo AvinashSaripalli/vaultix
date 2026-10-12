@@ -9,12 +9,14 @@ import { estimateStrength, checkBreachedPassword } from '../../utils/breachCheck
 import { isPasswordAtRisk } from '../../utils/passwordRisk';
 import {
   ITEM_TYPES,
+  TYPE_FIELDS,
   emptyTypeFields,
   isSensitiveDefault,
   getTypePlaceholder,
   serializeCustomFields,
   CUSTOM_FIELDS_KEY,
 } from '../../utils/itemTypes';
+import { luhnCheck, validateExpiry, validateCVV, validatePIN } from '../../utils/cardValidation';
 
 function AddMyVaultPasswordModal({
   open,
@@ -71,15 +73,27 @@ function AddMyVaultPasswordModal({
     setFormError('');
   }, [open, parent, selectedFolder, initialType]);
 
-  const fieldsValid = useMemo(() => {
-    if (formData.type !== 'CARD') return true;
-    const f = formData.fields;
-    if (!f) return true;
-    const errors = [];
-    if (f.cardNumber && !/^\d{13,19}$/.test(f.cardNumber.replace(/[\s-]/g, ''))) errors.push('cardNumber');
-    if (f.expiry && !/^\d{1,2}\s*\/\s*\d{2}$/.test(f.expiry)) errors.push('expiry');
-    if (f.cvv && !/^\d{3,4}$/.test(f.cvv)) errors.push('cvv');
-    return errors.length === 0;
+  const fieldsValidationMessage = useMemo(() => {
+    const type = formData.type;
+    if (type === 'LOGIN' || type === 'SECURE_NOTE') return '';
+    const f = formData.fields || {};
+    const requiredDefs = (TYPE_FIELDS[type] || []).filter((field) => field.required);
+    const missing = requiredDefs.filter((field) => !String(f[field.key] || '').trim());
+    if (missing.length > 0) {
+      return `Required fields missing: ${missing.map((m) => m.label).join(', ')}`;
+    }
+    if (type === 'CARD') {
+      if (!luhnCheck(f.cardNumber)) return 'Please enter a valid card number';
+      const exp = validateExpiry(f.expiry);
+      if (!exp.valid) return exp.message;
+      const cvv = validateCVV(f.cvv);
+      if (!cvv.valid) return cvv.message;
+      if (f.pin) {
+        const pin = validatePIN(f.pin);
+        if (!pin.valid) return pin.message;
+      }
+    }
+    return '';
   }, [formData.type, formData.fields]);
 
   if (!open) return null;
@@ -88,10 +102,12 @@ function AddMyVaultPasswordModal({
     'w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600';
 
   const updateField = (field, value) => {
+    setFormError('');
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const updateTypeField = (key, value) => {
+    setFormError('');
     setFormData((prev) => ({
       ...prev,
       fields: { ...prev.fields, [key]: value },
@@ -99,6 +115,7 @@ function AddMyVaultPasswordModal({
   };
 
   const changeType = (type) => {
+    setFormError('');
     setFormData((prev) => ({
       ...prev,
       type,
@@ -131,13 +148,8 @@ function AddMyVaultPasswordModal({
       return;
     }
 
-    if (formData.type === 'LOGIN' && !formData.encryptedPassword) {
-      setFormError('Password is required for a login item');
-      return;
-    }
-
-    if (formData.type !== 'LOGIN' && formData.type !== 'SECURE_NOTE' && !fieldsValid) {
-      setFormError('Please fix the validation errors in the fields above');
+    if (fieldsValidationMessage) {
+      setFormError(fieldsValidationMessage);
       return;
     }
 

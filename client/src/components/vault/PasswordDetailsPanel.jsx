@@ -26,8 +26,10 @@ import { unwrapItemKey, decryptTextWithAesKey, decryptText, safeDecryptText, dec
 import { secureCopyText } from '../../utils/clipboard';
 import { setCompanyPasswordEditCache } from '../../utils/companyPasswordEditCache';
 import { setSessionRsaPrivateKey, setSessionRsaPublicKey } from '../../features/auth/authSlice';
-import { TYPE_FIELDS, parseCustomFields, CUSTOM_FIELDS_KEY, getItemTypeMeta } from '../../utils/itemTypes';
-import { detectCardNetwork } from '../../utils/cardValidation';
+import { TYPE_FIELDS, isFieldMasked, maskFieldValue, parseCustomFields, CUSTOM_FIELDS_KEY, getItemTypeMeta } from '../../utils/itemTypes';
+import { detectCardNetwork, formatCardNumber } from '../../utils/cardValidation';
+
+const SENSITIVE_VERIFY_TTL_MS = 3 * 60 * 1000; // 3 minutes per item
 
 function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
   const dispatch = useDispatch();
@@ -97,6 +99,7 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
   const [confirmDelete, setConfirmDelete] = useState({ open: false, name: '', passwordId: null });
   const [reVerifyOpen, setReVerifyOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
+  const [verifiedAtMap, setVerifiedAtMap] = useState({});
 
   // Pre-decrypt typed (fields) items as soon as they are selected so masked
   // values are shown instead of '-' and the copy buttons work on first click.
@@ -154,6 +157,12 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
     );
   }
 
+  const isItemRecentlyVerified = (item) => {
+    if (!item?.isSensitive) return true;
+    const ts = verifiedAtMap[item.id];
+    return Boolean(ts && Date.now() - ts < SENSITIVE_VERIFY_TTL_MS);
+  };
+
   const handleAction = (actionName, item) => {
     if (!item) return;
 
@@ -177,7 +186,7 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
 
     if (
       item.isSensitive &&
-      item.createdById !== user?.id &&
+      !isItemRecentlyVerified(item) &&
       (actionName === 'view' || actionName === 'copy-password' || actionName === 'edit')
     ) {
       setPendingAction({ actionName, item });
@@ -596,20 +605,40 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
                   <>
                     {typeFields.map((field) => {
                       const rawValue = displayFields[field.key];
+                      const hasValue =
+                        rawValue !== undefined && rawValue !== null && rawValue !== '';
+                      if (!hasValue && !field.required) {
+                        return null;
+                      }
                       const fieldVisible = !!revealedFields[item.id]?.[field.key];
-                      const value =
-                        rawValue !== undefined && rawValue !== null && rawValue !== ''
-                          ? field.copy && !fieldVisible
-                            ? '••••••••••••'
-                            : String(rawValue)
-                          : '-';
+                      const isSecret = isFieldMasked(field);
+                      const formattedPlain =
+                        field.key === 'cardNumber' && hasValue
+                          ? formatCardNumber(String(rawValue))
+                          : hasValue
+                            ? String(rawValue)
+                            : '-';
+                      const value = hasValue
+                        ? isSecret && !fieldVisible
+                          ? maskFieldValue(String(rawValue), field)
+                          : formattedPlain
+                        : '-';
 
                       const handleSecretField = (action) => {
-                        // Sensitive items created by others require re-verification
-                        // before any field can be revealed or copied.
+                        if (action === 'view-field' && fieldVisible) {
+                          setRevealedFields((prev) => ({
+                            ...prev,
+                            [item.id]: {
+                              ...(prev[item.id] || {}),
+                              [field.key]: false,
+                            },
+                          }));
+                          return;
+                        }
                         if (
+                          isSecret &&
                           item.isSensitive &&
-                          item.createdById !== user?.id
+                          !isItemRecentlyVerified(item)
                         ) {
                           setPendingAction({ actionName: action, item, fieldKey: field.key });
                           setReVerifyOpen(true);
@@ -624,7 +653,7 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
                             },
                           }));
                         } else if (action === 'copy-field') {
-                          if (rawValue !== undefined && rawValue !== null && rawValue !== '') {
+                          if (hasValue) {
                             secureCopyText(String(rawValue), `${field.label} copied`);
                           }
                         }
@@ -634,24 +663,45 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
                         <DetailRow
                           key={field.key}
                           label={field.label}
-                          isMono={field.copy && fieldVisible}
-                          value={value}
+                          isMono={isSecret && fieldVisible}
+                          value={
+                            field.key === 'url' && hasValue ? (
+                              <a
+                                href={
+                                  String(rawValue).startsWith('http')
+                                    ? String(rawValue)
+                                    : `https://${rawValue}`
+                                }
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-blue-600 hover:text-blue-800 hover:underline break-all dark:text-blue-400"
+                              >
+                                {String(rawValue)}
+                              </a>
+                            ) : (
+                              value
+                            )
+                          }
                           action={
-                            field.copy ? (
-                              <div className="flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => handleSecretField('view-field')}
-                                  aria-label={fieldVisible ? `Hide ${field.label}` : `Show ${field.label}`}
-                                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-750 transition"
-                                  title={fieldVisible ? 'Hide' : 'Reveal'}
-                                >
-                                  {fieldVisible ? <EyeOff size={16} /> : <Eye size={16} />}
-                                </button>
-                                <CopyIconButton
-                                  onCopy={() => handleSecretField('copy-field')}
-                                  title={`Copy ${field.label}`}
-                                />
+                            hasValue && (isSecret || field.copy) ? (
+                              <div className="flex items-center gap-1.5">
+                                {isSecret && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSecretField('view-field')}
+                                    aria-label={fieldVisible ? `Hide ${field.label}` : `Show ${field.label}`}
+                                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-750 transition"
+                                    title={fieldVisible ? 'Hide' : 'Reveal'}
+                                  >
+                                    {fieldVisible ? <EyeOff size={16} /> : <Eye size={16} />}
+                                  </button>
+                                )}
+                                {field.copy && (
+                                  <CopyIconButton
+                                    onCopy={() => handleSecretField('copy-field')}
+                                    title={`Copy ${field.label}`}
+                                  />
+                                )}
                               </div>
                             ) : null
                           }
@@ -669,7 +719,17 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
                         : '-';
 
                       const handleCustomField = (action) => {
-                        if (item.isSensitive && item.createdById !== user?.id) {
+                        if (action === 'view-field' && cfVisible) {
+                          setRevealedFields((prev) => ({
+                            ...prev,
+                            [item.id]: {
+                              ...(prev[item.id] || {}),
+                              [cfKey]: false,
+                            },
+                          }));
+                          return;
+                        }
+                        if (cfSensitive && item.isSensitive && !isItemRecentlyVerified(item)) {
                           setPendingAction({ actionName: action, item, fieldKey: cfKey });
                           setReVerifyOpen(true);
                           return;
@@ -805,6 +865,13 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
           const action = pendingAction;
           setPendingAction(null);
           if (!action) return;
+
+          if (action.item?.id) {
+            setVerifiedAtMap((prev) => ({
+              ...prev,
+              [action.item.id]: Date.now(),
+            }));
+          }
 
           if (action.actionName === 'view-field') {
             setRevealedFields((prev) => ({

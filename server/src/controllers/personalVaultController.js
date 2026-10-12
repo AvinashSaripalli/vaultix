@@ -261,7 +261,10 @@ const createMyVaultPassword = async (req, res) => {
           lastUpdatedAt: new Date(),
           strengthScore: req.body.strengthScore ?? 40,
           isWeak: req.body.isWeak ?? false,
-          isSensitive: req.body.isSensitive ?? false,
+          isSensitive:
+            req.body.isSensitive !== undefined
+              ? Boolean(req.body.isSensitive)
+              : type !== 'LOGIN' && type !== 'SECURE_NOTE',
           tags: {
             create: tags.map((tagName) => ({
               tag: {
@@ -497,24 +500,6 @@ const updateMyVaultPassword = async (req, res) => {
       }
     }
 
-    if (encryptedFields !== undefined && encryptedFields) {
-      const effectiveType = type || password.type;
-      if (effectiveType !== 'LOGIN' && effectiveType !== 'SECURE_NOTE') {
-        let parsedFields;
-        try {
-          parsedFields = typeof encryptedFields === 'string'
-            ? JSON.parse(encryptedFields)
-            : encryptedFields;
-        } catch {
-          return res.status(400).json({ message: 'encryptedFields must be valid JSON' });
-        }
-        const fieldCheck = validateItemFields(effectiveType, parsedFields);
-        if (!fieldCheck.valid) {
-          return res.status(400).json({ message: fieldCheck.message });
-        }
-      }
-    }
-
     const cleanTags = Array.isArray(tags)
       ? tags
           .map((tag) => String(tag).trim())
@@ -552,6 +537,24 @@ const updateMyVaultPassword = async (req, res) => {
 
     if (password.deletedAt) {
       return res.status(404).json({ message: 'Password not found' });
+    }
+
+    if (encryptedFields !== undefined && encryptedFields) {
+      const effectiveType = type || password.type;
+      if (effectiveType !== 'LOGIN' && effectiveType !== 'SECURE_NOTE') {
+        let parsedFields;
+        try {
+          parsedFields = typeof encryptedFields === 'string'
+            ? JSON.parse(encryptedFields)
+            : encryptedFields;
+        } catch {
+          return res.status(400).json({ message: 'encryptedFields must be valid JSON' });
+        }
+        const fieldCheck = validateItemFields(effectiveType, parsedFields);
+        if (!fieldCheck.valid) {
+          return res.status(400).json({ message: fieldCheck.message });
+        }
+      }
     }
 
     if (folderId) {

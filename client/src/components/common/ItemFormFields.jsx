@@ -169,11 +169,11 @@ function ItemFormFields({
         />
       </div>
 
-      {/* Username / Login (for types that have login) */}
-      {currentType !== 'SECURE_NOTE' && currentType !== 'CARD' && (
+      {/* Username / Login (for LOGIN items; other types define their own typed fields) */}
+      {currentType === 'LOGIN' && (
         <div>
           <label className="block text-sm font-semibold text-slate-700 mb-1 dark:text-slate-300">
-            Username / Login
+            Username / Login <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
@@ -185,16 +185,12 @@ function ItemFormFields({
         </div>
       )}
 
-      {/* Primary Password / Secret */}
-      {currentType !== 'SECURE_NOTE' && currentType !== 'IDENTITY' && (
+      {/* Primary Password / Secret (for LOGIN items) */}
+      {currentType === 'LOGIN' && (
         <div>
           <div className="flex items-center justify-between mb-1.5">
             <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
-              {currentType === 'API_TOKEN'
-                ? 'API Token / Secret Key'
-                : currentType === 'SSH_KEY'
-                ? 'Private Key / Passphrase'
-                : 'Password'}
+              Password <span className="text-red-500">*</span>
             </label>
             <div className="flex items-center gap-2">
               <button
@@ -329,7 +325,7 @@ function ItemFormFields({
       {showConfirmPassword && currentType === 'LOGIN' && (
         <div>
           <label className="block text-sm font-semibold text-slate-700 mb-1 dark:text-slate-300">
-            Confirm Password
+            Confirm Password <span className="text-red-500">*</span>
           </label>
           <div className="relative">
             <input
@@ -351,8 +347,8 @@ function ItemFormFields({
         </div>
       )}
 
-      {/* URL / Website */}
-      {currentType !== 'SECURE_NOTE' && (
+      {/* URL / Website (for LOGIN items) */}
+      {currentType === 'LOGIN' && (
         <div>
           <label className="block text-sm font-semibold text-slate-700 mb-1 dark:text-slate-300">
             Website URL / Host

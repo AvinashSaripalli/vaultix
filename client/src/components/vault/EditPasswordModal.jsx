@@ -29,12 +29,14 @@ import {
 import { generatePassword } from '../../utils/passwordGenerator';
 import {
   ITEM_TYPES,
+  TYPE_FIELDS,
   emptyTypeFields,
   isSensitiveDefault,
   serializeCustomFields,
   parseCustomFields,
   CUSTOM_FIELDS_KEY,
 } from '../../utils/itemTypes';
+import { luhnCheck, validateExpiry, validateCVV, validatePIN } from '../../utils/cardValidation';
 
 const SUGGESTED_TAGS = [
   'Production',
@@ -191,6 +193,24 @@ function EditPasswordModal() {
       }
       if (formData.encryptedPassword !== formData.confirmPassword) {
         return 'Password and confirm password do not match';
+      }
+    } else if (formData.type !== 'SECURE_NOTE') {
+      const f = formData.fields || {};
+      const requiredDefs = (TYPE_FIELDS[formData.type] || []).filter((field) => field.required);
+      const missing = requiredDefs.filter((field) => !String(f[field.key] || '').trim());
+      if (missing.length > 0) {
+        return `Required fields missing: ${missing.map((m) => m.label).join(', ')}`;
+      }
+      if (formData.type === 'CARD') {
+        if (!luhnCheck(f.cardNumber)) return 'Please enter a valid card number';
+        const exp = validateExpiry(f.expiry);
+        if (!exp.valid) return exp.message;
+        const cvv = validateCVV(f.cvv);
+        if (!cvv.valid) return cvv.message;
+        if (f.pin) {
+          const pin = validatePIN(f.pin);
+          if (!pin.valid) return pin.message;
+        }
       }
     }
 

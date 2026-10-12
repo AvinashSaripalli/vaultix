@@ -11,15 +11,51 @@ const ITEM_FIELD_SCHEMAS = {
   },
   CARD: {
     required: ['cardholderName', 'cardNumber', 'expiry', 'cvv'],
-    optional: ['brand'],
+    optional: [
+      'brand',
+      'pin',
+      'cardType',
+      'validFrom',
+      'issuingBank',
+      'billingZip',
+      'supportPhone',
+    ],
   },
   BANK_ACCOUNT: {
     required: ['accountHolder', 'accountNumber', 'routingNumber'],
-    optional: ['iban', 'swiftCode'],
+    optional: [
+      'bankName',
+      'accountType',
+      'branchName',
+      'customerId',
+      'username',
+      'password',
+      'transactionPassword',
+      'mpin',
+      'upiId',
+      'registeredPhone',
+      'url',
+      'iban',
+      'swiftCode',
+      'totpSecret',
+    ],
   },
   IDENTITY: {
-    required: ['firstName', 'lastName', 'dob', 'idNumber', 'email', 'phone'],
-    optional: ['address1', 'address2', 'city', 'state', 'postalCode', 'country'],
+    required: ['firstName', 'lastName', 'dob', 'idNumber'],
+    optional: [
+      'email',
+      'phone',
+      'idType',
+      'issueDate',
+      'expiryDate',
+      'issuingAuthority',
+      'address1',
+      'address2',
+      'city',
+      'state',
+      'postalCode',
+      'country',
+    ],
   },
   SECURE_NOTE: {
     required: [],
@@ -35,7 +71,7 @@ const ITEM_FIELD_SCHEMAS = {
   },
   DATABASE: {
     required: ['dbName', 'username', 'password'],
-    optional: ['host', 'port', 'database', 'driver', 'connectionString'],
+    optional: ['host', 'port', 'database', 'driver', 'connectionString', 'totpSecret'],
   },
   WIFI: {
     required: ['ssid', 'password'],
@@ -81,26 +117,25 @@ function validateItemFields(type, fields) {
     return { valid: false, message: `Invalid item type: ${type}` };
   }
 
-const schema = ITEM_FIELD_SCHEMAS[type];
-    const allAllowed = new Set([...schema.required, ...schema.optional]);
+  const schema = ITEM_FIELD_SCHEMAS[type];
 
-    if (fields && typeof fields === 'object' && !Array.isArray(fields)) {
-      const hasEncryptionEnvelope = 'iv' in fields && 'content' in fields;
+  if (fields && typeof fields === 'object' && !Array.isArray(fields)) {
+    const hasEncryptionEnvelope = 'iv' in fields && 'content' in fields;
 
-      if (hasEncryptionEnvelope) {
-        return { valid: true };
-      }
-
-      const providedKeys = Object.keys(fields);
-      const disallowed = providedKeys.filter((k) => !isAllowedKey(schema, k));
-
-      if (disallowed.length > 0) {
-        return {
-          valid: false,
-          message: `Unexpected fields for ${type}: ${disallowed.join(', ')}`,
-        };
-      }
+    if (hasEncryptionEnvelope) {
+      return { valid: true };
     }
+
+    const providedKeys = Object.keys(fields);
+    const disallowed = providedKeys.filter((k) => !isAllowedKey(schema, k));
+
+    if (disallowed.length > 0) {
+      return {
+        valid: false,
+        message: `Unexpected fields for ${type}: ${disallowed.join(', ')}`,
+      };
+    }
+  }
 
   if (schema.required.length > 0) {
     if (!fields || typeof fields !== 'object') {

@@ -15,12 +15,15 @@ import { estimateStrength, checkBreachedPassword } from '../../utils/breachCheck
 import { isPasswordOld, isPasswordAtRisk } from '../../utils/passwordRisk';
 import {
   ITEM_TYPES,
+  TYPE_FIELDS,
   getTypePlaceholder,
   emptyTypeFields,
+  isSensitiveDefault,
   serializeCustomFields,
   parseCustomFields,
   CUSTOM_FIELDS_KEY,
 } from '../../utils/itemTypes';
+import { luhnCheck, validateExpiry, validateCVV, validatePIN } from '../../utils/cardValidation';
 
 function EditMyVaultPasswordModal({
   open,
@@ -142,12 +145,16 @@ function EditMyVaultPasswordModal({
     }));
   };
 
-  const handleTypeChange = (e) => {
-    const nextType = e.target.value;
+  const handleTypeChange = (typeOrEvent) => {
+    const nextType =
+      typeof typeOrEvent === 'string' ? typeOrEvent : typeOrEvent?.target?.value;
+    if (!nextType) return;
+    setDecryptError('');
     setFormData((prev) => ({
       ...prev,
       type: nextType,
       fields: emptyTypeFields(nextType),
+      isSensitive: prev.isSensitive || isSensitiveDefault(nextType),
       customFields: [],
     }));
   };
@@ -166,6 +173,39 @@ function EditMyVaultPasswordModal({
     if (formData.type === 'LOGIN' && (!formData.login || !formData.encryptedPassword)) {
       setDecryptError('Login and password are required for a login item');
       return;
+    }
+
+    if (formData.type !== 'LOGIN' && formData.type !== 'SECURE_NOTE') {
+      const f = formData.fields || {};
+      const requiredDefs = (TYPE_FIELDS[formData.type] || []).filter((field) => field.required);
+      const missing = requiredDefs.filter((field) => !String(f[field.key] || '').trim());
+      if (missing.length > 0) {
+        setDecryptError(`Required fields missing: ${missing.map((m) => m.label).join(', ')}`);
+        return;
+      }
+      if (formData.type === 'CARD') {
+        if (!luhnCheck(f.cardNumber)) {
+          setDecryptError('Please enter a valid card number');
+          return;
+        }
+        const exp = validateExpiry(f.expiry);
+        if (!exp.valid) {
+          setDecryptError(exp.message);
+          return;
+        }
+        const cvv = validateCVV(f.cvv);
+        if (!cvv.valid) {
+          setDecryptError(cvv.message);
+          return;
+        }
+        if (f.pin) {
+          const pin = validatePIN(f.pin);
+          if (!pin.valid) {
+            setDecryptError(pin.message);
+            return;
+          }
+        }
+      }
     }
 
     if (!sessionMasterPassword) {

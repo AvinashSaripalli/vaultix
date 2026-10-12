@@ -23,13 +23,18 @@ import { showToast } from '../../utils/toast';
 import {
   TYPE_FIELDS,
   getItemTypeMeta,
+  isFieldMasked,
   maskFieldValue,
   parseCustomFields,
   CUSTOM_FIELDS_KEY,
 } from '../../utils/itemTypes';
+import { detectCardNetwork, formatCardNumber } from '../../utils/cardValidation';
 import ItemTypeBadge from './ItemTypeBadge';
 import TotpField from './TotpField';
 import DecryptDialog from '../common/DecryptDialog';
+import VerifyMasterPasswordModal from '../security/VerifyMasterPasswordModal';
+
+const SENSITIVE_VERIFY_TTL_MS = 3 * 60 * 1000; // 3 minutes per item
 
 function ItemDetailsPanel({
   item,
@@ -54,6 +59,9 @@ function ItemDetailsPanel({
   const [showDecryptDialog, setShowDecryptDialog] = useState(false);
   const [decrypting, setDecrypting] = useState(false);
   const [decryptError, setDecryptError] = useState('');
+  const [reVerifyOpen, setReVerifyOpen] = useState(false);
+  const [pendingSensitiveCallback, setPendingSensitiveCallback] = useState(null);
+  const [verifiedAtMap, setVerifiedAtMap] = useState({});
 
   const salt = user?.encryptionSalt;
 
@@ -139,121 +147,177 @@ function ItemDetailsPanel({
     setDecryptedNote(decrypted.note);
   };
 
+  const isItemRecentlyVerified = () => {
+    if (!item?.isSensitive) return true;
+    const ts = verifiedAtMap[item.id];
+    return Boolean(ts && Date.now() - ts < SENSITIVE_VERIFY_TTL_MS);
+  };
+
+  const requireSensitiveVerification = (callback) => {
+    if (isItemRecentlyVerified()) {
+      callback();
+      return;
+    }
+    setPendingSensitiveCallback(() => callback);
+    setReVerifyOpen(true);
+  };
+
   const handlePasswordEye = () => {
     if (showPassword) {
       setShowPassword(false);
       return;
     }
 
-    if (decryptedPassword !== null) {
-      setShowPassword(true);
-    } else if (sessionMasterPassword) {
-      setDecrypting(true);
-      decryptAll(sessionMasterPassword)
-        .then((decrypted) => {
-          applySessionDecrypt(decrypted);
-          setShowPassword(true);
-        })
-        .catch(() => {
-          setShowDecryptDialog(true);
-        })
-        .finally(() => setDecrypting(false));
-    } else {
-      setShowDecryptDialog(true);
-    }
+    requireSensitiveVerification(() => {
+      if (decryptedPassword !== null) {
+        setShowPassword(true);
+      } else if (sessionMasterPassword) {
+        setDecrypting(true);
+        decryptAll(sessionMasterPassword)
+          .then((decrypted) => {
+            applySessionDecrypt(decrypted);
+            setShowPassword(true);
+          })
+          .catch(() => {
+            setShowDecryptDialog(true);
+          })
+          .finally(() => setDecrypting(false));
+      } else {
+        setShowDecryptDialog(true);
+      }
+    });
   };
 
   const handlePasswordCopy = () => {
-    if (decryptedPassword !== null) {
-      copyText(decryptedPassword, 'Password');
-    } else if (sessionMasterPassword) {
-      setDecrypting(true);
-      decryptAll(sessionMasterPassword)
-        .then((decrypted) => {
-          applySessionDecrypt(decrypted);
-          copyText(decrypted.password, 'Password');
-        })
-        .catch(() => {
-          setShowDecryptDialog(true);
-        })
-        .finally(() => setDecrypting(false));
-    } else {
-      setShowDecryptDialog(true);
-    }
+    requireSensitiveVerification(() => {
+      if (decryptedPassword !== null) {
+        copyText(decryptedPassword, 'Password');
+      } else if (sessionMasterPassword) {
+        setDecrypting(true);
+        decryptAll(sessionMasterPassword)
+          .then((decrypted) => {
+            applySessionDecrypt(decrypted);
+            copyText(decrypted.password, 'Password');
+          })
+          .catch(() => {
+            setShowDecryptDialog(true);
+          })
+          .finally(() => setDecrypting(false));
+      } else {
+        setShowDecryptDialog(true);
+      }
+    });
   };
 
+  const resolvedFields = (() => {
+    const raw = decryptedFields || {};
+    if (item.type === 'CARD' && raw.cardNumber && !raw.brand) {
+      const net = detectCardNetwork(raw.cardNumber);
+      if (net) return { ...raw, brand: net.name };
+    }
+    return raw;
+  })();
+
   const handleFieldAction = (field, mode) => {
-    const value = (decryptedFields || {})[field.key];
-
-    if (mode === 'copy' && value !== undefined && value !== null) {
-      copyText(value, field.label);
+    const masked = isFieldMasked(field);
+    // Hiding an already-revealed field never requires re-verification
+    if (mode === 'reveal' && revealed[field.key]) {
+      setRevealed((prev) => ({ ...prev, [field.key]: false }));
       return;
     }
 
-    if (mode === 'reveal' && value !== undefined && value !== null) {
-      setRevealed((prev) => ({ ...prev, [field.key]: !prev[field.key] }));
-      return;
-    }
+    const perform = () => {
+      const value = resolvedFields[field.key];
 
-    if (sessionMasterPassword) {
-      setDecrypting(true);
-      decryptAll(sessionMasterPassword)
-        .then((decrypted) => {
-          applySessionDecrypt(decrypted);
-          const decryptedValue = (decrypted.fields || {})[field.key];
-          if (mode === 'copy') {
-            copyText(decryptedValue, field.label);
-          } else {
-            setRevealed((prev) => ({ ...prev, [field.key]: true }));
-          }
-        })
-        .catch(() => {
-          setShowDecryptDialog(true);
-        })
-        .finally(() => setDecrypting(false));
+      if (mode === 'copy' && value !== undefined && value !== null) {
+        copyText(value, field.label);
+        return;
+      }
+
+      if (mode === 'reveal' && value !== undefined && value !== null) {
+        setRevealed((prev) => ({ ...prev, [field.key]: !prev[field.key] }));
+        return;
+      }
+
+      if (sessionMasterPassword) {
+        setDecrypting(true);
+        decryptAll(sessionMasterPassword)
+          .then((decrypted) => {
+            applySessionDecrypt(decrypted);
+            const decryptedValue = (decrypted.fields || {})[field.key];
+            if (mode === 'copy') {
+              copyText(decryptedValue, field.label);
+            } else {
+              setRevealed((prev) => ({ ...prev, [field.key]: true }));
+            }
+          })
+          .catch(() => {
+            setShowDecryptDialog(true);
+          })
+          .finally(() => setDecrypting(false));
+      } else {
+        setShowDecryptDialog(true);
+      }
+    };
+
+    if (masked) {
+      requireSensitiveVerification(perform);
     } else {
-      setShowDecryptDialog(true);
+      perform();
     }
   };
 
   const handleCustomValue = (mode, custom, index) => {
-    const run = (fields) => {
-      const customList = parseCustomFields(fields[CUSTOM_FIELDS_KEY]);
-      const target = customList[index];
-      if (!target) return;
-      if (mode === 'copy') {
-        copyText(target.value, target.name || 'Custom field');
-      } else {
-        setRevealed((prev) => ({ ...prev, [`__custom_${index}`]: true }));
+    const perform = () => {
+      const run = (fields) => {
+        const customList = parseCustomFields(fields[CUSTOM_FIELDS_KEY]);
+        const target = customList[index];
+        if (!target) return;
+        if (mode === 'copy') {
+          copyText(target.value, target.name || 'Custom field');
+        } else {
+          setRevealed((prev) => ({ ...prev, [`__custom_${index}`]: true }));
+        }
+      };
+
+      if (mode === 'copy' && custom?.value) {
+        copyText(custom.value, custom.name || 'Custom field');
+        return;
       }
+
+      if (mode === 'reveal' && custom?.value) {
+        setRevealed((prev) => ({ ...prev, [`__custom_${index}`]: true }));
+        return;
+      }
+
+      if (!sessionMasterPassword) {
+        setShowDecryptDialog(true);
+        return;
+      }
+
+      setDecrypting(true);
+      decryptAll(sessionMasterPassword)
+        .then((decrypted) => {
+          applySessionDecrypt(decrypted);
+          run(decrypted.fields || {});
+        })
+        .catch(() => {
+          setShowDecryptDialog(true);
+        })
+        .finally(() => setDecrypting(false));
     };
 
-    if (mode === 'copy' && custom?.value) {
-      copyText(custom.value, custom.name || 'Custom field');
-      return;
+    if (custom?.sensitive) {
+      requireSensitiveVerification(perform);
+    } else {
+      perform();
     }
-
-    if (!sessionMasterPassword) {
-      setShowDecryptDialog(true);
-      return;
-    }
-
-    setDecrypting(true);
-    decryptAll(sessionMasterPassword)
-      .then((decrypted) => {
-        applySessionDecrypt(decrypted);
-        run(decrypted.fields || {});
-      })
-      .catch(() => {
-        setShowDecryptDialog(true);
-      })
-      .finally(() => setDecrypting(false));
   };
 
   const handleCustomReveal = (custom, index) => handleCustomValue('reveal', custom, index);
   const handleCustomCopy = (custom, index) => handleCustomValue('copy', custom, index);
 
-  const totpSecret = (decryptedFields || {}).totpSecret;
+  const totpSecret = resolvedFields.totpSecret;
 
   const handleTotpReveal = () => {
     if (totpRevealed) {
@@ -309,20 +373,41 @@ function ItemDetailsPanel({
   };
 
   const renderField = (field) => {
-    const value = (decryptedFields || {})[field.key];
-    const isRevealed = revealed[field.key];
-    const display = field.copy ? (isRevealed ? value || '' : maskFieldValue(value, field)) : value || '';
-    const isSecret = field.copy || field.input === 'password';
+    const value = resolvedFields[field.key];
+    // Hide completely empty optional fields unless required so the detail card stays clean
+    if ((value === undefined || value === null || value === '') && !field.required) {
+      return null;
+    }
+    const isRevealed = Boolean(revealed[field.key]);
+    const isSecret = isFieldMasked(field);
+    const formattedPlain =
+      field.key === 'cardNumber' && value ? formatCardNumber(value) : value || '';
+    const display = isSecret
+      ? isRevealed
+        ? formattedPlain
+        : maskFieldValue(value, field)
+      : formattedPlain;
 
     return (
       <div key={field.key} className="border-b border-slate-200 py-3.5 sm:py-4 dark:border-slate-700 min-w-0">
-        <div className="grid grid-cols-[100px_1fr_auto] sm:grid-cols-[130px_1fr_auto] gap-2 items-center min-w-0">
+        <div className="grid grid-cols-[110px_1fr_auto] sm:grid-cols-[160px_1fr_auto] gap-2 items-center min-w-0">
           <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 shrink-0">{field.label}</p>
-          <p className={`text-xs sm:text-sm text-slate-900 break-all min-w-0 dark:text-slate-100 ${isSecret && isRevealed ? 'font-mono tracking-wider select-all font-semibold' : ''}`}>
-            {display || '—'}
-          </p>
+          {field.key === 'url' && display ? (
+            <a
+              href={display.startsWith('http') ? display : `https://${display}`}
+              target="_blank"
+              rel="noreferrer"
+              className="truncate text-xs sm:text-sm text-blue-600 hover:text-blue-800 hover:underline dark:text-blue-400 min-w-0"
+            >
+              {display}
+            </a>
+          ) : (
+            <p className={`text-xs sm:text-sm text-slate-900 break-all whitespace-pre-wrap min-w-0 dark:text-slate-100 ${isSecret && isRevealed ? 'font-mono tracking-wider select-all font-semibold' : ''}`}>
+              {display || '—'}
+            </p>
+          )}
           <div className="flex justify-end items-center gap-1.5 shrink-0">
-            {field.input === 'password' && (
+            {isSecret && value && (
               <button
                 type="button"
                 onClick={() => handleFieldAction(field, 'reveal')}
@@ -333,7 +418,7 @@ function ItemDetailsPanel({
                 {isRevealed ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             )}
-            {field.copy && (
+            {field.copy && value && (
               <CopyIconButton
                 onCopy={() => handleFieldAction(field, 'copy')}
                 title={`Copy ${field.label}`}
@@ -345,7 +430,7 @@ function ItemDetailsPanel({
     );
   };
 
-  const customFields = parseCustomFields((decryptedFields || {})[CUSTOM_FIELDS_KEY]);
+  const customFields = parseCustomFields(resolvedFields[CUSTOM_FIELDS_KEY]);
 
   const renderCustomField = (custom, index) => {
     const isRevealed = revealed[`__custom_${index}`];
@@ -357,7 +442,7 @@ function ItemDetailsPanel({
 
     return (
       <div key={`__custom_${index}`} className="border-b border-slate-200 py-3.5 sm:py-4 dark:border-slate-700 min-w-0">
-        <div className="grid grid-cols-[100px_1fr_auto] sm:grid-cols-[130px_1fr_auto] gap-2 items-center min-w-0">
+        <div className="grid grid-cols-[110px_1fr_auto] sm:grid-cols-[160px_1fr_auto] gap-2 items-center min-w-0">
           <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 shrink-0">{custom.name || 'Custom Field'}</p>
           <p className={`text-xs sm:text-sm text-slate-900 break-all min-w-0 dark:text-slate-100 ${custom.sensitive && isRevealed ? 'font-mono tracking-wider select-all font-semibold' : ''}`}>
             {display || '—'}
@@ -404,6 +489,21 @@ function ItemDetailsPanel({
         }}
         error={decryptError}
         decrypting={decrypting}
+      />
+
+      <VerifyMasterPasswordModal
+        open={reVerifyOpen}
+        onClose={() => {
+          setReVerifyOpen(false);
+          setPendingSensitiveCallback(null);
+        }}
+        onVerified={() => {
+          setReVerifyOpen(false);
+          setVerifiedAtMap((prev) => ({ ...prev, [item.id]: Date.now() }));
+          const fn = pendingSensitiveCallback;
+          setPendingSensitiveCallback(null);
+          if (typeof fn === 'function') fn();
+        }}
       />
 
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 mb-6 min-w-0">

@@ -137,19 +137,13 @@ export const verifyEmail = createAsyncThunk(
 
 export const fetchMe = createAsyncThunk('auth/fetchMe', async (_, thunkAPI) => {
   try {
-    const token = thunkAPI.getState().auth.token || getSavedToken();
-
-    const response = await api.get('/auth/me', {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
+    const response = await api.get('/auth/me');
     return response.data;
   } catch (error) {
-    return thunkAPI.rejectWithValue(
-      error.response?.data?.message || 'Failed to fetch user'
-    );
+    return thunkAPI.rejectWithValue({
+      message: error.response?.data?.message || 'Failed to fetch user',
+      status: error.response?.status,
+    });
   }
 });
 
@@ -736,24 +730,33 @@ const authSlice = createSlice({
       })
 
       .addCase(fetchMe.fulfilled, (state, action) => {
+        const latestToken = getSavedToken();
+        if (latestToken) {
+          state.token = latestToken;
+        }
         state.user = { ...state.user, ...action.payload };
         state.isAuthenticated = true;
         state.userLoaded = true;
         saveUser(state.user);
       })
 
-      .addCase(fetchMe.rejected, (state) => {
-        state.token = null;
-        state.user = null;
-        state.isAuthenticated = false;
-        state.isMasterVerified = false;
-        state.sessionMasterPassword = null;
-        state.sessionAdminMasterPassword = null;
+      .addCase(fetchMe.rejected, (state, action) => {
         state.userLoaded = true;
+        const latestToken = getSavedToken();
+        // Only log out if the token was actually cleared/rejected with 401;
+        // do not log out on transient network errors or aborted refresh requests.
+        if (!latestToken || action.payload?.status === 401) {
+          state.token = null;
+          state.user = null;
+          state.isAuthenticated = false;
+          state.isMasterVerified = false;
+          state.sessionMasterPassword = null;
+          state.sessionAdminMasterPassword = null;
 
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        purgeSecureSession();
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          purgeSecureSession();
+        }
       })
 
       .addCase(updateProfile.pending, (state) => {

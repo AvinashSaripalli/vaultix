@@ -35,25 +35,52 @@ try {
   // ignore
 }
 
+const TAB_SECRET_KEY = 'vaultix-tab-secret';
+
+function getOrCreateTabSecret() {
+  try {
+    let secret = sessionStorage.getItem(TAB_SECRET_KEY);
+    if (!secret) {
+      const bytes = window.crypto.getRandomValues(new Uint8Array(32));
+      secret = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+      sessionStorage.setItem(TAB_SECRET_KEY, secret);
+    }
+    return secret;
+  } catch {
+    return 'vaultix-ephemeral-session';
+  }
+}
+
 async function getSessionCryptoKey() {
-  const token = localStorage.getItem('token') || 'vaultix-ephemeral-session';
+  const tabSecret = getOrCreateTabSecret();
   const enc = new TextEncoder();
-  const hash = await window.crypto.subtle.digest('SHA-256', enc.encode(token + ':vaultix-session-v1'));
+  const hash = await window.crypto.subtle.digest('SHA-256', enc.encode(tabSecret + ':vaultix-session-v2'));
   return window.crypto.subtle.importKey('raw', hash, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
 }
 
 export async function persistEncryptedSession(sessionMp, rsaPriv, rsaPub) {
   try {
-    const mp = sessionMp !== undefined ? sessionMp : store.sessionMasterPassword;
-    const priv = rsaPriv !== undefined ? rsaPriv : store.rsaPrivateKey;
-    const pub = rsaPub !== undefined ? rsaPub : store.rsaPublicKey;
+    if (sessionMp !== undefined) store.sessionMasterPassword = sessionMp || null;
+    if (rsaPriv !== undefined) store.rsaPrivateKey = rsaPriv || null;
+    if (rsaPub !== undefined) store.rsaPublicKey = rsaPub || null;
+
+    if (!store.sessionMasterPassword && !store.rsaPrivateKey) {
+      sessionStorage.removeItem(ENC_SESSION_STORAGE_KEY);
+      return;
+    }
+
+    const key = await getSessionCryptoKey();
+
+    // Re-read from store after await so concurrent dispatches never overwrite newer keys with null
+    const mp = store.sessionMasterPassword;
+    const priv = store.rsaPrivateKey;
+    const pub = store.rsaPublicKey;
 
     if (!mp && !priv) {
       sessionStorage.removeItem(ENC_SESSION_STORAGE_KEY);
       return;
     }
 
-    const key = await getSessionCryptoKey();
     const iv = window.crypto.getRandomValues(new Uint8Array(12));
     const payload = JSON.stringify({
       sessionMasterPassword: mp || null,
@@ -174,6 +201,7 @@ export function clearSecureSession() {
   try {
     sessionStorage.removeItem(MASTER_VERIFIED_KEY);
     sessionStorage.removeItem(ENC_SESSION_STORAGE_KEY);
+    sessionStorage.removeItem(TAB_SECRET_KEY);
     sessionStorage.removeItem(RSA_PRIVATE_KEY_KEY);
     sessionStorage.removeItem(RSA_PUBLIC_KEY_KEY);
     sessionStorage.removeItem(SESSION_MASTER_PASSWORD_KEY);
