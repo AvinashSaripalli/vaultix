@@ -371,10 +371,12 @@ function AddPasswordModal({ prefill, prefillName, onPrefillConsumed }) {
           <div className="flex items-start justify-between gap-3 mb-5 sm:mb-6">
             <div className="min-w-0">
               <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">
-                Add Password
+                {effectivePrefill?.name ? `Add Login to ${effectivePrefill.name}` : 'Add Item'}
               </h2>
               <p className="text-xs sm:text-sm text-slate-500 mt-1 dark:text-slate-400 truncate">
-                Add password to {selectedFolder?.name || 'selected folder'}
+                {effectivePrefill?.name
+                  ? `Add another account credential for ${effectivePrefill.name} in ${selectedFolder?.name || 'selected folder'}`
+                  : `Add a login, card, bank account, secure note, or secret to ${selectedFolder?.name || 'selected folder'}`}
               </p>
             </div>
 
@@ -435,7 +437,7 @@ function AddPasswordModal({ prefill, prefillName, onPrefillConsumed }) {
                 disabled={actionLoading}
                 className="w-full sm:w-auto px-6 py-2.5 sm:py-3 rounded-xl bg-indigo-600 text-white text-sm font-medium disabled:opacity-50"
               >
-                {actionLoading ? 'Saving...' : 'Save Password'}
+                {actionLoading ? 'Saving...' : effectivePrefill?.name ? 'Save Login' : 'Save Item'}
               </button>
             </div>
           </form>

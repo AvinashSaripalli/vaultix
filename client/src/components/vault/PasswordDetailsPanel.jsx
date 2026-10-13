@@ -28,6 +28,7 @@ import { setCompanyPasswordEditCache } from '../../utils/companyPasswordEditCach
 import { setSessionRsaPrivateKey, setSessionRsaPublicKey } from '../../features/auth/authSlice';
 import { TYPE_FIELDS, isFieldMasked, maskFieldValue, parseCustomFields, CUSTOM_FIELDS_KEY, getItemTypeMeta } from '../../utils/itemTypes';
 import { detectCardNetwork, formatCardNumber } from '../../utils/cardValidation';
+import ItemTypeBadge from '../myVault/ItemTypeBadge';
 
 const SENSITIVE_VERIFY_TTL_MS = 3 * 60 * 1000; // 3 minutes per item
 
@@ -391,7 +392,10 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
     }
   };
 
-  const canAddLogin = user?.role === 'ADMIN' || ['ADMINISTRATOR', 'READ_WRITE'].includes(selectedFolderAccess);
+  const isLoginGroup = !selectedPassword.type || selectedPassword.type === 'LOGIN';
+  const canAddLogin =
+    isLoginGroup &&
+    (user?.role === 'ADMIN' || ['ADMINISTRATOR', 'READ_WRITE'].includes(selectedFolderAccess));
 
   return (
     <div className="p-3.5 sm:p-6 lg:p-8 min-w-0">
@@ -402,16 +406,16 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
           className="md:hidden inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 mb-4 py-1.5 px-3 rounded-xl bg-indigo-50/70 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 transition border border-indigo-100 dark:border-indigo-800"
         >
           <ArrowLeft size={14} />
-          Back to passwords
+          Back to items
         </button>
       )}
       <div className="mb-5 sm:mb-8 flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 min-w-0">
         <div className="min-w-0 flex-1">
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Selected password group</p>
-          <div className="flex items-center gap-2.5 mt-1 flex-wrap min-w-0">
+          <div className="flex items-center gap-2.5 flex-wrap min-w-0">
             <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100 truncate">
               {selectedPassword.name}
             </h2>
+            <ItemTypeBadge type={selectedPassword.type} />
             {selectedPassword.isSensitive && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 text-amber-800 px-2.5 py-0.5 text-xs font-semibold dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shrink-0">
                 <Lock size={12} />
@@ -419,9 +423,10 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
               </span>
             )}
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1 dark:text-slate-400">
-            {sameNamePasswords.length} account
-            {sameNamePasswords.length > 1 ? 's' : ''}
+          <p className="text-xs sm:text-sm text-slate-500 mt-1.5 dark:text-slate-400">
+            {sameNamePasswords.length > 1
+              ? `${sameNamePasswords.length} accounts in ${selectedFolder?.name || 'Company Vault'}`
+              : `${getItemTypeMeta(selectedPassword.type).label} in ${selectedFolder?.name || 'Company Vault'}`}
           </p>
         </div>
         <div className="flex items-center flex-wrap gap-2 shrink-0">
@@ -439,14 +444,6 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
             >
               <Plus size={15} />
               <span>Add Login</span>
-            </button>
-          )}
-          {user?.role === 'ADMIN' && onShareVault && selectedVault && (
-            <button
-              onClick={onShareVault}
-              className="h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-semibold dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 transition shadow-sm"
-            >
-              Share Vault
             </button>
           )}
         </div>

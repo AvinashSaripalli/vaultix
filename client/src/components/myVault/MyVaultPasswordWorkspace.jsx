@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { Lock, LockKeyhole, Search, SearchX, ArrowLeft } from 'lucide-react';
 import ItemTypeBadge from './ItemTypeBadge';
@@ -19,25 +19,44 @@ function MyVaultPasswordWorkspace({
   const { user, sessionMasterPassword } = useSelector((state) => state.auth);
   const [search, setSearch] = useState('');
 
-  const filteredPasswords = passwords.filter((item) => {
+  const filteredPasswords = useMemo(() => {
     const value = search.toLowerCase();
-    return (
-      item.name?.toLowerCase().includes(value) ||
-      item.login?.toLowerCase().includes(value)
+    return passwords.filter(
+      (item) =>
+        item.name?.toLowerCase().includes(value) ||
+        item.login?.toLowerCase().includes(value) ||
+        item.url?.toLowerCase().includes(value)
     );
-  });
+  }, [passwords, search]);
 
-  const selectedPassword =
-    filteredPasswords.find((item) => item.id === selectedPasswordId) ||
-    filteredPasswords[0];
+  const groupedPasswords = useMemo(() => {
+    const byId = new Map(passwords.map((p) => [p.id, p]));
+    return Object.values(
+      filteredPasswords.reduce((acc, item) => {
+        const parentItem = item.parentId ? byId.get(item.parentId) : null;
+        const baseName = (parentItem?.name || item.name || 'Untitled').trim();
+        const key = baseName.toLowerCase();
 
-  const selectedPasswordChildren = selectedPassword
-    ? passwords.filter((item) => item.parentId === selectedPassword.id)
-    : [];
+        if (!acc[key]) {
+          acc[key] = {
+            name: baseName,
+            items: [],
+          };
+        }
 
-  const selectedPasswordParent = selectedPassword
-    ? passwords.find((item) => item.id === selectedPassword.parentId)
-    : null;
+        acc[key].items.push(item);
+        return acc;
+      }, {})
+    );
+  }, [filteredPasswords, passwords]);
+
+  const selectedGroup =
+    groupedPasswords.find((group) =>
+      group.items.some((item) => item.id === selectedPasswordId)
+    ) || groupedPasswords[0];
+
+  const selectedPassword = selectedGroup?.items?.[0] || null;
+  const selectedGroupItems = selectedGroup?.items || [];
 
   const handleSelect = (id) => {
     onSelectPassword(id);
@@ -57,7 +76,7 @@ function MyVaultPasswordWorkspace({
             <LockKeyhole size={28} className="text-indigo-400 dark:text-indigo-400" />
           </div>
           <p className="text-lg font-semibold text-slate-700 dark:text-slate-300">No items yet</p>
-          <p className="text-sm">Add your first password, card or note to get started</p>
+          <p className="text-sm">Add your first login, card, or secure note to get started</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] lg:grid-cols-[280px_1fr] xl:grid-cols-[300px_1fr] min-h-[600px] divide-y md:divide-y-0 md:divide-x divide-slate-200 dark:divide-slate-700 min-w-0">
@@ -76,45 +95,47 @@ function MyVaultPasswordWorkspace({
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Items</h2>
               <span className="text-xs font-semibold text-slate-500 bg-slate-200/70 dark:bg-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-full">
-                {filteredPasswords.length}
+                {groupedPasswords.length}
               </span>
             </div>
 
-            {filteredPasswords.length === 0 ? (
+            {groupedPasswords.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-10 text-slate-400 dark:text-slate-500">
                 <SearchX size={22} />
                 <p className="text-sm">No matching items</p>
               </div>
             ) : (
               <div className="space-y-2">
-                {filteredPasswords.map((item) => {
-                  const meta = getItemTypeMeta(item.type);
+                {groupedPasswords.map((group) => {
+                  const firstItem = group.items[0];
+                  const meta = getItemTypeMeta(firstItem?.type);
+                  const active = selectedGroup?.name === group.name;
+
                   return (
                     <button
-                      key={item.id}
-                      onClick={() => handleSelect(item.id)}
+                      key={group.name}
+                      onClick={() => handleSelect(firstItem.id)}
                       className={`w-full text-left rounded-xl border p-4 transition min-w-0 ${
-                        selectedPassword?.id === item.id
+                        active
                           ? 'bg-indigo-50 border-indigo-200 dark:bg-indigo-900/20 dark:border-indigo-800'
                           : 'bg-white border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-slate-700'
                       }`}
                     >
                       <div className="flex items-center gap-1.5 min-w-0">
-                        {item.parentId && (
-                          <span className="text-slate-400 dark:text-slate-500 text-xs">↳</span>
-                        )}
                         <h3 className="font-semibold text-slate-900 truncate flex items-center gap-1.5 flex-1 dark:text-slate-100 min-w-0">
-                          {item.name}
+                          {group.name}
                         </h3>
-                        {item.isSensitive && (
+                        {firstItem?.isSensitive && (
                           <Lock size={12} className="text-emerald-600 shrink-0 dark:text-emerald-400" />
                         )}
                       </div>
                       <div className="flex items-center gap-2 mt-1.5 min-w-0">
                         <p className="text-sm text-slate-500 truncate dark:text-slate-400 min-w-0 flex-1">
-                          {item.login || meta.label}
+                          {group.items.length > 1
+                            ? `${group.items.length} accounts`
+                            : firstItem?.login || meta.label}
                         </p>
-                        <ItemTypeBadge type={item.type} />
+                        <ItemTypeBadge type={firstItem?.type} />
                       </div>
                     </button>
                   );
@@ -149,9 +170,7 @@ function MyVaultPasswordWorkspace({
               <>
                 <ItemDetailsPanel
                   item={selectedPassword}
-                  parent={selectedPasswordParent}
-                  children={selectedPasswordChildren}
-                  onSelectChild={handleSelect}
+                  groupItems={selectedGroupItems}
                   onAddChild={() => onAddChild(selectedPassword)}
                   onShare={onSharePassword}
                   onEdit={onEditPassword}

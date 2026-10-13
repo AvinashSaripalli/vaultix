@@ -5,6 +5,8 @@ import {
   selectPassword,
   setSearchTerm,
 } from '../../features/vault/vaultSlice';
+import ItemTypeBadge from '../myVault/ItemTypeBadge';
+import { getItemTypeMeta } from '../../utils/itemTypes';
 
 function PasswordListPanel() {
   const dispatch = useDispatch();
@@ -107,7 +109,7 @@ function PasswordListPanel() {
           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
-            placeholder="Search passwords..."
+            placeholder="Search items..."
             value={searchTerm}
             onChange={(e) => dispatch(setSearchTerm(e.target.value))}
             className="w-full h-10 sm:h-11 rounded-xl sm:rounded-2xl border border-slate-200 bg-slate-50 pl-9 pr-4 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:bg-slate-800/50 dark:border-slate-700"
@@ -117,7 +119,7 @@ function PasswordListPanel() {
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
           <div className="min-w-0">
             <p className="text-lg sm:text-xl font-bold text-slate-900 leading-tight dark:text-slate-100 truncate">
-              {totalGroups} password{totalGroups !== 1 ? 's' : ''}
+              {totalGroups} item{totalGroups !== 1 ? 's' : ''}
             </p>
             {totalGroups > 0 && !isAll && (
               <p className="text-xs text-slate-500 mt-0.5 dark:text-slate-400">
@@ -152,11 +154,13 @@ function PasswordListPanel() {
             const active = group.items.some(
               (item) => item.id === selectedPasswordId
             );
+            const firstItem = group.items[0];
+            const meta = getItemTypeMeta(firstItem?.type);
 
             return (
               <button
                 key={group.name}
-                onClick={() => dispatch(selectPassword(group.items[0].id))}
+                onClick={() => dispatch(selectPassword(firstItem.id))}
                 className={`w-full text-left px-3.5 sm:px-4 py-3 sm:py-3.5 rounded-xl border transition min-w-0 ${
                   active
                     ? 'bg-indigo-50 border-indigo-200 shadow-sm dark:bg-indigo-900/20 dark:border-indigo-800'
@@ -167,15 +171,20 @@ function PasswordListPanel() {
                   {group.name}
                 </div>
 
-                <div className="text-xs text-slate-500 mt-0.5 dark:text-slate-400">
-                  {group.items.length} account{group.items.length > 1 ? 's' : ''}
+                <div className="flex items-center gap-2 mt-1 min-w-0">
+                  <span className="text-xs text-slate-500 dark:text-slate-400 truncate flex-1 min-w-0">
+                    {group.items.length > 1
+                      ? `${group.items.length} accounts`
+                      : firstItem?.login || meta.label}
+                  </span>
+                  <ItemTypeBadge type={firstItem?.type} />
                 </div>
               </button>
             );
           })}
 
           {!groupedPasswords.length && (
-            <p className="text-slate-500 text-sm py-8 text-center dark:text-slate-400">No passwords found.</p>
+            <p className="text-slate-500 text-sm py-8 text-center dark:text-slate-400">No items found.</p>
           )}
         </div>
       </div>

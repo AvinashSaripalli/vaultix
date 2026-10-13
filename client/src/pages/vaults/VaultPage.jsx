@@ -35,6 +35,7 @@ import {
   ChevronDown,
   RotateCcw,
   Shield,
+  Plus,
 } from 'lucide-react';
 
 import {
@@ -657,10 +658,14 @@ function VaultPage() {
 
               {selectedFolder && canAddPassword && (
                 <button
-                  onClick={() => dispatch(openAddPasswordModal())}
-                  className="h-9 sm:h-10 inline-flex items-center justify-center px-3.5 sm:px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold transition shadow-sm"
+                  onClick={() => {
+                    setPrefillData(null);
+                    dispatch(openAddPasswordModal());
+                  }}
+                  className="h-9 sm:h-10 inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3.5 sm:px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold transition shadow-sm"
                 >
-                  Add password
+                  <Plus size={16} className="shrink-0" />
+                  <span>Add Item</span>
                 </button>
               )}
 

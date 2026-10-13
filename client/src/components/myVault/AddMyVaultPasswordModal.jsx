@@ -51,19 +51,22 @@ function AddMyVaultPasswordModal({
   useEffect(() => {
     if (!open) return;
 
-    const type = initialType;
+    const type = parent ? 'LOGIN' : initialType;
     const baseFolder = parent?.folderId || selectedFolder?.id || '';
+    const parentTags = Array.isArray(parent?.tags)
+      ? parent.tags.map((t) => (typeof t === 'string' ? t : t?.tag?.name)).filter(Boolean)
+      : [];
 
     setFormData({
       folderId: baseFolder,
       type,
       parentId: parent?.id || null,
-      name: '',
+      name: parent?.name || '',
       login: '',
       encryptedPassword: '',
-      url: '',
+      url: parent?.url || '',
       encryptedNote: '',
-      tags: [],
+      tags: parentTags,
       isSensitive: isSensitiveDefault(type),
       fields: emptyTypeFields(type),
       customFields: [],
@@ -231,10 +234,12 @@ function AddMyVaultPasswordModal({
         <div className="flex items-center justify-between mb-5">
           <div>
             <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-              {parent ? `Add password to ${parent.name}` : 'Add Password'}
+              {parent ? `Add Login to ${parent.name}` : 'Add Item'}
             </h2>
             <p className="text-sm text-slate-500 mt-1 dark:text-slate-400">
-              Create a new password in Personal Vault
+              {parent
+                ? `Add another account credential for ${parent.name} in Personal Vault`
+                : 'Add a login, card, bank account, secure note, or secret to Personal Vault'}
             </p>
           </div>
           <button

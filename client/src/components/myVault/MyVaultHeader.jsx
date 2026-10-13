@@ -35,7 +35,7 @@ function MyVaultHeader({
           className="h-9 sm:h-10 inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3.5 sm:px-4 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 text-xs sm:text-sm font-semibold transition shadow-sm"
         >
           <Plus size={16} className="shrink-0" />
-          <span>Add Password</span>
+          <span>Add Item</span>
         </button>
 
         {onToggleTrash && (

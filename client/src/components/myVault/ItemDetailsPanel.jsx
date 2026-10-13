@@ -5,8 +5,8 @@ import {
   Eye,
   EyeOff,
   ExternalLink,
-  FolderPlus,
   Lock,
+  Plus,
   Share2,
   Trash2,
   Users,
@@ -36,19 +36,18 @@ import VerifyMasterPasswordModal from '../security/VerifyMasterPasswordModal';
 
 const SENSITIVE_VERIFY_TTL_MS = 3 * 60 * 1000; // 3 minutes per item
 
-function ItemDetailsPanel({
+function PersonalAccountCard({
   item,
-  parent,
-  children,
-  onSelectChild,
-  onAddChild,
+  index,
+  totalCount,
   onShare,
   onEdit,
   onDelete,
   onManageShares,
   user,
   sessionMasterPassword,
-  samples,
+  verifiedAtMap,
+  onRequestVerify,
 }) {
   const [decryptedPassword, setDecryptedPassword] = useState(null);
   const [decryptedFields, setDecryptedFields] = useState(null);
@@ -59,9 +58,6 @@ function ItemDetailsPanel({
   const [showDecryptDialog, setShowDecryptDialog] = useState(false);
   const [decrypting, setDecrypting] = useState(false);
   const [decryptError, setDecryptError] = useState('');
-  const [reVerifyOpen, setReVerifyOpen] = useState(false);
-  const [pendingSensitiveCallback, setPendingSensitiveCallback] = useState(null);
-  const [verifiedAtMap, setVerifiedAtMap] = useState({});
 
   const salt = user?.encryptionSalt;
 
@@ -114,8 +110,6 @@ function ItemDetailsPanel({
     })();
   }, [item, sessionMasterPassword, salt, decryptAll]);
 
-  if (!item) return null;
-
   const typeMeta = getItemTypeMeta(item.type);
 
   const copyText = (value, label) => {
@@ -124,6 +118,12 @@ function ItemDetailsPanel({
       return;
     }
     secureCopyText(value, `${label || 'Item'} copied`);
+  };
+
+  const applySessionDecrypt = (decrypted) => {
+    setDecryptedPassword(decrypted.password);
+    setDecryptedFields(decrypted.fields);
+    setDecryptedNote(decrypted.note);
   };
 
   const handleDecryptDialog = async (masterPassword) => {
@@ -141,12 +141,6 @@ function ItemDetailsPanel({
     }
   };
 
-  const applySessionDecrypt = (decrypted) => {
-    setDecryptedPassword(decrypted.password);
-    setDecryptedFields(decrypted.fields);
-    setDecryptedNote(decrypted.note);
-  };
-
   const isItemRecentlyVerified = () => {
     if (!item?.isSensitive) return true;
     const ts = verifiedAtMap[item.id];
@@ -158,8 +152,7 @@ function ItemDetailsPanel({
       callback();
       return;
     }
-    setPendingSensitiveCallback(() => callback);
-    setReVerifyOpen(true);
+    onRequestVerify(item.id, callback);
   };
 
   const handlePasswordEye = () => {
@@ -220,7 +213,6 @@ function ItemDetailsPanel({
 
   const handleFieldAction = (field, mode) => {
     const masked = isFieldMasked(field);
-    // Hiding an already-revealed field never requires re-verification
     if (mode === 'reveal' && revealed[field.key]) {
       setRevealed((prev) => ({ ...prev, [field.key]: false }));
       return;
@@ -267,16 +259,16 @@ function ItemDetailsPanel({
     }
   };
 
-  const handleCustomValue = (mode, custom, index) => {
+  const handleCustomValue = (mode, custom, idx) => {
     const perform = () => {
       const run = (fields) => {
         const customList = parseCustomFields(fields[CUSTOM_FIELDS_KEY]);
-        const target = customList[index];
+        const target = customList[idx];
         if (!target) return;
         if (mode === 'copy') {
           copyText(target.value, target.name || 'Custom field');
         } else {
-          setRevealed((prev) => ({ ...prev, [`__custom_${index}`]: true }));
+          setRevealed((prev) => ({ ...prev, [`__custom_${idx}`]: true }));
         }
       };
 
@@ -286,7 +278,7 @@ function ItemDetailsPanel({
       }
 
       if (mode === 'reveal' && custom?.value) {
-        setRevealed((prev) => ({ ...prev, [`__custom_${index}`]: true }));
+        setRevealed((prev) => ({ ...prev, [`__custom_${idx}`]: true }));
         return;
       }
 
@@ -314,8 +306,8 @@ function ItemDetailsPanel({
     }
   };
 
-  const handleCustomReveal = (custom, index) => handleCustomValue('reveal', custom, index);
-  const handleCustomCopy = (custom, index) => handleCustomValue('copy', custom, index);
+  const handleCustomReveal = (custom, idx) => handleCustomValue('reveal', custom, idx);
+  const handleCustomCopy = (custom, idx) => handleCustomValue('copy', custom, idx);
 
   const totpSecret = resolvedFields.totpSecret;
 
@@ -374,7 +366,6 @@ function ItemDetailsPanel({
 
   const renderField = (field) => {
     const value = resolvedFields[field.key];
-    // Hide completely empty optional fields unless required so the detail card stays clean
     if ((value === undefined || value === null || value === '') && !field.required) {
       return null;
     }
@@ -434,8 +425,8 @@ function ItemDetailsPanel({
 
   const customFields = parseCustomFields(resolvedFields[CUSTOM_FIELDS_KEY]);
 
-  const renderCustomField = (custom, index) => {
-    const isRevealed = revealed[`__custom_${index}`];
+  const renderCustomField = (custom, idx) => {
+    const isRevealed = revealed[`__custom_${idx}`];
     const display = custom.sensitive
       ? isRevealed
         ? custom.value
@@ -443,7 +434,7 @@ function ItemDetailsPanel({
       : custom.value || '';
 
     return (
-      <div key={`__custom_${index}`} className="border-b border-slate-200 py-3 sm:py-4 dark:border-slate-700 min-w-0">
+      <div key={`__custom_${idx}`} className="border-b border-slate-200 py-3 sm:py-4 dark:border-slate-700 min-w-0">
         <div className="flex flex-col gap-1 sm:grid sm:grid-cols-[150px_1fr_auto] sm:gap-3 sm:items-center min-w-0">
           <p className="text-[11px] sm:text-sm font-medium text-slate-500 dark:text-slate-400 shrink-0">{custom.name || 'Custom Field'}</p>
           <div className="flex items-center justify-between gap-2 min-w-0 sm:contents">
@@ -456,9 +447,9 @@ function ItemDetailsPanel({
                   type="button"
                   onClick={() => {
                     if (isRevealed) {
-                      setRevealed((prev) => ({ ...prev, [`__custom_${index}`]: false }));
+                      setRevealed((prev) => ({ ...prev, [`__custom_${idx}`]: false }));
                     } else {
-                      handleCustomReveal(custom, index);
+                      handleCustomReveal(custom, idx);
                     }
                   }}
                   aria-label={isRevealed ? 'Hide custom field' : 'Show custom field'}
@@ -469,7 +460,7 @@ function ItemDetailsPanel({
                 </button>
               )}
               <CopyIconButton
-                onCopy={() => handleCustomCopy(custom, index)}
+                onCopy={() => handleCustomCopy(custom, idx)}
                 title="Copy custom field"
               />
             </div>
@@ -483,7 +474,7 @@ function ItemDetailsPanel({
   const hasLogin = item.type === 'LOGIN';
 
   return (
-    <>
+    <div className="rounded-2xl border border-slate-200 p-4 sm:p-6 bg-white dark:border-slate-700 dark:bg-slate-800 shadow-sm min-w-0">
       <DecryptDialog
         open={showDecryptDialog}
         onDecrypt={handleDecryptDialog}
@@ -495,16 +486,225 @@ function ItemDetailsPanel({
         decrypting={decrypting}
       />
 
+      <div className="flex items-start justify-between gap-3 mb-4 sm:mb-5 min-w-0">
+        <div className="min-w-0 flex-1">
+          {totalCount > 1 ? (
+            <div className="flex items-center gap-2 flex-wrap min-w-0">
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100">
+                {typeMeta.label} #{index + 1}
+              </h2>
+              {item.login && (
+                <span className="text-xs sm:text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800 px-2.5 py-0.5 rounded-lg truncate max-w-[240px]">
+                  {item.login}
+                </span>
+              )}
+            </div>
+          ) : hasLogin ? (
+            <>
+              <h2 className="text-lg sm:text-xl font-semibold text-slate-900 dark:text-slate-100 break-all">
+                {item.login}
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500 mt-0.5 dark:text-slate-400">Account details</p>
+            </>
+          ) : (
+            <h2 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-slate-100">
+              {typeMeta.label} details
+            </h2>
+          )}
+        </div>
+
+        <div className="flex items-center flex-wrap gap-1.5 sm:gap-2 shrink-0">
+          <button
+            onClick={() => onShare(item)}
+            className="w-9 h-9 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50 text-slate-600 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 transition"
+            title="Share item"
+            aria-label="Share item"
+          >
+            <Share2 size={16} />
+          </button>
+          <button
+            onClick={() => onManageShares(item)}
+            className="w-9 h-9 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50 text-slate-600 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 transition"
+            title="Manage shared access"
+            aria-label="Manage shared access"
+          >
+            <Users size={16} />
+          </button>
+          <button
+            onClick={() => onEdit(item)}
+            className="w-9 h-9 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50 text-slate-600 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 transition"
+            title="Edit"
+            aria-label="Edit item"
+          >
+            <Edit2 size={16} />
+          </button>
+          <button
+            onClick={() => onDelete(item)}
+            className="w-9 h-9 rounded-xl border border-red-200 text-red-500 flex items-center justify-center hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20 transition"
+            title="Delete"
+            aria-label="Delete item"
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
+      </div>
+
+      <div>
+        {hasLogin && (
+          <>
+            <div className="border-b border-slate-200 py-3 sm:py-4 dark:border-slate-700 min-w-0">
+              <div className="flex flex-col gap-1 sm:grid sm:grid-cols-[130px_1fr_auto] sm:gap-3 sm:items-center min-w-0">
+                <p className="text-[11px] sm:text-sm font-medium text-slate-500 dark:text-slate-400 shrink-0">Login</p>
+                <div className="flex items-center justify-between gap-2 min-w-0 sm:contents">
+                  <p className="text-xs sm:text-sm text-slate-900 break-all dark:text-slate-100 min-w-0 flex-1">{item.login}</p>
+                  <div className="flex justify-end items-center gap-1.5 shrink-0">
+                    <CopyIconButton onCopy={() => copyText(item.login, 'Login')} title="Copy login" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-b border-slate-200 py-3 sm:py-4 dark:border-slate-700 min-w-0">
+              <div className="flex flex-col gap-1 sm:grid sm:grid-cols-[130px_1fr_auto] sm:gap-3 sm:items-center min-w-0">
+                <p className="text-[11px] sm:text-sm font-medium text-slate-500 dark:text-slate-400 shrink-0">Password</p>
+                <div className="flex items-center justify-between gap-2 min-w-0 sm:contents">
+                  <p className={`text-xs sm:text-sm text-slate-900 break-all min-w-0 flex-1 dark:text-slate-100 ${showPassword ? 'font-mono tracking-wider select-all font-semibold' : ''}`}>
+                    {showPassword ? decryptedPassword || '' : '••••••••••••'}
+                  </p>
+                  <div className="flex justify-end items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={handlePasswordEye}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-750 transition"
+                      title={showPassword ? 'Hide' : 'Reveal'}
+                    >
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                    <CopyIconButton onCopy={handlePasswordCopy} title="Copy password" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-b border-slate-200 py-3 sm:py-5 dark:border-slate-700 min-w-0">
+              <div className="flex flex-col gap-1 sm:grid sm:grid-cols-[130px_1fr_auto] sm:gap-3 sm:items-center min-w-0">
+                <p className="text-[11px] sm:text-sm text-slate-500 dark:text-slate-400 shrink-0">URL</p>
+                <div className="flex items-center justify-between gap-2 min-w-0 sm:contents">
+                  {item.url ? (
+                    <a
+                      href={item.url.startsWith('http') ? item.url : `https://${item.url}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="truncate text-xs sm:text-sm text-blue-600 hover:text-blue-800 hover:underline dark:text-blue-400 dark:hover:text-blue-400 min-w-0 flex-1"
+                    >
+                      {item.url}
+                    </a>
+                  ) : (
+                    <p className="text-xs sm:text-sm text-slate-900 dark:text-slate-100 flex-1">No URL</p>
+                  )}
+                  <div className="flex justify-end items-center gap-2 shrink-0">
+                    {item.url && (
+                      <a
+                        href={item.url.startsWith('http') ? item.url : `https://${item.url}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
+                      >
+                        <ExternalLink size={16} />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {hasLogin && totpSecret && (
+          <TotpField
+            secret={totpSecret}
+            revealed={totpRevealed}
+            onReveal={handleTotpReveal}
+            onCopy={handleTotpCopy}
+          />
+        )}
+
+        {!hasLogin && typeFields.length > 0 && typeFields.map(renderField)}
+
+        {customFields.length > 0 && customFields.map(renderCustomField)}
+
+        {(item.encryptedNote || item.type === 'SECURE_NOTE') && (
+          <div className="border-b border-slate-200 py-3 sm:py-5 dark:border-slate-700 min-w-0">
+            <div className="flex flex-col gap-1 sm:grid sm:grid-cols-[130px_1fr_auto] sm:gap-3 sm:items-start min-w-0">
+              <p className="text-[11px] sm:text-sm text-slate-500 dark:text-slate-400 shrink-0">Note</p>
+              <p className="text-xs sm:text-sm text-slate-900 break-words dark:text-slate-100 min-w-0">
+                {decryptedNote || '—'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {item.tags?.length > 0 && (
+          <div className="py-3 sm:py-4 min-w-0">
+            <div className="flex flex-col gap-1.5 sm:grid sm:grid-cols-[130px_1fr_auto] sm:gap-3 sm:items-start min-w-0">
+              <p className="text-[11px] sm:text-sm text-slate-500 dark:text-slate-400 shrink-0">Tags</p>
+              <div className="flex flex-wrap gap-1.5 min-w-0">
+                {item.tags.map((tagItem) => (
+                  <span
+                    key={tagItem.tag?.id || tagItem.tag?.name}
+                    className="inline-flex items-center px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-medium dark:bg-indigo-900/20 dark:text-indigo-400"
+                  >
+                    {tagItem.tag?.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ItemDetailsPanel({
+  item,
+  groupItems,
+  onAddChild,
+  onShare,
+  onEdit,
+  onDelete,
+  onManageShares,
+  user,
+  sessionMasterPassword,
+}) {
+  const [reVerifyOpen, setReVerifyOpen] = useState(false);
+  const [pendingVerifyItemId, setPendingVerifyItemId] = useState(null);
+  const [pendingSensitiveCallback, setPendingSensitiveCallback] = useState(null);
+  const [verifiedAtMap, setVerifiedAtMap] = useState({});
+
+  if (!item) return null;
+
+  const effectiveGroupItems = groupItems?.length ? groupItems : [item];
+  const typeMeta = getItemTypeMeta(item.type);
+  const hasLogin = item.type === 'LOGIN';
+
+  return (
+    <>
       <VerifyMasterPasswordModal
         open={reVerifyOpen}
         onClose={() => {
           setReVerifyOpen(false);
+          setPendingVerifyItemId(null);
           setPendingSensitiveCallback(null);
         }}
         onVerified={() => {
           setReVerifyOpen(false);
-          setVerifiedAtMap((prev) => ({ ...prev, [item.id]: Date.now() }));
+          if (pendingVerifyItemId) {
+            setVerifiedAtMap((prev) => ({ ...prev, [pendingVerifyItemId]: Date.now() }));
+          }
           const fn = pendingSensitiveCallback;
+          setPendingVerifyItemId(null);
           setPendingSensitiveCallback(null);
           if (typeof fn === 'function') fn();
         }}
@@ -524,221 +724,64 @@ function ItemDetailsPanel({
               </span>
             )}
           </div>
-          {parent && (
-            <button
-              onClick={() => onSelectChild(parent.id)}
-              className="text-slate-500 mt-1.5 text-xs sm:text-sm hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 truncate block"
-            >
-              Part of: {parent.name}
-            </button>
-          )}
-          {!parent && (
-            <p className="text-slate-500 mt-1.5 text-xs sm:text-sm dark:text-slate-400">
-              {typeMeta.label} in Personal Vault
-            </p>
-          )}
+          <p className="text-slate-500 mt-1.5 text-xs sm:text-sm dark:text-slate-400">
+            {effectiveGroupItems.length > 1
+              ? `${effectiveGroupItems.length} accounts in Personal Vault`
+              : `${typeMeta.label} in Personal Vault`}
+          </p>
         </div>
 
         <div className="flex items-center flex-wrap gap-2 shrink-0">
-          <button
-            onClick={() => onShare(item)}
-            className="w-10 h-10 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50 text-slate-600 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 transition"
-            title="Share"
-            aria-label="Share item"
-          >
-            <Share2 size={17} />
-          </button>
-          <button
-            onClick={() => onEdit(item)}
-            className="w-10 h-10 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50 text-slate-600 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 transition"
-            title="Edit"
-            aria-label="Edit item"
-          >
-            <Edit2 size={17} />
-          </button>
-          <button
-            onClick={() => onDelete(item)}
-            className="w-10 h-10 rounded-xl border border-red-200 text-red-500 flex items-center justify-center hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20 transition"
-            title="Delete"
-            aria-label="Delete item"
-          >
-            <Trash2 size={17} />
-          </button>
+          {hasLogin && onAddChild && (
+            <button
+              onClick={onAddChild}
+              className="h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold inline-flex items-center gap-1.5 transition shadow-sm"
+              title="Add another login to this service"
+            >
+              <Plus size={15} />
+              <span>Add Login</span>
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 p-4 sm:p-6 bg-white dark:border-slate-700 dark:bg-slate-800 shadow-sm min-w-0">
-        {hasLogin && (
-          <div className="mb-4 sm:mb-6">
-            <h2 className="text-lg sm:text-xl font-semibold text-slate-900 dark:text-slate-100 break-all">
-              {item.login}
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1 dark:text-slate-400">Account details</p>
-          </div>
-        )}
+      <div className="space-y-5">
+        {effectiveGroupItems.map((accountItem, idx) => (
+          <PersonalAccountCard
+            key={accountItem.id}
+            item={accountItem}
+            index={idx}
+            totalCount={effectiveGroupItems.length}
+            onShare={onShare}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onManageShares={onManageShares}
+            user={user}
+            sessionMasterPassword={sessionMasterPassword}
+            verifiedAtMap={verifiedAtMap}
+            onRequestVerify={(itemId, callback) => {
+              setPendingVerifyItemId(itemId);
+              setPendingSensitiveCallback(() => callback);
+              setReVerifyOpen(true);
+            }}
+          />
+        ))}
 
-        <div>
-          {hasLogin && (
-            <>
-              <div className="border-b border-slate-200 py-3 sm:py-4 dark:border-slate-700 min-w-0">
-                <div className="flex flex-col gap-1 sm:grid sm:grid-cols-[130px_1fr_auto] sm:gap-3 sm:items-center min-w-0">
-                  <p className="text-[11px] sm:text-sm font-medium text-slate-500 dark:text-slate-400 shrink-0">Login</p>
-                  <div className="flex items-center justify-between gap-2 min-w-0 sm:contents">
-                    <p className="text-xs sm:text-sm text-slate-900 break-all dark:text-slate-100 min-w-0 flex-1">{item.login}</p>
-                    <div className="flex justify-end items-center gap-1.5 shrink-0">
-                      <CopyIconButton onCopy={() => copyText(item.login, 'Login')} title="Copy login" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-b border-slate-200 py-3 sm:py-4 dark:border-slate-700 min-w-0">
-                <div className="flex flex-col gap-1 sm:grid sm:grid-cols-[130px_1fr_auto] sm:gap-3 sm:items-center min-w-0">
-                  <p className="text-[11px] sm:text-sm font-medium text-slate-500 dark:text-slate-400 shrink-0">Password</p>
-                  <div className="flex items-center justify-between gap-2 min-w-0 sm:contents">
-                    <p className={`text-xs sm:text-sm text-slate-900 break-all min-w-0 flex-1 dark:text-slate-100 ${showPassword ? 'font-mono tracking-wider select-all font-semibold' : ''}`}>
-                      {showPassword ? decryptedPassword || '' : '••••••••••••'}
-                    </p>
-                    <div className="flex justify-end items-center gap-1.5 shrink-0">
-                      <button
-                        type="button"
-                        onClick={handlePasswordEye}
-                        aria-label={showPassword ? 'Hide password' : 'Show password'}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-750 transition"
-                        title={showPassword ? 'Hide' : 'Reveal'}
-                      >
-                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                      <CopyIconButton onCopy={handlePasswordCopy} title="Copy password" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-b border-slate-200 py-3 sm:py-5 dark:border-slate-700 min-w-0">
-                <div className="flex flex-col gap-1 sm:grid sm:grid-cols-[130px_1fr_auto] sm:gap-3 sm:items-center min-w-0">
-                  <p className="text-[11px] sm:text-sm text-slate-500 dark:text-slate-400 shrink-0">URL</p>
-                  <div className="flex items-center justify-between gap-2 min-w-0 sm:contents">
-                    {item.url ? (
-                      <a
-                        href={item.url.startsWith('http') ? item.url : `https://${item.url}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="truncate text-xs sm:text-sm text-blue-600 hover:text-blue-800 hover:underline dark:text-blue-400 dark:hover:text-blue-400 min-w-0 flex-1"
-                      >
-                        {item.url}
-                      </a>
-                    ) : (
-                      <p className="text-xs sm:text-sm text-slate-900 dark:text-slate-100 flex-1">No URL</p>
-                    )}
-                    <div className="flex justify-end items-center gap-2 shrink-0">
-                      {item.url && (
-                        <a
-                          href={item.url.startsWith('http') ? item.url : `https://${item.url}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
-                        >
-                          <ExternalLink size={16} />
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-
-          {hasLogin && totpSecret && (
-            <TotpField
-              secret={totpSecret}
-              revealed={totpRevealed}
-              onReveal={handleTotpReveal}
-              onCopy={handleTotpCopy}
-            />
-          )}
-
-          {!hasLogin && typeFields.length > 0 && typeFields.map(renderField)}
-
-          {customFields.length > 0 && customFields.map(renderCustomField)}
-
-          {(item.encryptedNote || item.type === 'SECURE_NOTE') && (
-            <div className="border-b border-slate-200 py-3 sm:py-5 dark:border-slate-700 min-w-0">
-              <div className="flex flex-col gap-1 sm:grid sm:grid-cols-[130px_1fr_auto] sm:gap-3 sm:items-start min-w-0">
-                <p className="text-[11px] sm:text-sm text-slate-500 dark:text-slate-400 shrink-0">Note</p>
-                <p className="text-xs sm:text-sm text-slate-900 break-words dark:text-slate-100 min-w-0">
-                  {decryptedNote || '—'}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {item.tags?.length > 0 && (
-            <div className="border-b border-slate-200 py-3 sm:py-5 dark:border-slate-700 min-w-0">
-              <div className="flex flex-col gap-1.5 sm:grid sm:grid-cols-[130px_1fr_auto] sm:gap-3 sm:items-start min-w-0">
-                <p className="text-[11px] sm:text-sm text-slate-500 dark:text-slate-400 shrink-0">Tags</p>
-                <div className="flex flex-wrap gap-1.5 min-w-0">
-                  {item.tags.map((tagItem) => (
-                    <span
-                      key={tagItem.tag?.id || tagItem.tag?.name}
-                      className="inline-flex items-center px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-medium dark:bg-indigo-900/20 dark:text-indigo-400"
-                    >
-                      {tagItem.tag?.name}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-wrap gap-2.5 sm:gap-3 mt-5 sm:mt-7">
+        {hasLogin && onAddChild && (
           <button
             onClick={onAddChild}
-            className="flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-lg bg-indigo-600 text-white text-xs sm:text-sm font-medium hover:bg-indigo-700"
+            className="w-full rounded-3xl border-2 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-800 hover:border-indigo-300 dark:hover:border-indigo-600 p-6 flex flex-col items-center justify-center gap-2 text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors group"
           >
-            <FolderPlus size={16} />
-            Add Password
+            <span className="w-10 h-10 rounded-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 flex items-center justify-center group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/30 group-hover:border-indigo-200 dark:group-hover:border-indigo-700 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+              <Plus size={18} />
+            </span>
+            <span className="text-sm font-semibold">Add another login to {item.name}</span>
+            <span className="text-xs text-slate-500 dark:text-slate-500 text-center max-w-sm">
+              Same service, different account — e.g., personal vs work {item.name}. It will appear as Account {effectiveGroupItems.length + 1} in this group.
+            </span>
           </button>
-          <button
-            onClick={() => onManageShares(item)}
-            className="flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-lg bg-slate-100 text-slate-700 text-xs sm:text-sm hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
-          >
-            <Users size={16} />
-            Manage Access
-          </button>
-        </div>
+        )}
       </div>
-
-      {children.length > 0 && (
-        <div className="rounded-2xl border border-slate-200 p-4 sm:p-6 mt-5 sm:mt-6 dark:border-slate-700 dark:bg-slate-800">
-          <h2 className="text-base sm:text-lg font-semibold text-slate-900 mb-3 sm:mb-4 dark:text-slate-100">
-            Inside this password ({children.length})
-          </h2>
-          <div className="space-y-2">
-            {children.map((child) => (
-              <button
-                key={child.id}
-                onClick={() => onSelectChild(child.id)}
-                className="w-full text-left rounded-xl border border-slate-200 px-3.5 sm:px-4 py-3 hover:bg-slate-50 flex items-center justify-between dark:border-slate-700 dark:hover:bg-slate-700"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <ItemTypeBadge type={child.type} />
-                  <div className="min-w-0">
-                    <p className="font-semibold text-slate-900 truncate dark:text-slate-100 text-sm sm:text-base">
-                      {child.name}
-                    </p>
-                    <p className="text-xs sm:text-sm text-slate-500 truncate dark:text-slate-400">
-                      {child.login || '—'}
-                    </p>
-                  </div>
-                </div>
-                {child.isSensitive && <Lock size={13} className="text-emerald-600 shrink-0 dark:text-emerald-400" />}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
     </>
   );
 }
