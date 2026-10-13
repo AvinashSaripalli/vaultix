@@ -54,3 +54,26 @@ export async function apiPost(baseUrl, path, token, body) {
   if (!res.ok) throw new Error((data && data.message) || 'Request failed');
   return data;
 }
+
+export async function apiPut(baseUrl, path, token, body) {
+  const res = await fetch(`${baseUrl}/api/v1${path}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body || {}),
+  });
+  const data = await res.json().catch(() => ({}));
+
+  if (res.status === 401) {
+    const msg = data && data.message;
+    if (!msg || msg === 'Unauthorized' || msg === 'Invalid token' || msg === 'Invalid token type') {
+      throw new Error('SESSION_EXPIRED');
+    }
+  }
+
+  if (!res.ok) throw new Error((data && data.message) || 'Request failed');
+  return data;
+}
+

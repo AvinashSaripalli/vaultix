@@ -54,6 +54,64 @@ export function isEncryptedFormat(value) {
   }
 }
 
+export async function encryptText(text, masterPassword, salt) {
+  if (!text) return '';
+
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(masterPassword),
+    { name: 'PBKDF2' },
+    false,
+    ['deriveKey']
+  );
+
+  const randomSalt = crypto.getRandomValues(new Uint8Array(16));
+  const userSaltBytes = getSaltBytes(salt);
+  const kdfSalt = new Uint8Array(randomSalt.length + userSaltBytes.length);
+  kdfSalt.set(randomSalt, 0);
+  kdfSalt.set(userSaltBytes, randomSalt.length);
+
+  const key = await crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt: kdfSalt,
+      iterations: KDF_ITERATIONS_CURRENT,
+      hash: 'SHA-256',
+    },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt']
+  );
+
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encrypted = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    encoder.encode(text)
+  );
+
+  return JSON.stringify({
+    v: KDF_VERSION,
+    kdf: 'PBKDF2',
+    iterations: KDF_ITERATIONS_CURRENT,
+    salt: Array.from(kdfSalt),
+    iv: Array.from(iv),
+    content: Array.from(new Uint8Array(encrypted)),
+  });
+}
+
+export function estimateStrength(password = '') {
+  if (!password) return 0;
+  let score = 0;
+  if (password.length >= 8) score += 1;
+  if (password.length >= 12) score += 1;
+  if (/[A-Z]/.test(password) && /[a-z]/.test(password)) score += 1;
+  if (/\d/.test(password)) score += 1;
+  if (/[^A-Za-z0-9]/.test(password)) score += 1;
+  return Math.min(4, score);
+}
+
 export async function decryptText(encryptedText, masterPassword, salt) {
   if (!encryptedText) return '';
   const parsed = JSON.parse(encryptedText);
@@ -214,6 +272,37 @@ export async function reWrapItemKey(encryptedItemKeyStr, oldPrivateKeyJwk, newPu
 // Unwrap an item AES key that was RSA-wrapped for this user (company/shared items).
 export async function unwrapItemKey(wrappedKeyStr, privateKeyJwk) {
   return rsaDecrypt(wrappedKeyStr, privateKeyJwk);
+}
+
+export async function wrapItemKey(aesKeyJwk, publicKeyJwk) {
+  return rsaEncrypt(aesKeyJwk, publicKeyJwk);
+}
+
+export async function generateItemAesKey() {
+  const key = await crypto.subtle.generateKey(
+    { name: 'AES-GCM', length: 256 },
+    true,
+    ['encrypt', 'decrypt']
+  );
+  const jwk = await crypto.subtle.exportKey('jwk', key);
+  return { aesKeyJwk: JSON.stringify(jwk) };
+}
+
+export async function encryptValueWithAesKey(value, aesKeyJwk) {
+  if (value === undefined || value === null || value === '') return '';
+  if (!aesKeyJwk) return '';
+  const key = await importAesKey(aesKeyJwk);
+  const toEncrypt = Array.isArray(value) ? JSON.stringify(value) : String(value);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encrypted = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    encoder.encode(toEncrypt)
+  );
+  return JSON.stringify({
+    iv: Array.from(iv),
+    content: Array.from(new Uint8Array(encrypted)),
+  });
 }
 
 async function importAesKey(jwkStr) {

@@ -418,12 +418,16 @@ async function loadCreds(force) {
     let entries = [];
     const sourceCounts = [];
     const folderNameById = new Map();
+    const personalFolders = [];
 
     try {
       const mine = await secureGet('/my-vault');
       if (Array.isArray(mine?.folders)) {
         for (const f of mine.folders) {
-          if (f?.id && f?.name) folderNameById.set(f.id, f.name);
+          if (f?.id && f?.name) {
+            folderNameById.set(f.id, f.name);
+            personalFolders.push({ id: f.id, name: f.name });
+          }
         }
       }
       const list = (mine?.passwords || []).map((p) => {
@@ -635,6 +639,7 @@ async function loadCreds(force) {
         name: entry.name || entry.login || 'Item',
         login: entry.login || '',
         url: entry.url || '',
+        folderId: entry.folderId || entry.folder?.id || '',
         folderName: resolveFolderName(entry),
         vaultName: entry.vaultName || entry.vault?.name || '',
         password,
@@ -646,7 +651,9 @@ async function loadCreds(force) {
     creds = decrypted;
     const now = Date.now();
     lockAt = now + lockMs;
-    await chrome.storage.session.set({ cache: { ts: now, creds } });
+    await chrome.storage.session.set({
+      cache: { ts: now, creds, folders: personalFolders },
+    });
     startLockTimer();
 
     console.debug(
@@ -777,7 +784,163 @@ function showList() {
     label.textContent = 'No site detected — showing all items';
   }
 
+  renderPendingSaveCard();
   renderList();
+}
+
+function renderPendingSaveCard() {
+  const cardEl = $('pendingSaveCard');
+  if (!cardEl) return;
+
+  try {
+    chrome.runtime.sendMessage(
+      { type: 'VAULTIX_CHECK_PENDING_LOGIN', fromPopup: true },
+      (resp) => {
+        if (chrome.runtime.lastError || !resp || !resp.ok || !resp.pending) {
+          cardEl.style.display = 'none';
+          cardEl.innerHTML = '';
+          return;
+        }
+
+        const {
+          pending,
+          folders = [],
+          companyVaults = [],
+          defaultFolderName = 'Saved from Browser',
+        } = resp;
+        const isUpdate = pending.mode === 'UPDATE';
+
+        cardEl.style.display = 'block';
+        cardEl.innerHTML = `
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <span style="font-weight:700;color:#a5b4fc;font-size:12px;">
+              🔑 ${isUpdate ? 'Update login in Vaultix?' : 'Save new login to Vaultix?'}
+            </span>
+            <button id="btnDismissPending" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:12px;">✕</button>
+          </div>
+          <div style="font-size:11.5px;color:#e2e8f0;margin-bottom:6px;">
+            <b>${pending.name || pending.hostname}</b> · <span style="color:#94a3b8;">${pending.username || '(no username)'}</span>
+          </div>
+          <div style="margin-bottom:7px;">
+            <select id="selPendingFolder" style="width:100%;padding:6px 8px;border-radius:7px;border:1px solid #334155;background:#0b1222;color:#e2e8f0;font-size:11.5px;outline:none;"></select>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button id="btnSavePending" class="primary" style="padding:6px 10px;font-size:11.5px;flex:1;">
+              ${isUpdate ? 'Update Password' : 'Save Login'}
+            </button>
+          </div>
+        `;
+
+        const selectEl = $('selPendingFolder');
+        const pGroup = document.createElement('optgroup');
+        pGroup.label = '🔒 Personal Vault (Private)';
+
+        const existingDefault = folders.find(
+          (f) => (f.name || '').trim().toLowerCase() === defaultFolderName.toLowerCase()
+        );
+        const defOpt = document.createElement('option');
+        defOpt.value = `personal:${existingDefault ? existingDefault.id : '__DEFAULT_BROWSER_FOLDER__'}`;
+        defOpt.textContent = `📁 ${defaultFolderName} (Default)`;
+        pGroup.appendChild(defOpt);
+
+        for (const f of folders) {
+          if (existingDefault && f.id === existingDefault.id) continue;
+          const opt = document.createElement('option');
+          opt.value = `personal:${f.id}`;
+          opt.textContent = `📁 ${f.name}`;
+          if (
+            isUpdate &&
+            pending.existingVaultType !== 'COMPANY' &&
+            pending.existingFolderId &&
+            f.id === pending.existingFolderId
+          ) {
+            opt.selected = true;
+          }
+          pGroup.appendChild(opt);
+        }
+        selectEl.appendChild(pGroup);
+
+        for (const cv of companyVaults) {
+          if (!cv.folders || !cv.folders.length) continue;
+          const cGroup = document.createElement('optgroup');
+          cGroup.label = `🏢 ${cv.name} (Company Vault)`;
+          for (const f of cv.folders) {
+            const opt = document.createElement('option');
+            opt.value = `company:${cv.id}:${f.id}`;
+            opt.textContent = `🏢 ${f.name}`;
+            if (
+              isUpdate &&
+              pending.existingVaultType === 'COMPANY' &&
+              pending.existingFolderId &&
+              f.id === pending.existingFolderId
+            ) {
+              opt.selected = true;
+            }
+            cGroup.appendChild(opt);
+          }
+          selectEl.appendChild(cGroup);
+        }
+
+        $('btnDismissPending')?.addEventListener('click', () => {
+          cardEl.style.display = 'none';
+          chrome.runtime.sendMessage({
+            type: 'VAULTIX_DISMISS_PENDING',
+            hostname: pending.hostname,
+          });
+        });
+
+        $('btnSavePending')?.addEventListener('click', () => {
+          const btn = $('btnSavePending');
+          btn.disabled = true;
+          btn.textContent = 'Saving…';
+
+          const rawChoice = selectEl.value || 'personal:__DEFAULT_BROWSER_FOLDER__';
+          let vaultType = 'PERSONAL';
+          let companyVaultId = '';
+          let targetFolderId = '';
+
+          if (rawChoice.startsWith('company:')) {
+            vaultType = 'COMPANY';
+            const parts = rawChoice.split(':');
+            companyVaultId = parts[1] || '';
+            targetFolderId = parts[2] || '';
+          } else {
+            const parts = rawChoice.split(':');
+            targetFolderId = parts[1] || '';
+          }
+
+          chrome.runtime.sendMessage(
+            {
+              type: 'VAULTIX_SAVE_LOGIN',
+              mode: pending.mode,
+              existingId: pending.existingId,
+              name: pending.name,
+              username: pending.username,
+              password: pending.password,
+              url: pending.url,
+              hostname: pending.hostname,
+              vaultType,
+              companyVaultId,
+              folderId: targetFolderId,
+            },
+            async (saveResp) => {
+              if (chrome.runtime.lastError || !saveResp || !saveResp.ok) {
+                btn.disabled = false;
+                btn.textContent = isUpdate ? 'Update Password' : 'Save Login';
+                flash(saveResp?.error || 'Could not save login');
+                return;
+              }
+              cardEl.style.display = 'none';
+              flash(`Saved in 📁 "${saveResp.folderName || defaultFolderName}"`);
+              await loadCreds(true);
+            }
+          );
+        });
+      }
+    );
+  } catch {
+    cardEl.style.display = 'none';
+  }
 }
 
 function hostOf(url) {
