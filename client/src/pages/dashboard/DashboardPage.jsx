@@ -145,21 +145,19 @@ function DashboardPage() {
               </div>
             </div>
             <div className="flex items-center gap-3 flex-wrap">
-              {user?.role === 'ADMIN' && (
-                <div className="flex rounded-2xl bg-slate-100 dark:bg-slate-700 p-1">
-                  {['COMPANY', 'PERSONAL'].map((type) => (
-                    <button
-                      key={type}
-                      onClick={() => setVaultType(type)}
-                      className={`px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 ${
-                        vaultType === type ? 'bg-white dark:bg-slate-800 shadow-sm text-slate-900 dark:text-slate-100' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                      }`}
-                    >
-                      {type === 'COMPANY' ? 'Company' : 'Personal'}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <div className="flex rounded-2xl bg-slate-100 dark:bg-slate-700 p-1">
+                {['COMPANY', 'PERSONAL'].map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => setVaultType(type)}
+                    className={`px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 ${
+                      vaultType === type ? 'bg-white dark:bg-slate-800 shadow-sm text-slate-900 dark:text-slate-100' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    {type === 'COMPANY' ? 'Company' : 'Personal'}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -175,7 +173,9 @@ function DashboardPage() {
             </p>
             <p className={`text-xs mt-0.5 ${vaultType === 'COMPANY' ? 'text-indigo-700 dark:text-indigo-300' : 'text-emerald-700 dark:text-emerald-300'}`}>
               {vaultType === 'COMPANY'
-                ? 'Showing organization-wide analytics — shared passwords, team activity, and overall security health for your Company Vault.'
+                ? user?.role === 'ADMIN'
+                  ? 'Showing organization-wide analytics — shared passwords, team activity, and overall security health for your Company Vault.'
+                  : 'Showing analytics for shared Company Vault folders you have access to — shared passwords, team additions, and security health.'
                 : 'Showing private analytics — your personal passwords, weak/old/at-risk counts, and your own security score.'}
             </p>
           </div>
@@ -575,12 +575,13 @@ function DashboardPage() {
                 </div>
               ) : recentPasswords?.length > 0 ? (
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[620px]">
+                  <table className="w-full min-w-[700px]">
                     <thead>
                       <tr className="border-t border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/50">
                         <th className="text-left px-4 sm:px-6 py-3 sm:py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Name</th>
                         <th className="text-left px-4 sm:px-6 py-3 sm:py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Login</th>
-                        <th className="text-left px-4 sm:px-6 py-3 sm:py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Vault</th>
+                        <th className="text-left px-4 sm:px-6 py-3 sm:py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Folder</th>
+                        <th className="text-left px-4 sm:px-6 py-3 sm:py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Added By</th>
                         <th className="text-center px-4 sm:px-6 py-3 sm:py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Weak</th>
                         <th className="text-center px-4 sm:px-6 py-3 sm:py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Old</th>
                         <th className="text-center px-4 sm:px-6 py-3 sm:py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Risk</th>
@@ -596,7 +597,12 @@ function DashboardPage() {
                           <td className="px-4 sm:px-6 py-3.5 sm:py-4 text-xs sm:text-sm text-slate-600 dark:text-slate-300">{row.login}</td>
                           <td className="px-4 sm:px-6 py-3.5 sm:py-4">
                             <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2.5 py-1 rounded-lg">
-                              {row.vault?.name || '-'}
+                              {row.folder?.name || row.vault?.name || '-'}
+                            </span>
+                          </td>
+                          <td className="px-4 sm:px-6 py-3.5 sm:py-4">
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 px-2.5 py-1 rounded-lg">
+                              {row.createdBy?.fullName || row.createdBy?.email || '-'}
                             </span>
                           </td>
                           <td className="px-4 sm:px-6 py-3.5 sm:py-4 text-center">
@@ -629,7 +635,10 @@ function DashboardPage() {
               )}
               {recentPasswords?.length > 0 && (
                 <div className="px-4 sm:px-6 py-3 border-t border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30 text-right">
-                  <button onClick={() => navigate('/my-vault')} className="text-xs font-semibold text-indigo-600 hover:text-indigo-700">
+                  <button
+                    onClick={() => vaultType === 'COMPANY' && firstCompanyVaultSlug ? navigate(`/vaults/${firstCompanyVaultSlug}`) : navigate('/my-vault')}
+                    className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+                  >
                     View all passwords →
                   </button>
                 </div>
