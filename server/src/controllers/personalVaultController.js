@@ -789,9 +789,26 @@ const restoreMyVaultPassword = async (req, res) => {
 
     const subtreeIds = await collectMyVaultSubtreeIds(passwordId, vault.id);
 
+    let folderUpdate = {};
+    if (password.folderId) {
+      const folderExists = await prisma.folder.findFirst({
+        where: { id: password.folderId, vaultId: vault.id },
+      });
+      if (!folderExists) {
+        const fallbackFolder = await prisma.folder.findFirst({
+          where: { vaultId: vault.id },
+          orderBy: { createdAt: 'asc' },
+        });
+        folderUpdate = { folderId: fallbackFolder ? fallbackFolder.id : null };
+      }
+    }
+
     await prisma.passwordEntry.updateMany({
       where: { id: { in: subtreeIds } },
-      data: { deletedAt: null },
+      data: {
+        deletedAt: null,
+        ...folderUpdate,
+      },
     });
 
     res.json({ message: 'Password restored successfully' });

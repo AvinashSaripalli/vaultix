@@ -47,14 +47,32 @@ function StatusBar() {
         <Icon size={18} className="shrink-0" />
         <span className="truncate">{toast.message}</span>
       </div>
-      <button
-        type="button"
-        onClick={() => setToast(null)}
-        className="shrink-0 p-1 -mr-1 rounded-lg hover:bg-white/20 transition text-white/80 hover:text-white"
-        aria-label="Dismiss notification"
-      >
-        <X size={15} />
-      </button>
+      <div className="flex items-center gap-2 shrink-0">
+        {toast.action && (
+          <button
+            type="button"
+            onClick={() => {
+              try {
+                toast.action.onClick?.();
+              } catch (e) {
+                console.error('Toast action failed:', e);
+              }
+              setToast(null);
+            }}
+            className="px-2.5 py-1 rounded-lg bg-white/25 hover:bg-white/35 text-white text-xs font-bold transition shadow-sm"
+          >
+            {toast.action.label || 'Undo'}
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => setToast(null)}
+          className="p-1 -mr-1 rounded-lg hover:bg-white/20 transition text-white/80 hover:text-white"
+          aria-label="Dismiss notification"
+        >
+          <X size={15} />
+        </button>
+      </div>
     </div>
   );
 }

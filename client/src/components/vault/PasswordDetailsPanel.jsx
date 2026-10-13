@@ -17,6 +17,9 @@ import { useDispatch, useSelector } from 'react-redux';
 import api from '../../services/api';
 import {
   deletePassword,
+  restorePassword,
+  fetchPasswordsByVault,
+  fetchVaultTrash,
   openEditPasswordModal,
   selectPassword,
 } from '../../features/vault/vaultSlice';
@@ -854,12 +857,31 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
       <ConfirmModal
         open={confirmDelete.open}
         title="Delete Password"
-        message={`Are you sure you want to delete "${confirmDelete.name}"? This action cannot be undone.`}
+        message={`Are you sure you want to move "${confirmDelete.name}" to Trash? You can restore it anytime.`}
         onConfirm={async () => {
           if (!confirmDelete.passwordId) return;
-          const result = await dispatch(deletePassword(confirmDelete.passwordId));
+          const deletedId = confirmDelete.passwordId;
+          const deletedName = confirmDelete.name;
+          const vaultId = selectedVault?.id;
+          const result = await dispatch(deletePassword(deletedId));
           if (deletePassword.fulfilled.match(result)) {
             dispatch(selectPassword(null));
+            if (vaultId) {
+              dispatch(fetchVaultTrash(vaultId));
+            }
+            showToast(`"${deletedName}" moved to Trash`, 'success', 5000, {
+              label: 'Undo',
+              onClick: async () => {
+                if (vaultId) {
+                  const restoreRes = await dispatch(restorePassword({ passwordId: deletedId, vaultId }));
+                  if (restorePassword.fulfilled.match(restoreRes)) {
+                    dispatch(fetchPasswordsByVault(vaultId));
+                    dispatch(fetchVaultTrash(vaultId));
+                    showToast(`Restored "${deletedName}"`);
+                  }
+                }
+              },
+            });
           }
           setConfirmDelete({ open: false, name: '', passwordId: null });
         }}

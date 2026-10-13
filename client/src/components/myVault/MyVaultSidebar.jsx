@@ -7,6 +7,9 @@ function MyVaultSidebar({
   onSelectFolder,
   onEditFolder,
   onDeleteFolder,
+  trashOpen = false,
+  trashCount = 0,
+  onToggleTrash,
 }) {
   const [openMenuId, setOpenMenuId] = useState(null);
 
@@ -50,18 +53,21 @@ function MyVaultSidebar({
           setOpenMenuId(null);
         }}
         className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition text-left mb-1.5 ${
-          !selectedFolderId
+          !selectedFolderId && !trashOpen
             ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
             : 'text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-750'
         }`}
       >
-        <Layers size={17} className={!selectedFolderId ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'} />
+        <Layers
+          size={17}
+          className={!selectedFolderId && !trashOpen ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}
+        />
         <span>All Items</span>
       </button>
 
       <div className="space-y-1 flex-1 overflow-y-auto">
         {folders.map((folder) => {
-          const isSelected = selectedFolderId === folder.id;
+          const isSelected = !trashOpen && selectedFolderId === folder.id;
           return (
             <div
               key={folder.id}
@@ -127,6 +133,36 @@ function MyVaultSidebar({
             No folders created yet.
           </div>
         )}
+      </div>
+
+      {/* Bottom Trash Link with live badge */}
+      <div className="pt-2 mt-auto border-t border-slate-100 dark:border-slate-700/60">
+        <button
+          type="button"
+          onClick={() => {
+            onToggleTrash?.();
+            setOpenMenuId(null);
+          }}
+          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition text-left ${
+            trashOpen
+              ? 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 font-semibold border border-rose-200/70 dark:border-rose-800/50'
+              : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-750 dark:hover:text-slate-200'
+          }`}
+          title="View deleted passwords in Trash"
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <Trash2
+              size={17}
+              className={trashOpen ? 'text-rose-600 dark:text-rose-400 shrink-0' : 'text-slate-400 shrink-0'}
+            />
+            <span className="truncate">Trash</span>
+          </div>
+          {trashCount > 0 && (
+            <span className="h-5 min-w-5 px-1.5 rounded-full bg-rose-500 text-white text-[10px] font-bold inline-flex items-center justify-center shrink-0 shadow-sm">
+              {trashCount > 99 ? '99+' : trashCount}
+            </span>
+          )}
+        </button>
       </div>
     </div>
   );
