@@ -8,8 +8,92 @@ const {
   getDepartmentIdsWithAncestors,
 } = require('../utils/permissions');
 const generateId = require('../utils/generateId');
+const createNotification = require('../utils/createNotification');
 const { VALID_ITEM_TYPES, validateItemFields, validateLoginForType } = require('../utils/itemFieldSchemas');
 const { getVaultPolicy, validateAgainstPolicy } = require('../utils/vaultPolicy');
+
+const notifyCollaboratorsOnPasswordChange = async ({
+  folderId,
+  vaultId,
+  entry,
+  actorId,
+  actionType,
+  previousCreatedById,
+}) => {
+  try {
+    const [actor, folder, vault, admins] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: actorId },
+        select: { fullName: true, email: true },
+      }),
+      prisma.folder.findUnique({
+        where: { id: folderId },
+        select: {
+          name: true,
+          permissions: {
+            where: { accessLevel: { in: ['ADMINISTRATOR', 'FULL_ACCESS'] } },
+            select: { userId: true },
+          },
+        },
+      }),
+      prisma.vault.findUnique({
+        where: { id: vaultId },
+        select: { name: true, type: true, ownerId: true },
+      }),
+      prisma.user.findMany({
+        where: { role: 'ADMIN', isActive: true },
+        select: { id: true },
+      }),
+    ]);
+
+    if (!vault || vault.type === 'PERSONAL') return;
+
+    const recipientIds = new Set();
+    if (vault.ownerId) recipientIds.add(vault.ownerId);
+    for (const admin of admins) {
+      if (admin.id) recipientIds.add(admin.id);
+    }
+    for (const perm of folder?.permissions || []) {
+      if (perm.userId) recipientIds.add(perm.userId);
+    }
+    if (actionType === 'UPDATE' && previousCreatedById) {
+      recipientIds.add(previousCreatedById);
+    }
+
+    recipientIds.delete(actorId);
+    if (recipientIds.size === 0) return;
+
+    const actorName = actor?.fullName || actor?.email || 'A team member';
+    const folderLabel = folder?.name ? ` in "${folder.name}"` : '';
+    const loginSuffix = entry.login ? ` (${entry.login})` : '';
+
+    const title =
+      actionType === 'CREATE' ? 'New Password Added' : 'Password Updated';
+    const message =
+      actionType === 'CREATE'
+        ? `${actorName} added a login to "${entry.name}"${loginSuffix}${folderLabel}`
+        : `${actorName} updated "${entry.name}"${loginSuffix}${folderLabel}`;
+
+    await Promise.all(
+      [...recipientIds].map((userId) =>
+        createNotification({
+          userId,
+          title,
+          message,
+          type: 'SHARE_PASSWORD',
+          metadata: {
+            passwordId: entry.id,
+            vaultId,
+            folderId,
+            action: actionType === 'CREATE' ? 'CREATE_PASSWORD' : 'UPDATE_PASSWORD',
+          },
+        })
+      )
+    );
+  } catch (err) {
+    console.error('Notify collaborators error:', err);
+  }
+};
 
 const getVaultType = async (vaultId) => {
   try {
@@ -211,6 +295,14 @@ const createPassword = async (req, res) => {
           tags: {
             include: { tag: true },
           },
+          createdBy: {
+            select: {
+              id: true,
+              fullName: true,
+              email: true,
+              encryptionSalt: true,
+            },
+          },
         },
       });
 
@@ -232,6 +324,16 @@ const createPassword = async (req, res) => {
 
       return entry;
     });
+
+    if (vaultType && vaultType !== 'PERSONAL') {
+      notifyCollaboratorsOnPasswordChange({
+        folderId,
+        vaultId,
+        entry: passwordEntry,
+        actorId: req.user.id,
+        actionType: 'CREATE',
+      });
+    }
 
     const allWrappedKeys = passwordEntry.wrappedKeys || {};
     const myWrappedKey = allWrappedKeys[req.user.id] || null;
@@ -404,7 +506,7 @@ const getPasswordsByVault = async (req, res) => {
           tags: { include: { tag: true } },
           folder: true,
           createdBy: {
-            select: { id: true, encryptionSalt: true },
+            select: { id: true, fullName: true, email: true, encryptionSalt: true },
           },
         },
         orderBy: { createdAt: 'desc' },
@@ -490,7 +592,7 @@ const getPasswordsByVault = async (req, res) => {
             tags: { include: { tag: true } },
             folder: true,
             createdBy: {
-              select: { id: true, encryptionSalt: true },
+              select: { id: true, fullName: true, email: true, encryptionSalt: true },
             },
           },
           orderBy: { createdAt: 'desc' },
@@ -517,7 +619,7 @@ const getPasswordById = async (req, res) => {
         folder: true,
         vault: true,
         createdBy: {
-          select: { id: true, encryptionSalt: true },
+          select: { id: true, fullName: true, email: true, encryptionSalt: true },
         },
       },
     });
@@ -743,6 +845,14 @@ const updatePassword = async (req, res) => {
             },
           },
           folder: true,
+          createdBy: {
+            select: {
+              id: true,
+              fullName: true,
+              email: true,
+              encryptionSalt: true,
+            },
+          },
         },
       });
 
@@ -765,6 +875,17 @@ const updatePassword = async (req, res) => {
 
       return updated;
     });
+
+    if (vaultType && vaultType !== 'PERSONAL') {
+      notifyCollaboratorsOnPasswordChange({
+        folderId: updatedPassword.folderId,
+        vaultId: updatedPassword.vaultId,
+        entry: updatedPassword,
+        actorId: req.user.id,
+        actionType: 'UPDATE',
+        previousCreatedById: existingPassword.createdById,
+      });
+    }
 
     const allWrappedKeysUpdated = updatedPassword.wrappedKeys || {};
     const { wrappedKeys: _wk, ...passwordData } = updatedPassword;

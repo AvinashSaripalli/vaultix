@@ -482,16 +482,33 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
               className="rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-3.5 sm:p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800 min-w-0"
             >
               <div className="flex items-start justify-between gap-2.5 sm:gap-5 mb-4 sm:mb-5">
-                <div className="flex items-center gap-2 flex-wrap min-w-0">
-                  <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight dark:text-slate-100">
-                    {getItemTypeMeta(item.type).label}
-                    {sameNamePasswords.length > 1 ? ` #${index + 1}` : ''}
-                  </h3>
-                  {item.isSensitive && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2.5 py-0.5 text-[11px] font-semibold dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shrink-0">
-                      <ShieldCheck size={12} />
-                      Secured
-                    </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap min-w-0">
+                    <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight dark:text-slate-100">
+                      {getItemTypeMeta(item.type).label}
+                      {sameNamePasswords.length > 1 ? ` #${index + 1}` : ''}
+                    </h3>
+                    {item.login && sameNamePasswords.length > 1 && (
+                      <span className="text-xs sm:text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800 px-2.5 py-0.5 rounded-lg truncate max-w-[220px]">
+                        {item.login}
+                      </span>
+                    )}
+                    {item.isSensitive && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2.5 py-0.5 text-[11px] font-semibold dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shrink-0">
+                        <ShieldCheck size={12} />
+                        Secured
+                      </span>
+                    )}
+                  </div>
+                  {(item.createdBy?.fullName || item.createdBy?.email) && (
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 truncate">
+                      Added by{' '}
+                      <span className="font-semibold text-slate-700 dark:text-slate-300">
+                        {item.createdBy?.id === user?.id
+                          ? `${item.createdBy.fullName || item.createdBy.email} (You)`
+                          : item.createdBy.fullName || item.createdBy.email}
+                      </span>
+                    </p>
                   )}
                 </div>
 
