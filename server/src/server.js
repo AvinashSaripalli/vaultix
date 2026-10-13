@@ -8,9 +8,10 @@ const PORT = process.env.PORT || 4000;
 
 function ensureLocalPostgres() {
   return new Promise((resolve) => {
-    const pgBin = 'D:\\pgsql\\bin\\postgres.exe';
+    const pgCtl = 'D:\\pgsql\\bin\\pg_ctl.exe';
     const pgData = 'D:\\pgsql\\data';
-    if (process.platform !== 'win32' || !fs.existsSync(pgBin)) {
+    const pgLog = 'D:\\pgsql\\postgres.log';
+    if (process.platform !== 'win32' || !fs.existsSync(pgCtl)) {
       return resolve();
     }
 
@@ -25,8 +26,11 @@ function ensureLocalPostgres() {
         socket.destroy();
         console.log('Local PostgreSQL not listening on 5432 — starting D:\\pgsql...');
         try {
-          const child = spawn(pgBin, ['-D', pgData], {
-            detached: true,
+          // NOTE: Do NOT set `detached: true` on Windows — in Node/libuv,
+          // `detached: true` uses DETACHED_PROCESS which overrides `windowsHide: true`
+          // (CREATE_NO_WINDOW) and causes postgres worker processes to pop up
+          // multiple console windows.
+          const child = spawn(pgCtl, ['start', '-D', pgData, '-l', pgLog], {
             stdio: 'ignore',
             windowsHide: true,
           });
