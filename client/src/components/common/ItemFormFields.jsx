@@ -401,6 +401,7 @@ function ItemFormFields({
         </label>
         <TagInput
           tags={formData.tags || []}
+          setTags={(nextTags) => onChange('tags', nextTags)}
           onChange={(nextTags) => onChange('tags', nextTags)}
           suggestions={suggestedTags}
         />

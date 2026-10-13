@@ -8,10 +8,11 @@ const DEFAULT_SUGGESTIONS = [
   'Support', 'Temporary',
 ];
 
-function TagInput({ tags = [], setTags, suggestions: externalSuggestions }) {
+function TagInput({ tags = [], setTags, onChange, suggestions: externalSuggestions }) {
   const [input, setInput] = useState('');
   const [focused, setFocused] = useState(false);
   const ref = useRef(null);
+  const handleTagsChange = setTags || onChange;
 
   const suggestions = (externalSuggestions || DEFAULT_SUGGESTIONS).filter(
     (s) =>
@@ -34,12 +35,12 @@ function TagInput({ tags = [], setTags, suggestions: externalSuggestions }) {
       setInput('');
       return;
     }
-    setTags([...tags, clean]);
+    handleTagsChange?.([...tags, clean]);
     setInput('');
   };
 
   const removeTag = (tag) => {
-    setTags(tags.filter((t) => t !== tag));
+    handleTagsChange?.(tags.filter((t) => t !== tag));
   };
 
   const handleKeyDown = (e) => {
