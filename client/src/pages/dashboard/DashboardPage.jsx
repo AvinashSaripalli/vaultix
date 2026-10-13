@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -7,7 +7,7 @@ import {
 } from 'recharts';
 import {
   Shield, KeyRound, AlertTriangle, Clock, Activity, LogIn,
-  ExternalLink, Eye, ArrowRight, TrendingUp, Users, ShieldCheck,
+  ExternalLink, Eye, ArrowRight, TrendingUp, Users, ShieldCheck, Folder,
 } from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout';
 import {
@@ -16,11 +16,17 @@ import {
 } from '../../features/dashboard/dashboardSlice';
 
 const RANGE_OPTIONS = [
-  { label: '7D', value: '7D' },
-  { label: '30D', value: '30D' },
-  { label: 'Month', value: 'THIS_MONTH' },
-  { label: 'Last', value: 'LAST_MONTH' },
-  { label: '6M', value: '6M' },
+  { label: 'Today', value: '24H' },
+  { label: '7 Days', value: '7D' },
+  { label: '30 Days', value: '30D' },
+  { label: '1 Year', value: '1Y' },
+];
+
+const TABLE_FILTERS = [
+  { label: 'All', value: 'ALL' },
+  { label: 'At Risk', value: 'RISK' },
+  { label: 'Weak', value: 'WEAK' },
+  { label: 'Old', value: 'OLD' },
 ];
 
 const ACTION_MAP = {
@@ -99,24 +105,26 @@ function DashboardPage() {
   const vaults = useSelector((state) => state.vault?.vaults);
   const {
     totalPasswords, weakPasswords, oldPasswords, riskPasswords, securityScore,
-    passwordTrend, recentPasswords, loginTotal, loginSuccess, loginFailed, loginBlocked,
+    folders, passwordTrend, recentPasswords, loginTotal, loginSuccess, loginFailed, loginBlocked,
     recentLogins, recentActivityLogs, summaryLoading, activityLoading, recentLoading,
     loginLoading, activityLogsLoading, error,
   } = useSelector((state) => state.dashboard);
 
-  const [range, setRange] = useState('6M');
+  const [range, setRange] = useState('7D');
   const [vaultType, setVaultType] = useState(() => user?.role === 'ADMIN' ? 'COMPANY' : 'PERSONAL');
+  const [selectedFolderId, setSelectedFolderId] = useState('ALL');
+  const [tableFilter, setTableFilter] = useState('ALL');
 
   useEffect(() => {
-    dispatch(fetchSecuritySummary(vaultType));
-    dispatch(fetchRecentPasswords(vaultType));
+    dispatch(fetchSecuritySummary({ vaultType, folderId: selectedFolderId }));
+    dispatch(fetchRecentPasswords({ vaultType, folderId: selectedFolderId }));
     dispatch(fetchLoginActivity());
     dispatch(fetchRecentActivityLogs());
-  }, [dispatch, vaultType]);
+  }, [dispatch, vaultType, selectedFolderId]);
 
   useEffect(() => {
-    dispatch(fetchPasswordActivity({ range, vaultType }));
-  }, [dispatch, range, vaultType]);
+    dispatch(fetchPasswordActivity({ range, vaultType, folderId: selectedFolderId }));
+  }, [dispatch, range, vaultType, selectedFolderId]);
 
   const loading = summaryLoading || activityLoading || recentLoading;
 
@@ -124,6 +132,15 @@ function DashboardPage() {
   const scoreLabel = securityScore >= 80 ? 'Good' : securityScore >= 50 ? 'Needs Work' : 'Poor';
 
   const firstCompanyVaultSlug = vaults?.find((v) => v.type === 'COMPANY')?.slug;
+  const selectedFolderName = folders?.find((f) => f.id === selectedFolderId)?.name;
+
+  const filteredRecentPasswords = useMemo(() => {
+    const list = recentPasswords || [];
+    if (tableFilter === 'RISK') return list.filter((p) => p.isAtRisk);
+    if (tableFilter === 'WEAK') return list.filter((p) => p.isWeak);
+    if (tableFilter === 'OLD') return list.filter((p) => p.isOld);
+    return list.slice(0, 10);
+  }, [recentPasswords, tableFilter]);
 
   return (
     <AppLayout>
@@ -144,12 +161,35 @@ function DashboardPage() {
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
+              {folders?.length > 0 && (
+                <div className="relative flex items-center">
+                  <Folder size={15} className="absolute left-3.5 text-slate-400 pointer-events-none" />
+                  <select
+                    value={selectedFolderId}
+                    onChange={(e) => setSelectedFolderId(e.target.value)}
+                    aria-label="Filter by folder"
+                    className="h-9 sm:h-10 pl-9 pr-8 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/70 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200 outline-none focus:border-indigo-500 transition cursor-pointer max-w-[220px] truncate"
+                  >
+                    <option value="ALL">All Folders ({folders.length})</option>
+                    {folders.map((f) => (
+                      <option key={f.id} value={f.id}>
+                        {f.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div className="flex rounded-2xl bg-slate-100 dark:bg-slate-700 p-1">
                 {['COMPANY', 'PERSONAL'].map((type) => (
                   <button
                     key={type}
-                    onClick={() => setVaultType(type)}
+                    onClick={() => {
+                      setVaultType(type);
+                      setSelectedFolderId('ALL');
+                      setTableFilter('ALL');
+                    }}
                     className={`px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 ${
                       vaultType === type ? 'bg-white dark:bg-slate-800 shadow-sm text-slate-900 dark:text-slate-100' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                     }`}
@@ -170,6 +210,7 @@ function DashboardPage() {
           <div className="min-w-0">
             <p className={`text-xs sm:text-sm font-semibold ${vaultType === 'COMPANY' ? 'text-indigo-900 dark:text-indigo-200' : 'text-emerald-900 dark:text-emerald-200'}`}>
               {vaultType === 'COMPANY' ? 'Company Vault Dashboard' : 'Personal Vault Dashboard'}
+              {selectedFolderName ? ` — ${selectedFolderName}` : ''}
             </p>
             <p className={`text-xs mt-0.5 ${vaultType === 'COMPANY' ? 'text-indigo-700 dark:text-indigo-300' : 'text-emerald-700 dark:text-emerald-300'}`}>
               {vaultType === 'COMPANY'
@@ -181,7 +222,7 @@ function DashboardPage() {
           </div>
           <span className={`ml-auto hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold shrink-0 ${vaultType === 'COMPANY' ? 'bg-white dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700' : 'bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700'}`}>
             <span className={`h-2 w-2 rounded-full ${vaultType === 'COMPANY' ? 'bg-indigo-600' : 'bg-emerald-600'}`} />
-            {vaultType === 'COMPANY' ? 'Company' : 'Personal'}
+            {selectedFolderName || (vaultType === 'COMPANY' ? 'Company' : 'Personal')}
           </span>
         </div>
 
@@ -201,8 +242,8 @@ function DashboardPage() {
             {/* Stat Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <StatCard
-                icon={KeyRound} label="Total Passwords" value={totalPasswords || 0}
-                subtext={vaultType === 'COMPANY' ? 'Company vault' : 'Personal vault'}
+                icon={KeyRound} label="Total Items" value={totalPasswords || 0}
+                subtext={selectedFolderName || (vaultType === 'COMPANY' ? 'Company vault' : 'Personal vault')}
                 gradient="bg-gradient-to-br from-indigo-500 to-purple-600"
                 valueColor="text-indigo-600"
                 onClick={() => vaultType === 'COMPANY' && firstCompanyVaultSlug ? navigate(`/vaults/${firstCompanyVaultSlug}`) : navigate('/my-vault')}
@@ -239,13 +280,13 @@ function DashboardPage() {
                     <TrendingUp size={18} className="text-indigo-600" />
                     <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Password Activity</h3>
                   </div>
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex rounded-xl bg-slate-100 dark:bg-slate-700 p-1 gap-0.5">
                     {RANGE_OPTIONS.map((item) => (
                       <button
                         key={item.value}
                         onClick={() => setRange(item.value)}
                         className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-                          range === item.value ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                          range === item.value ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                         }`}
                       >
                         {item.label}
@@ -255,16 +296,22 @@ function DashboardPage() {
                 </div>
 
                 {/* Chart summary stats */}
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  <div className="rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 px-4 py-3">
-                    <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-0.5">Total Added</p>
-                    <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">
+                <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-6">
+                  <div className="rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 px-3.5 sm:px-4 py-3">
+                    <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-0.5">Added</p>
+                    <p className="text-xl sm:text-2xl font-bold text-emerald-700 dark:text-emerald-300">
                       {passwordTrend?.reduce((sum, d) => sum + (d.added || 0), 0) || 0}
                     </p>
                   </div>
-                  <div className="rounded-2xl bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-800 px-4 py-3">
-                    <p className="text-xs font-medium text-rose-600 dark:text-rose-400 mb-0.5">Total Deleted</p>
-                    <p className="text-2xl font-bold text-rose-700 dark:text-rose-300">
+                  <div className="rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 px-3.5 sm:px-4 py-3">
+                    <p className="text-xs font-medium text-indigo-600 dark:text-indigo-400 mb-0.5">Updated</p>
+                    <p className="text-xl sm:text-2xl font-bold text-indigo-700 dark:text-indigo-300">
+                      {passwordTrend?.reduce((sum, d) => sum + (d.updated || 0), 0) || 0}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-800 px-3.5 sm:px-4 py-3">
+                    <p className="text-xs font-medium text-rose-600 dark:text-rose-400 mb-0.5">Deleted</p>
+                    <p className="text-xl sm:text-2xl font-bold text-rose-700 dark:text-rose-300">
                       {passwordTrend?.reduce((sum, d) => sum + (d.deleted || 0), 0) || 0}
                     </p>
                   </div>
@@ -277,6 +324,7 @@ function DashboardPage() {
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--border-primary)" />
                         <XAxis
                           dataKey="label"
+                          minTickGap={22}
                           tick={{ fill: 'var(--text-secondary)', fontSize: 12 }}
                           axisLine={false}
                           tickLine={false}
@@ -307,8 +355,17 @@ function DashboardPage() {
                           name="Added"
                           stroke="#10b981"
                           strokeWidth={3}
-                          dot={{ r: 4, fill: '#10b981', strokeWidth: 0 }}
-                          activeDot={{ r: 7 }}
+                          dot={{ r: 3.5, fill: '#10b981', strokeWidth: 0 }}
+                          activeDot={{ r: 6 }}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="updated"
+                          name="Updated"
+                          stroke="#6366f1"
+                          strokeWidth={3}
+                          dot={{ r: 3.5, fill: '#6366f1', strokeWidth: 0 }}
+                          activeDot={{ r: 6 }}
                         />
                         <Line
                           type="monotone"
@@ -316,8 +373,8 @@ function DashboardPage() {
                           name="Deleted"
                           stroke="#f43f5e"
                           strokeWidth={3}
-                          dot={{ r: 4, fill: '#f43f5e', strokeWidth: 0 }}
-                          activeDot={{ r: 7 }}
+                          dot={{ r: 3.5, fill: '#f43f5e', strokeWidth: 0 }}
+                          activeDot={{ r: 6 }}
                         />
                       </LineChart>
                     </ResponsiveContainer>
@@ -562,18 +619,59 @@ function DashboardPage() {
 
             {/* Recent Passwords Table */}
             <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl sm:rounded-3xl overflow-hidden min-w-0">
-              <div className="p-4 sm:p-6 pb-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <KeyRound size={16} className="text-indigo-600" />
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Recent Passwords</h3>
+              <div className="p-4 sm:p-6 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <KeyRound size={16} className="text-indigo-600" />
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Recent Items</h3>
+                  </div>
+                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+                    Latest items in {selectedFolderName || `your ${vaultType === 'COMPANY' ? 'company' : 'personal'} vault`}
+                  </p>
                 </div>
-                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mb-4">Latest passwords in your {vaultType === 'COMPANY' ? 'company' : 'personal'} vault</p>
+
+                <div className="flex rounded-xl bg-slate-100 dark:bg-slate-700 p-1 gap-0.5 self-start sm:self-auto">
+                  {TABLE_FILTERS.map((f) => {
+                    const count =
+                      f.value === 'RISK'
+                        ? (recentPasswords || []).filter((p) => p.isAtRisk).length
+                        : f.value === 'WEAK'
+                          ? (recentPasswords || []).filter((p) => p.isWeak).length
+                          : f.value === 'OLD'
+                            ? (recentPasswords || []).filter((p) => p.isOld).length
+                            : null;
+                    return (
+                      <button
+                        key={f.value}
+                        onClick={() => setTableFilter(f.value)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition inline-flex items-center gap-1.5 ${
+                          tableFilter === f.value
+                            ? 'bg-indigo-600 text-white shadow-sm'
+                            : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                        }`}
+                      >
+                        <span>{f.label}</span>
+                        {count !== null && count > 0 && (
+                          <span
+                            className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                              tableFilter === f.value
+                                ? 'bg-white/20 text-white'
+                                : 'bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200'
+                            }`}
+                          >
+                            {count}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
               {recentLoading ? (
                 <div className="p-4 sm:p-6 space-y-3">
                   {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-12" />)}
                 </div>
-              ) : recentPasswords?.length > 0 ? (
+              ) : filteredRecentPasswords?.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[700px]">
                     <thead>
@@ -589,12 +687,12 @@ function DashboardPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                      {recentPasswords.map((row) => (
+                      {filteredRecentPasswords.map((row) => (
                         <tr key={row.id} className="hover:bg-slate-50 dark:hover:bg-slate-700 transition">
                           <td className="px-4 sm:px-6 py-3.5 sm:py-4">
                             <span className="font-medium text-slate-900 dark:text-slate-100 text-sm">{row.name}</span>
                           </td>
-                          <td className="px-4 sm:px-6 py-3.5 sm:py-4 text-xs sm:text-sm text-slate-600 dark:text-slate-300">{row.login}</td>
+                          <td className="px-4 sm:px-6 py-3.5 sm:py-4 text-xs sm:text-sm text-slate-600 dark:text-slate-300">{row.login || '-'}</td>
                           <td className="px-4 sm:px-6 py-3.5 sm:py-4">
                             <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2.5 py-1 rounded-lg">
                               {row.folder?.name || row.vault?.name || '-'}
@@ -627,10 +725,14 @@ function DashboardPage() {
                   </table>
                 </div>
               ) : (
-                <div className="text-center py-12 px-6">
+                <div className="text-center py-12 px-6 border-t border-slate-100 dark:border-slate-700">
                   <KeyRound size={32} className="mx-auto text-slate-300 dark:text-slate-600 mb-3" />
-                  <p className="text-sm text-slate-500 dark:text-slate-400">No passwords found</p>
-                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Add passwords to see them here</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    {tableFilter !== 'ALL' ? `No ${tableFilter.toLowerCase()} items found` : 'No items found'}
+                  </p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                    {tableFilter !== 'ALL' ? 'Your vault looks clean for this filter!' : 'Add items to see them here'}
+                  </p>
                 </div>
               )}
               {recentPasswords?.length > 0 && (

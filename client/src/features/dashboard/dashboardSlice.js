@@ -3,11 +3,15 @@ import api from '../../services/api';
 
 export const fetchSecuritySummary = createAsyncThunk(
   'dashboard/fetchSecuritySummary',
-  async (vaultType = 'PERSONAL', thunkAPI) => {
+  async (arg = 'PERSONAL', thunkAPI) => {
     try {
+      const vaultType = typeof arg === 'string' ? arg : arg?.vaultType || 'PERSONAL';
+      const folderId = typeof arg === 'object' ? arg?.folderId : null;
       const token = thunkAPI.getState().auth.token;
+      const params = new URLSearchParams({ vaultType });
+      if (folderId && folderId !== 'ALL') params.set('folderId', folderId);
       const response = await api.get(
-        `/dashboard/security-summary?vaultType=${vaultType}`,
+        `/dashboard/security-summary?${params.toString()}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       return response.data;
@@ -21,11 +25,13 @@ export const fetchSecuritySummary = createAsyncThunk(
 
 export const fetchPasswordActivity = createAsyncThunk(
   'dashboard/fetchPasswordActivity',
-  async ({ range = '6M', vaultType = 'PERSONAL' }, thunkAPI) => {
+  async ({ range = '7D', vaultType = 'PERSONAL', folderId = null }, thunkAPI) => {
     try {
       const token = thunkAPI.getState().auth.token;
+      const params = new URLSearchParams({ range, vaultType });
+      if (folderId && folderId !== 'ALL') params.set('folderId', folderId);
       const response = await api.get(
-        `/dashboard/password-activity?range=${range}&vaultType=${vaultType}`,
+        `/dashboard/password-activity?${params.toString()}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       return response.data;
@@ -39,11 +45,15 @@ export const fetchPasswordActivity = createAsyncThunk(
 
 export const fetchRecentPasswords = createAsyncThunk(
   'dashboard/fetchRecentPasswords',
-  async (vaultType = 'PERSONAL', thunkAPI) => {
+  async (arg = 'PERSONAL', thunkAPI) => {
     try {
+      const vaultType = typeof arg === 'string' ? arg : arg?.vaultType || 'PERSONAL';
+      const folderId = typeof arg === 'object' ? arg?.folderId : null;
       const token = thunkAPI.getState().auth.token;
+      const params = new URLSearchParams({ vaultType });
+      if (folderId && folderId !== 'ALL') params.set('folderId', folderId);
       const response = await api.get(
-        `/dashboard/recent-passwords?vaultType=${vaultType}`,
+        `/dashboard/recent-passwords?${params.toString()}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       return response.data;
@@ -103,6 +113,7 @@ const initialState = {
   oldPasswords: 0,
   riskPasswords: 0,
   securityScore: 100,
+  folders: [],
   passwordTrend: [],
   recentPasswords: [],
   loginTotal: 0,
@@ -139,6 +150,7 @@ const dashboardSlice = createSlice({
         state.oldPasswords = action.payload.oldPasswords || 0;
         state.riskPasswords = action.payload.riskPasswords || 0;
         state.securityScore = action.payload.securityScore ?? 100;
+        state.folders = action.payload.folders || [];
       })
       .addCase(fetchSecuritySummary.rejected, (state, action) => {
         state.summaryLoading = false;
