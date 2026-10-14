@@ -29,6 +29,9 @@ services:
       CLIENT_URL: ${CLIENT_URL}
       MAIL_USER: ${MAIL_USER}
       MAIL_PASS: ${MAIL_PASS}
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-}
+      MAIL_SECURE: ${MAIL_SECURE:-}
       TRUST_PROXY: "true"
 
   web:
