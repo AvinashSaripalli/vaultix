@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 
 import AppLayout from '../../components/layout/AppLayout';
 import PasswordListPanel from '../../components/vault/PasswordListPanel';
@@ -36,6 +36,10 @@ import {
   RotateCcw,
   Shield,
   Plus,
+  ArrowLeft,
+  Search,
+  Folder,
+  Lock,
 } from 'lucide-react';
 
 import {
@@ -65,8 +69,23 @@ function VaultPage() {
   const [importFile, setImportFile] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [prefillData, setPrefillData] = useState(null);
-  const [exportMenuOpen, setExportMenuOpen] = useState(false);
-  const [trashOpen, setTrashOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const trashOpen = searchParams.get('tab') === 'trash';
+  const setTrashOpen = (open) => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (open) {
+          next.set('tab', 'trash');
+        } else {
+          next.delete('tab');
+        }
+        return next;
+      },
+      { replace: true }
+    );
+  };
+  const [trashSearch, setTrashSearch] = useState('');
   const [confirmPurge, setConfirmPurge] = useState({ open: false, item: null });
   const [policyOpen, setPolicyOpen] = useState(false);
   const [auditExportOpen, setAuditExportOpen] = useState(false);
@@ -107,6 +126,20 @@ function VaultPage() {
     trashLoading,
     error,
   } = useSelector((state) => state.vault);
+
+  const trashItems = trashByVault[selectedVault?.id] || [];
+
+  const filteredTrash = useMemo(() => {
+    if (!trashSearch.trim()) return trashItems;
+    const q = trashSearch.toLowerCase();
+    return trashItems.filter((item) => {
+      const nameMatch = item.name?.toLowerCase().includes(q);
+      const loginMatch = item.login?.toLowerCase().includes(q);
+      const folderName = item.folder?.name || folders.find((f) => f.id === item.folderId)?.name;
+      const folderMatch = folderName?.toLowerCase().includes(q);
+      return nameMatch || loginMatch || folderMatch;
+    });
+  }, [trashItems, trashSearch, folders]);
 
   const selectedFolder = folders.find((item) => item.id === selectedFolderId);
 
@@ -644,61 +677,103 @@ function VaultPage() {
     <AppLayout>
       <div className="bg-white rounded-2xl border border-slate-200 dark:bg-slate-800 dark:border-slate-700 shadow-sm min-w-0">
         <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5 border-b border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800 rounded-t-2xl">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-                Company Vault
-              </p>
-
-              <h1
-                className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-slate-900 mt-1 dark:text-slate-100 truncate max-w-2xl"
-                title={selectedFolder?.name || selectedVault?.name || 'Company Vault'}
-              >
-                {selectedFolder?.name || selectedVault?.name || 'Company Vault'}
-              </h1>
-
-              <FolderMembersSummary onClick={() => setUsersOpen(true)} />
-            </div>
-
-            <div className="relative flex items-center flex-wrap gap-2 sm:gap-2.5 shrink-0" ref={menuRef}>
-              {selectedFolder && canShareFolder && (
-                <button
-                  onClick={() => setShareOpen(true)}
-                  className="h-9 sm:h-10 inline-flex items-center justify-center px-3.5 sm:px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-semibold dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 transition shadow-sm"
-                >
-                  Share Folder
-                </button>
-              )}
-
-              {selectedFolder && canAddPassword && (
-                <button
-                  onClick={() => {
-                    setPrefillData(null);
-                    dispatch(openAddPasswordModal());
-                  }}
-                  className="h-9 sm:h-10 inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3.5 sm:px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold transition shadow-sm"
-                >
-                  <Plus size={16} className="shrink-0" />
-                  <span>Add Item</span>
-                </button>
-              )}
-
-              <button
-                onClick={() => setTrashOpen((prev) => !prev)}
-                className={`h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl border text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-1.5 relative transition shadow-sm ${
-                  trashOpen
-                    ? 'bg-red-50 border-red-300 text-red-600 dark:bg-red-900/20 dark:border-red-700 dark:text-red-400'
-                    : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200'
-                }`}
-              >
-                <Trash2 size={16} className="shrink-0" />
-                <span>{trashOpen ? 'Back' : 'Trash'}</span>
-                {!trashOpen && trashByVault[selectedVault?.id]?.length > 0 && (
-                  <span className="ml-0.5 h-5 min-w-5 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold inline-flex items-center justify-center">
-                    {trashByVault[selectedVault.id].length}
+          {trashOpen ? (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-rose-600 dark:text-rose-400">
+                    Company Vault
                   </span>
+                  <span className="text-xs text-slate-400">•</span>
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 truncate">
+                    {selectedVault?.name || 'Vault'}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2.5 mt-1">
+                  <div className="w-8 h-8 rounded-xl bg-rose-100 dark:bg-rose-950/60 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0">
+                    <Trash2 size={18} />
+                  </div>
+                  <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                    Trash
+                  </h1>
+                  {trashItems.length > 0 && (
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">
+                      {trashItems.length} {trashItems.length === 1 ? 'deleted item' : 'deleted items'}
+                    </span>
+                  )}
+                </div>
+
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+                  Deleted passwords in this vault can be restored to their original folders or permanently removed.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setTrashOpen(false)}
+                  className="h-9 sm:h-10 inline-flex items-center justify-center gap-2 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-700 dark:hover:bg-slate-600 text-xs sm:text-sm font-semibold transition shadow-sm"
+                >
+                  <ArrowLeft size={16} />
+                  <span>Back to Vault</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                  Company Vault
+                </p>
+
+                <h1
+                  className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-slate-900 mt-1 dark:text-slate-100 truncate max-w-2xl"
+                  title={selectedFolder?.name || selectedVault?.name || 'Company Vault'}
+                >
+                  {selectedFolder?.name || selectedVault?.name || 'Company Vault'}
+                </h1>
+
+                <FolderMembersSummary onClick={() => setUsersOpen(true)} />
+              </div>
+
+              <div className="relative flex items-center flex-wrap gap-2 sm:gap-2.5 shrink-0" ref={menuRef}>
+                {selectedFolder && canShareFolder && (
+                  <button
+                    onClick={() => setShareOpen(true)}
+                    className="h-9 sm:h-10 inline-flex items-center justify-center px-3.5 sm:px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-semibold dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 transition shadow-sm"
+                  >
+                    Share Folder
+                  </button>
                 )}
-              </button>
+
+                {selectedFolder && canAddPassword && (
+                  <button
+                    onClick={() => {
+                      setPrefillData(null);
+                      dispatch(openAddPasswordModal());
+                    }}
+                    className="h-9 sm:h-10 inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3.5 sm:px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold transition shadow-sm"
+                  >
+                    <Plus size={16} className="shrink-0" />
+                    <span>Add Item</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setTrashOpen(true)}
+                  className="h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-1.5 relative transition shadow-sm"
+                  title="View deleted passwords in Trash"
+                >
+                  <Trash2 size={16} className="text-slate-500 dark:text-slate-400 shrink-0" />
+                  <span>Trash</span>
+                  {trashItems.length > 0 && (
+                    <span className="ml-0.5 h-5 min-w-5 px-1.5 rounded-full bg-rose-500 text-white text-[10px] font-bold inline-flex items-center justify-center">
+                      {trashItems.length}
+                    </span>
+                  )}
+                </button>
 
               <div className="sm:relative">
                 <button
@@ -854,7 +929,8 @@ function VaultPage() {
               </div>
             </div>
           </div>
-        </div>
+        )}
+      </div>
 
         {(vaultsLoading || passwordsLoading) && (
           <div className="p-4 sm:p-8 text-slate-500 dark:text-slate-400">Loading vault...</div>
@@ -863,25 +939,35 @@ function VaultPage() {
         {error && <div className="p-4 sm:p-8 text-red-600 dark:text-red-400">{error}</div>}
 
         {!vaultsLoading && !passwordsLoading && !error && trashOpen && (
-          <div className="min-h-[500px] flex flex-col">
-            <div className="px-4 sm:px-8 py-4 sm:py-6 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                  <Trash2 size={20} className="text-rose-500" />
-                  Trash
-                </h2>
-                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                  Deleted passwords in this vault can be restored anytime or permanently removed.
-                </p>
+          <div className="min-h-[500px] flex flex-col p-4 sm:p-6 lg:p-8">
+            {/* Search within trash if items exist */}
+            {trashItems.length > 0 && (
+              <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="relative flex-1 max-w-md">
+                  <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    value={trashSearch}
+                    onChange={(e) => setTrashSearch(e.target.value)}
+                    placeholder="Search in trash by name, login, or folder..."
+                    className="w-full h-10 pl-9 pr-4 rounded-xl border border-slate-200 bg-slate-50/70 focus:bg-white text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition dark:bg-slate-750 dark:border-slate-700 dark:text-slate-100 dark:placeholder-slate-500"
+                  />
+                  {trashSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setTrashSearch('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+
+                <div className="text-xs text-slate-500 dark:text-slate-400">
+                  Showing {filteredTrash.length} of {trashItems.length} {trashItems.length === 1 ? 'item' : 'items'}
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setTrashOpen(false)}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-750 dark:text-slate-200 transition"
-              >
-                Back to Items
-              </button>
-            </div>
+            )}
 
             {trashLoading && (
               <div className="flex-1 flex items-center justify-center p-12 text-slate-500 dark:text-slate-400 text-sm">
@@ -889,71 +975,102 @@ function VaultPage() {
               </div>
             )}
 
-            {!trashLoading && (!trashByVault[selectedVault?.id] || trashByVault[selectedVault?.id]?.length === 0) && (
+            {!trashLoading && trashItems.length === 0 && (
               <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-slate-400 dark:text-slate-500">
-                <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-700/50 flex items-center justify-center text-slate-400 mb-3 shadow-sm">
-                  <Trash2 size={24} />
+                <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-750 flex items-center justify-center text-slate-400 mb-3 shadow-inner">
+                  <Trash2 size={28} />
                 </div>
                 <h3 className="text-base font-semibold text-slate-700 dark:text-slate-200 mb-1">
                   Trash is empty
                 </h3>
-                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-sm">
-                  No deleted passwords. Items you delete will appear here so you can easily recover them.
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-sm mb-4">
+                  No deleted passwords in this vault. When you delete passwords, they will appear here so you can recover them anytime.
                 </p>
+                <button
+                  type="button"
+                  onClick={() => setTrashOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200 text-xs font-semibold transition"
+                >
+                  Return to Passwords
+                </button>
               </div>
             )}
 
-            {!trashLoading && trashByVault[selectedVault?.id]?.length > 0 && (
-              <div className="p-4 sm:p-6 space-y-2.5 flex-1 overflow-y-auto">
-                {trashByVault[selectedVault?.id].map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white hover:bg-slate-50/60 dark:bg-slate-800 dark:hover:bg-slate-750 transition shadow-xs"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">
-                        {item.name}
-                      </p>
-                      <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
-                        {item.login && <span className="truncate">{item.login}</span>}
-                        {item.folder?.name && (
-                          <>
-                            <span>•</span>
-                            <span className="truncate">📁 {item.folder.name}</span>
-                          </>
-                        )}
-                        {item.deletedAt && (
-                          <>
-                            <span>•</span>
-                            <span className="text-[11px] text-slate-400">
-                              Deleted {new Date(item.deletedAt).toLocaleDateString()}
-                            </span>
-                          </>
-                        )}
+            {!trashLoading && trashItems.length > 0 && filteredTrash.length === 0 && (
+              <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-slate-400">
+                <p className="text-sm">No items match "{trashSearch}"</p>
+                <button
+                  type="button"
+                  onClick={() => setTrashSearch('')}
+                  className="mt-2 text-xs text-rose-600 dark:text-rose-400 hover:underline"
+                >
+                  Clear search
+                </button>
+              </div>
+            )}
+
+            {!trashLoading && filteredTrash.length > 0 && (
+              <div className="space-y-2.5 flex-1 overflow-y-auto">
+                {filteredTrash.map((item) => {
+                  const folderName = item.folder?.name || folders.find((f) => f.id === item.folderId)?.name;
+                  return (
+                    <div
+                      key={item.id}
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white hover:bg-slate-50/70 dark:bg-slate-800 dark:hover:bg-slate-750/70 transition shadow-xs"
+                    >
+                      <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                        <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-700/60 flex items-center justify-center text-slate-500 dark:text-slate-400 shrink-0">
+                          <Lock size={18} />
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">
+                            {item.name}
+                          </p>
+                          <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
+                            {item.login && (
+                              <span className="truncate max-w-[200px]" title={item.login}>
+                                {item.login}
+                              </span>
+                            )}
+                            {folderName && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-slate-650">
+                                <Folder size={11} className="text-slate-400 shrink-0" />
+                                <span className="truncate max-w-[150px]">{folderName}</span>
+                              </span>
+                            )}
+                            {item.deletedAt && (
+                              <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                                Deleted {new Date(item.deletedAt).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                        <button
+                          type="button"
+                          onClick={() => handleRestoreTrashItem(item)}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/50 transition border border-emerald-200/70 dark:border-emerald-800"
+                          title="Restore password to its original folder"
+                        >
+                          <RotateCcw size={13} />
+                          Restore
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handlePurgeTrashItem(item)}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-900/50 transition border border-rose-200/70 dark:border-rose-800"
+                          title="Permanently erase from database"
+                        >
+                          <Trash2 size={13} />
+                          Delete permanently
+                        </button>
                       </div>
                     </div>
-                    <div className="flex items-center flex-wrap gap-2 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => handleRestoreTrashItem(item)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-300 dark:hover:bg-emerald-900/50 transition border border-emerald-200 dark:border-emerald-800"
-                        title="Restore password to its folder"
-                      >
-                        <RotateCcw size={14} />
-                        Restore
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handlePurgeTrashItem(item)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-900/30 dark:text-rose-300 dark:hover:bg-rose-900/50 transition border border-rose-200 dark:border-rose-800"
-                        title="Permanently erase from database"
-                      >
-                        <Trash2 size={14} />
-                        Delete permanently
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

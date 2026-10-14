@@ -4,7 +4,7 @@ import {
   Shield, Users, Activity, Folder, FolderOpen,
   LogOut, Plus, ChevronDown, LockKeyhole, Share2, User, Sparkles, Building2,
   Smartphone, Clock, HeartPulse, MonitorCheck, Clipboard,
-  PanelLeftClose, PanelLeftOpen, X,
+  PanelLeftClose, PanelLeftOpen, X, Trash2,
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { logoutUser } from '../../features/auth/authSlice';
@@ -13,7 +13,7 @@ import { useLayout } from '../../context/LayoutContext';
 import api from '../../services/api';
 import {
   fetchVaults, fetchFoldersByVault, selectFolder, clearSelectedFolder,
-  openAddFolderModal, deleteFolder, clearVaultError,
+  openAddFolderModal, deleteFolder, clearVaultError, fetchVaultTrash,
 } from '../../features/vault/vaultSlice';
 import ShareFolderModal from '../folder/ShareFolderModal';
 import RenameFolderModal from '../folder/RenameFolderModal';
@@ -32,7 +32,7 @@ function Sidebar() {
   const { sidebarCollapsed, toggleSidebarCollapse, mobileSidebarOpen, closeMobileSidebar } = useLayout();
 
   const { user, isMasterVerified } = useSelector((state) => state.auth);
-  const { vaults, vaultsLoading, folders, foldersLoading, selectedFolderId, error } =
+  const { vaults, vaultsLoading, folders, foldersLoading, selectedFolderId, trashByVault, error } =
     useSelector((state) => state.vault);
 
   const activeVault = vaults.find((v) => v.slug === currentVaultSlug);
@@ -48,7 +48,10 @@ function Sidebar() {
   useEffect(() => { dispatch(fetchVaults()); }, [dispatch]);
 
   useEffect(() => {
-    if (currentVaultId) dispatch(fetchFoldersByVault(currentVaultId));
+    if (currentVaultId) {
+      dispatch(fetchFoldersByVault(currentVaultId));
+      dispatch(fetchVaultTrash(currentVaultId));
+    }
   }, [dispatch, currentVaultId]);
 
   useEffect(() => {
@@ -292,7 +295,8 @@ function Sidebar() {
                           <p className="text-xs text-[var(--text-muted)] py-1">Loading folders...</p>
                         )}
                         {!foldersLoading && folders.map((folder) => {
-                          const selected = selectedFolderId === folder.id;
+                          const isTrashActive = vaultActive && location.search.includes('tab=trash');
+                          const selected = !isTrashActive && selectedFolderId === folder.id;
                           const folderPermission = folder?.permissions?.find(
                             (item) => item.userId === user?.id || item.user?.id === user?.id
                           );
@@ -326,6 +330,7 @@ function Sidebar() {
                                 type="button"
                                 onClick={() => {
                                   dispatch(selectFolder(folder.id));
+                                  navigate(`/vaults/${vault.slug}`);
                                   onNavigate();
                                 }}
                                 className="flex items-center gap-2.5 pl-2.5 pr-1.5 py-2 text-left text-sm flex-1 min-w-0 focus:outline-none"
@@ -355,6 +360,42 @@ function Sidebar() {
                         {!foldersLoading && !folders.length && (
                           <p className="text-xs text-[var(--text-muted)] py-2 px-2">No folders</p>
                         )}
+
+                        {/* Dedicated Vault Trash Navigation */}
+                        {(() => {
+                          const isTrashActive = vaultActive && location.search.includes('tab=trash');
+                          const trashCount = trashByVault[vault.id]?.length || 0;
+                          return (
+                            <div className="pt-2 mt-1.5 border-t border-[var(--border-secondary)]">
+                              <Link
+                                to={`/vaults/${vault.slug}?tab=trash`}
+                                onClick={() => {
+                                  dispatch(clearSelectedFolder());
+                                  onNavigate();
+                                }}
+                                className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs transition-all duration-150 ${
+                                  isTrashActive
+                                    ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 font-bold border border-rose-200/60 dark:border-rose-900/40'
+                                    : 'text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-rose-600 dark:hover:text-rose-400 font-medium'
+                                }`}
+                                title="View deleted passwords in Trash"
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <Trash2
+                                    size={15}
+                                    className={isTrashActive ? 'text-rose-600 dark:text-rose-400 shrink-0' : 'text-[var(--text-muted)] shrink-0'}
+                                  />
+                                  <span className="truncate">Trash</span>
+                                </div>
+                                {trashCount > 0 && (
+                                  <span className="h-4 min-w-4 px-1.5 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                                    {trashCount}
+                                  </span>
+                                )}
+                              </Link>
+                            </div>
+                          );
+                        })()}
                       </div>
                     )}
                   </div>
