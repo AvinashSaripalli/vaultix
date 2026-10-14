@@ -3,12 +3,12 @@ const status = document.getElementById('status');
 const testBtn = document.getElementById('testBtn');
 
 chrome.storage.sync.get('baseUrl', ({ baseUrl }) => {
-  input.value = (baseUrl && baseUrl !== 'http://localhost:4000') ? baseUrl : 'https://knbitrix.duckdns.org';
+  input.value = (baseUrl && baseUrl !== 'http://localhost:4000') ? baseUrl : 'https://vaultix.knadvisors.pro';
 });
 
 document.getElementById('form').addEventListener('submit', (e) => {
   e.preventDefault();
-  const url = (input.value.trim() || 'https://knbitrix.duckdns.org').replace(/\/+$/, '');
+  const url = (input.value.trim() || 'https://vaultix.knadvisors.pro').replace(/\/+$/, '');
   chrome.storage.sync.set({ baseUrl: url }, () => {
     status.textContent = 'Saved';
     setTimeout(() => (status.textContent = ''), 1500);

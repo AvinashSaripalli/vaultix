@@ -8,7 +8,7 @@ import {
 } from './lib/crypto.js';
 import { apiGet, apiPost, apiPut, apiRefresh } from './lib/api.js';
 
-const DEFAULT_URL = 'https://knbitrix.duckdns.org';
+const DEFAULT_URL = 'https://vaultix.knadvisors.pro';
 const DEFAULT_LOCK_MS = 15 * 60 * 1000;
 const DEFAULT_BROWSER_FOLDER = 'Saved from Browser';
 const PENDING_TTL_MS = 3 * 60 * 1000;

@@ -10,7 +10,7 @@ import {
 } from '../lib/crypto.js';
 import { apiLogin, apiGet, apiPost, apiRefresh } from '../lib/api.js';
 
-const DEFAULT_URL = 'https://knbitrix.duckdns.org';
+const DEFAULT_URL = 'https://vaultix.knadvisors.pro';
 const DEFAULT_LOCK_MS = 15 * 60 * 1000;
 
 const $ = (id) => document.getElementById(id);
