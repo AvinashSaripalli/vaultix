@@ -8,6 +8,7 @@ const config = {
   vaultPermission: 'VPERM',
   passwordEntry: 'PWD',
   activityLog: 'ACT',
+  activity: 'ACT',
   invitation: 'INV',
   passwordShare: 'PSHARE',
   loginActivity: 'LOGIN',
@@ -18,6 +19,9 @@ const config = {
   departmentPermission: 'DACCESS',
   keyPair: 'KPAIR',
   webauthn: 'WEBAUTH',
+  req: 'REQ',
+  approvalRequest: 'REQ',
+  adminApprovalRequest: 'REQ',
 };
 
 function generateId(model) {

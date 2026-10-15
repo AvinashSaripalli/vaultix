@@ -66,12 +66,16 @@ function AddUserPage() {
     try {
       setDeleting(true);
 
-      await api.delete(`/users/${deleteUser.id}`, {
+      const res = await api.delete(`/users/${deleteUser.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      setUsers((prev) => prev.filter((u) => u.id !== deleteUser.id));
-      showToast('User deleted');
+      if (res.data?.approvalRequired) {
+        showToast(res.data.message || 'Dual-Admin approval request created', 'info');
+      } else {
+        setUsers((prev) => prev.filter((u) => u.id !== deleteUser.id));
+        showToast('User deleted');
+      }
       setDeleteUser(null);
     } catch (err) {
       showToast(err.response?.data?.message || 'Delete failed', 'error');
