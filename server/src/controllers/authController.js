@@ -12,8 +12,25 @@ const {
   generateRecoveryKey,
 } = require('../utils/recoveryKey');
 const { verifyTOTP, verifyBackupCode, hashBackupCode } = require('../utils/totp');
+const { getEffectiveOrganizationPolicy } = require('../utils/organizationPolicy');
 
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_\-+=<>?/{}[\]|~`])/;
+
+const validatePasswordComplexity = (password, policy, fieldName = 'Password') => {
+  const minLength = policy?.minMasterPasswordLength || 8;
+  const requireSpecial = policy?.requireMasterPasswordSpecial !== false;
+
+  if (!password || password.length < minLength) {
+    return `${fieldName} must be at least ${minLength} characters`;
+  }
+  if (requireSpecial && !PASSWORD_REGEX.test(password)) {
+    return `${fieldName} must include uppercase, lowercase, number, and special character`;
+  }
+  if (!requireSpecial && !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+    return `${fieldName} must include uppercase, lowercase, and number`;
+  }
+  return null;
+};
 
 // Derives a zero-knowledge authentication key (AuthKey) matching the client algorithm
 const deriveServerAuthKey = (password, salt) => {
@@ -330,12 +347,10 @@ const register = async (req, res) => {
       return res.status(400).json({ message: emailValidationError });
     }
 
-    if (password.length < 8) {
-      return res.status(400).json({ message: 'Password must be at least 8 characters' });
-    }
-
-    if (!PASSWORD_REGEX.test(password)) {
-      return res.status(400).json({ message: 'Password must include uppercase, lowercase, number, and special character' });
+    const policy = await getEffectiveOrganizationPolicy();
+    const pwError = validatePasswordComplexity(password, policy);
+    if (pwError) {
+      return res.status(400).json({ message: pwError });
     }
 
     let role = 'USER';
@@ -664,14 +679,12 @@ const setMasterPassword = async (req, res) => {
       return res.status(400).json({ message: 'Master password or auth key is required' });
     }
 
-    if (masterPassword && masterPassword.length < 8) {
-      return res.status(400).json({ message: 'Master password must be at least 8 characters' });
-    }
-
-    if (masterPassword && !PASSWORD_REGEX.test(masterPassword)) {
-      return res.status(400).json({
-        message: 'Master password must include uppercase, lowercase, number, and special character',
-      });
+    if (masterPassword) {
+      const policy = await getEffectiveOrganizationPolicy();
+      const pwError = validatePasswordComplexity(masterPassword, policy, 'Master password');
+      if (pwError) {
+        return res.status(400).json({ message: pwError });
+      }
     }
 
     if (hint && hint.length > 100) {
@@ -799,14 +812,10 @@ const changePassword = async (req, res) => {
       return res.status(400).json({ message: 'Current password is incorrect' });
     }
 
-    if (newPassword.length < 8) {
-      return res.status(400).json({ message: 'New password must be at least 8 characters' });
-    }
-
-    if (!PASSWORD_REGEX.test(newPassword)) {
-      return res.status(400).json({
-        message: 'New password must include uppercase, lowercase, number, and special character',
-      });
+    const policy = await getEffectiveOrganizationPolicy();
+    const pwError = validatePasswordComplexity(newPassword, policy, 'New password');
+    if (pwError) {
+      return res.status(400).json({ message: pwError });
     }
 
     const passwordHash = await bcrypt.hash(newPassword, 12);
@@ -907,14 +916,10 @@ const resetPassword = async (req, res) => {
       return res.status(400).json({ message: 'Token and new password are required' });
     }
 
-    if (newPassword.length < 8) {
-      return res.status(400).json({ message: 'Password must be at least 8 characters' });
-    }
-
-    if (!PASSWORD_REGEX.test(newPassword)) {
-      return res.status(400).json({
-        message: 'Password must include uppercase, lowercase, number, and special character',
-      });
+    const policy = await getEffectiveOrganizationPolicy();
+    const pwError = validatePasswordComplexity(newPassword, policy, 'Password');
+    if (pwError) {
+      return res.status(400).json({ message: pwError });
     }
 
     let decoded;
@@ -1282,14 +1287,10 @@ const resetMasterPasswordWithRecoveryKey = async (req, res) => {
       return res.status(400).json({ message: emailValidationError });
     }
 
-    if (newMasterPassword.length < 8) {
-      return res.status(400).json({ message: 'Master password must be at least 8 characters' });
-    }
-
-    if (!PASSWORD_REGEX.test(newMasterPassword)) {
-      return res.status(400).json({
-        message: 'Master password must include uppercase, lowercase, number, and special character',
-      });
+    const policy = await getEffectiveOrganizationPolicy();
+    const pwError = validatePasswordComplexity(newMasterPassword, policy, 'Master password');
+    if (pwError) {
+      return res.status(400).json({ message: pwError });
     }
 
     if (hint && hint.length > 100) {
@@ -1426,14 +1427,10 @@ const resetMasterPassword = async (req, res) => {
       return res.status(400).json({ message: 'Account password is incorrect' });
     }
 
-    if (newMasterPassword.length < 8) {
-      return res.status(400).json({ message: 'Master password must be at least 8 characters' });
-    }
-
-    if (!PASSWORD_REGEX.test(newMasterPassword)) {
-      return res.status(400).json({
-        message: 'Master password must include uppercase, lowercase, number, and special character',
-      });
+    const policy = await getEffectiveOrganizationPolicy();
+    const pwError = validatePasswordComplexity(newMasterPassword, policy, 'Master password');
+    if (pwError) {
+      return res.status(400).json({ message: pwError });
     }
 
     if (hint && hint.length > 100) {

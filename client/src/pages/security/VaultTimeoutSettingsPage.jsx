@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Clock, Save, CheckCircle2 } from 'lucide-react';
+import { Clock, Save, CheckCircle2, Building2 } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import api from '../../services/api';
 import AppLayout from '../../components/layout/AppLayout';
@@ -21,6 +21,7 @@ function VaultTimeoutSettingsPage() {
 
   const [currentTimeout, setCurrentTimeout] = useState(15);
   const [selectedTimeout, setSelectedTimeout] = useState(15);
+  const [maxAllowedMinutes, setMaxAllowedMinutes] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -34,6 +35,7 @@ function VaultTimeoutSettingsPage() {
         if (cancelled) return;
         setCurrentTimeout(res.data.vaultTimeoutMinutes);
         setSelectedTimeout(res.data.vaultTimeoutMinutes);
+        setMaxAllowedMinutes(res.data.maxAllowedMinutes ?? null);
       } catch {
         if (cancelled) return;
         // Fall back to the user object
@@ -105,25 +107,42 @@ function VaultTimeoutSettingsPage() {
                 <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                   Vault locks after
                 </p>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
                   Your vault will automatically re-lock after this period of inactivity. You'll need to enter your master password again to unlock it.
                 </p>
 
+                {maxAllowedMinutes && (
+                  <div className="mb-5 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-3.5 text-xs sm:text-sm text-amber-800 dark:text-amber-300 flex items-center gap-2.5">
+                    <Building2 size={16} className="shrink-0 text-amber-600 dark:text-amber-400" />
+                    <span>
+                      <strong>Organization Policy Enforced:</strong> Your organization limits idle vault unlock to a maximum of{' '}
+                      <strong>{maxAllowedMinutes === 60 ? '1 hour' : maxAllowedMinutes > 60 ? `${maxAllowedMinutes / 60} hours` : `${maxAllowedMinutes} minutes`}</strong>.
+                      Higher durations are locked.
+                    </span>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                  {TIMEOUT_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => setSelectedTimeout(opt.value)}
-                      className={`rounded-xl border px-4 py-3 text-sm font-medium transition-all ${
-                        selectedTimeout === opt.value
-                          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-200 dark:ring-indigo-800'
-                          : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
+                  {TIMEOUT_OPTIONS.map((opt) => {
+                    const isExceeding = maxAllowedMinutes && opt.value > maxAllowedMinutes;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        disabled={isExceeding}
+                        onClick={() => setSelectedTimeout(opt.value)}
+                        className={`rounded-xl border px-4 py-3 text-sm font-medium transition-all ${
+                          isExceeding
+                            ? 'opacity-40 cursor-not-allowed border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 text-slate-400 line-through'
+                            : selectedTimeout === opt.value
+                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-200 dark:ring-indigo-800'
+                            : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 

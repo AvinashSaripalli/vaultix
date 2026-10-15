@@ -23,6 +23,7 @@ const keyPairRoutes = require('./routes/keyPairRoutes');
 const twoFactorRoutes = require('./routes/twoFactorRoutes');
 const passwordHealthRoutes = require('./routes/passwordHealthRoutes');
 const sessionRoutes = require('./routes/sessionRoutes');
+const organizationPolicyRoutes = require('./routes/organizationPolicyRoutes');
 
 const app = express();
 
@@ -93,6 +94,7 @@ app.use('/api/v1/keypair', keyPairRoutes);
 app.use('/api/v1/2fa', twoFactorRoutes);
 app.use('/api/v1/password-health', passwordHealthRoutes);
 app.use('/api/v1/sessions', sessionRoutes);
+app.use('/api/v1/organization-policy', organizationPolicyRoutes);
 
 app.use('/api', (req, res) => {
   res.status(404).json({ message: 'API endpoint not found' });

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams, Link } from 'react-router-dom';
 
 import AppLayout from '../../components/layout/AppLayout';
 import PasswordListPanel from '../../components/vault/PasswordListPanel';
@@ -40,6 +40,7 @@ import {
   Search,
   Folder,
   Lock,
+  ShieldAlert,
 } from 'lucide-react';
 
 import {
@@ -936,7 +937,37 @@ function VaultPage() {
           <div className="p-4 sm:p-8 text-slate-500 dark:text-slate-400">Loading vault...</div>
         )}
 
-        {error && <div className="p-4 sm:p-8 text-red-600 dark:text-red-400">{error}</div>}
+        {error && (
+          <div className="p-4 sm:p-8">
+            {error.toLowerCase().includes('two-factor') || error.toLowerCase().includes('2fa') ? (
+              <div className="rounded-2xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-900/60 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+                    <ShieldAlert size={24} />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-amber-900 dark:text-amber-200">
+                      Two-Factor Authentication Required
+                    </h3>
+                    <p className="text-sm text-amber-700 dark:text-amber-300 mt-1 max-w-xl">
+                      {error}
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  to="/security/2fa"
+                  className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-sm transition shrink-0 shadow-sm"
+                >
+                  Enable 2FA Now
+                </Link>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4 text-red-600 dark:text-red-400">
+                {error}
+              </div>
+            )}
+          </div>
+        )}
 
         {!vaultsLoading && !passwordsLoading && !error && trashOpen && (
           <div className="min-h-[500px] flex flex-col p-4 sm:p-6 lg:p-8">

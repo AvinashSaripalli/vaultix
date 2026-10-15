@@ -315,6 +315,18 @@ model Notification {
   @@index([userId])
 }
 
+model OrganizationPolicy {
+  id                           String   @id @default("default")
+  requireTwoFactor             Boolean  @default(false)
+  maxVaultTimeoutMinutes       Int?
+  minMasterPasswordLength      Int      @default(8)
+  requireMasterPasswordSpecial Boolean  @default(true)
+  clipboardTimeoutSeconds      Int?
+  updatedById                  String?
+  updatedAt                    DateTime @updatedAt
+  createdAt                    DateTime @default(now())
+}
+
 enum Role {
   OWNER
   ADMIN
@@ -399,6 +411,7 @@ enum ActivityAction {
   ENABLE_2FA
   DISABLE_2FA
   VERIFY_EMAIL
+  UPDATE_ORGANIZATION_POLICY
 }
 
 enum LoginStatus {

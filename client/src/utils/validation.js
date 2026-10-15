@@ -28,11 +28,16 @@ export const validateEmail = (email) => {
   return '';
 };
 
-export const validatePassword = (password) => {
+export const validatePassword = (password, policy = null) => {
   if (!password) return 'Password is required';
-  if (password.length < 8) return 'Password must be at least 8 characters';
-  if (!PASSWORD_REGEX.test(password))
+  const minLength = policy?.minMasterPasswordLength || 8;
+  const requireSpecial = policy?.requireMasterPasswordSpecial !== false;
+
+  if (password.length < minLength) return `Password must be at least ${minLength} characters`;
+  if (requireSpecial && !PASSWORD_REGEX.test(password))
     return 'Password must include uppercase, lowercase, number, and special character';
+  if (!requireSpecial && !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password))
+    return 'Password must include uppercase, lowercase, and number';
   return '';
 };
 
@@ -42,8 +47,8 @@ export const validateFullName = (name) => {
   return '';
 };
 
-export const validateMasterPassword = (password) => {
-  return validatePassword(password);
+export const validateMasterPassword = (password, policy = null) => {
+  return validatePassword(password, policy);
 };
 
 export const validateConfirmPassword = (password, confirm) => {

@@ -4,7 +4,7 @@ import {
   Shield, Users, Activity, Folder, FolderOpen,
   LogOut, Plus, ChevronDown, LockKeyhole, Share2, User, Sparkles, Building2,
   Smartphone, Clock, HeartPulse, MonitorCheck, Clipboard,
-  PanelLeftClose, PanelLeftOpen, X, Trash2,
+  PanelLeftClose, PanelLeftOpen, X, Trash2, ShieldCheck,
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { logoutUser } from '../../features/auth/authSlice';
@@ -94,6 +94,7 @@ function Sidebar() {
     ? [
         { name: 'Team Management', path: '/team-management', icon: Users },
         { name: 'Departments', path: '/departments', icon: Building2 },
+        { name: 'Security Policies', path: '/admin/policies', icon: ShieldCheck },
       ]
     : [];
 

@@ -27,6 +27,7 @@ const authenticate = async (req, res, next) => {
         role: true,
         isActive: true,
         tokenVersion: true,
+        twoFactorEnabled: true,
       },
     });
 
@@ -46,6 +47,7 @@ const authenticate = async (req, res, next) => {
       ...decoded,
       email: user.email,
       role: user.role,
+      twoFactorEnabled: Boolean(user.twoFactorEnabled),
     };
     next();
   } catch (error) {
@@ -53,4 +55,22 @@ const authenticate = async (req, res, next) => {
   }
 };
 
-module.exports = { authenticate };
+const { getEffectiveOrganizationPolicy } = require('../utils/organizationPolicy');
+
+const require2faIfEnforced = async (req, res, next) => {
+  try {
+    const policy = await getEffectiveOrganizationPolicy();
+    if (policy?.requireTwoFactor && !req.user?.twoFactorEnabled) {
+      return res.status(403).json({
+        code: '2FA_ENFORCED',
+        message: 'Your organization enforces Two-Factor Authentication. Please enable 2FA in Security Settings to access company vaults.',
+      });
+    }
+    next();
+  } catch (err) {
+    console.error('2FA policy enforcement check error:', err);
+    next();
+  }
+};
+
+module.exports = { authenticate, require2faIfEnforced };

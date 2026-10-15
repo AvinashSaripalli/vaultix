@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
 
-const { authenticate } = require('../middlewares/authMiddleware');
+const { authenticate, require2faIfEnforced } = require('../middlewares/authMiddleware');
 const passwordController = require('../controllers/passwordController');
+
+router.use(authenticate, require2faIfEnforced);
 
 router.post('/', authenticate, passwordController.createPassword);
 

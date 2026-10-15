@@ -15,6 +15,7 @@ const {
   generateAuthenticationOpts,
   verifyAuthenticationOpts,
 } = require('../utils/webauthn');
+const { getEffectiveOrganizationPolicy } = require('../utils/organizationPolicy');
 
 // ─── TOTP ──────────────────────────────────────────────────────────────────
 
@@ -371,12 +372,23 @@ const removeWebAuthnCredential = async (req, res) => {
 
 const getVaultTimeout = async (req, res) => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.id },
-      select: { vaultTimeoutMinutes: true },
-    });
+    const [user, policy] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: req.user.id },
+        select: { vaultTimeoutMinutes: true },
+      }),
+      getEffectiveOrganizationPolicy(),
+    ]);
 
-    res.json({ vaultTimeoutMinutes: user.vaultTimeoutMinutes });
+    const userSetting = user?.vaultTimeoutMinutes || 15;
+    const maxAllowed = policy?.maxVaultTimeoutMinutes || null;
+    const effectiveTimeout = maxAllowed ? Math.min(userSetting, maxAllowed) : userSetting;
+
+    res.json({
+      vaultTimeoutMinutes: effectiveTimeout,
+      userConfiguredMinutes: userSetting,
+      maxAllowedMinutes: maxAllowed,
+    });
   } catch (error) {
     console.error('Get vault timeout error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -394,6 +406,13 @@ const updateVaultTimeout = async (req, res) => {
     const value = Number(vaultTimeoutMinutes);
     if (!Number.isFinite(value) || value < 1 || value > 480) {
       return res.status(400).json({ message: 'Timeout must be between 1 and 480 minutes' });
+    }
+
+    const policy = await getEffectiveOrganizationPolicy();
+    if (policy?.maxVaultTimeoutMinutes && value > policy.maxVaultTimeoutMinutes) {
+      return res.status(400).json({
+        message: `Organization policy limits vault timeout to a maximum of ${policy.maxVaultTimeoutMinutes} minutes.`,
+      });
     }
 
     await prisma.user.update({

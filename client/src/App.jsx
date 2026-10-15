@@ -29,6 +29,7 @@ import ProtectedRoute from './routes/ProtectedRoute';
 import MasterProtectedRoute from './routes/MasterProtectedRoute';
 import ActivityLogPage from './pages/activity/ActivityLogPage';
 import TeamManagementPage from './pages/team/TeamManagementPage';
+import OrganizationPoliciesPage from './pages/admin/OrganizationPoliciesPage';
 import DepartmentsPage from './pages/team/DepartmentsPage';
 import MyDepartmentsPage from './pages/team/MyDepartmentsPage';
 import EditUserPage from './pages/team/EditUserPage';
@@ -345,6 +346,15 @@ function App() {
         element={
           <MasterProtectedRoute>
             <DepartmentsPage />
+          </MasterProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/policies"
+        element={
+          <MasterProtectedRoute>
+            <OrganizationPoliciesPage />
           </MasterProtectedRoute>
         }
       />
