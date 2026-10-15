@@ -84,7 +84,7 @@ const getRecentNotifications = async (req, res) => {
 const getRecentActivity = async (req, res) => {
   try {
     const userId = req.user.id;
-    const isAdmin = req.user.role === 'ADMIN';
+    const isAdmin = ['OWNER', 'ADMIN'].includes(req.user.role);
     const { since } = req.query;
     const sinceDate = since ? new Date(since) : null;
 

@@ -5,6 +5,8 @@ import AppLayout from '../../components/layout/AppLayout';
 import api from '../../services/api';
 import PendingInvitationsModal from './PendingInvitationsModal';
 import ConfirmModal from '../../components/common/ConfirmModal';
+import RoleBadge from '../../components/common/RoleBadge';
+import { isAdmin, isOwner, ROLES } from '../../utils/roles';
 import { showToast } from '../../utils/toast';
 
 const USERS_PER_PAGE = 10;
@@ -23,7 +25,7 @@ function TeamManagementPage() {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    if (user?.role !== 'ADMIN') return;
+    if (!isAdmin(user)) return;
 
     const fetchUsers = async () => {
       try {
@@ -49,7 +51,7 @@ function TeamManagementPage() {
     setCurrentPage(1);
   }, [search]);
 
-  if (user?.role !== 'ADMIN') {
+  if (!isAdmin(user)) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -191,14 +193,29 @@ function TeamManagementPage() {
                       >
                         <td className="px-4 sm:px-5 py-3.5 sm:py-4">
                           <div className="flex items-center gap-3">
-                            <div className="flex h-9 sm:h-10 w-9 sm:w-10 items-center justify-center rounded-full bg-indigo-100 text-xs sm:text-sm font-bold text-indigo-700 shrink-0 dark:bg-indigo-900/40 dark:text-indigo-300">
+                            <div
+                              className={`flex h-9 sm:h-10 w-9 sm:w-10 items-center justify-center rounded-full text-xs sm:text-sm font-bold shrink-0 ${
+                                item.role === ROLES.OWNER
+                                  ? 'bg-amber-100 text-amber-800 border border-amber-300/80 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-700/60'
+                                  : item.role === ROLES.ADMIN
+                                  ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'
+                                  : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
+                              }`}
+                            >
                               {item.fullName?.charAt(0)?.toUpperCase() || 'U'}
                             </div>
 
                             <div className="min-w-0">
-                              <p className="font-semibold text-slate-900 truncate dark:text-slate-100 text-sm">
-                                {item.fullName}
-                              </p>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <p className="font-semibold text-slate-900 truncate dark:text-slate-100 text-sm">
+                                  {item.fullName}
+                                </p>
+                                {item.id === user?.id && (
+                                  <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600">
+                                    You
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-xs text-slate-400 truncate dark:text-slate-500">
                                 ID: {item.id}
                               </p>
@@ -211,15 +228,7 @@ function TeamManagementPage() {
                         </td>
 
                         <td className="px-4 sm:px-5 py-3.5 sm:py-4">
-                          <span
-                            className={`rounded-full px-2.5 sm:px-3 py-1 text-xs font-semibold ${
-                              item.role === 'ADMIN'
-                                ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'
-                                : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
-                            }`}
-                          >
-                            {item.role}
-                          </span>
+                          <RoleBadge role={item.role} />
                         </td>
 
                         <td className="px-4 sm:px-5 py-3.5 sm:py-4">
@@ -236,24 +245,55 @@ function TeamManagementPage() {
 
                         <td className="px-4 sm:px-5 py-3.5 sm:py-4">
                           <div className="flex justify-end gap-2">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                navigate(`/team-management/edit/${item.id}`)
-                              }
-                              className="rounded-xl border border-slate-300 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
-                            >
-                              Edit
-                            </button>
+                            {item.role === ROLES.OWNER && !isOwner(user) ? (
+                              <button
+                                type="button"
+                                disabled
+                                title="Only an Owner can edit an Owner account"
+                                className="rounded-xl border border-slate-200 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-slate-400 dark:border-slate-700 dark:text-slate-600 cursor-not-allowed opacity-60"
+                              >
+                                Protected
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  navigate(`/team-management/edit/${item.id}`)
+                                }
+                                className="rounded-xl border border-slate-300 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700 transition"
+                              >
+                                Edit
+                              </button>
+                            )}
 
-                            <button
-                              onClick={() =>
-                                handleDelete(item.id, item.fullName)
-                              }
-                              className="rounded-xl border border-red-200 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
-                            >
-                              Delete
-                            </button>
+                            {item.id === user?.id ? (
+                              <button
+                                type="button"
+                                disabled
+                                title="You cannot delete your own account"
+                                className="rounded-xl border border-slate-200 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-slate-400 dark:border-slate-700 dark:text-slate-600 cursor-not-allowed opacity-60"
+                              >
+                                Delete
+                              </button>
+                            ) : item.role === ROLES.OWNER && !isOwner(user) ? (
+                              <button
+                                type="button"
+                                disabled
+                                title="Only an Owner can delete an Owner account"
+                                className="rounded-xl border border-slate-200 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-slate-400 dark:border-slate-700 dark:text-slate-600 cursor-not-allowed opacity-60"
+                              >
+                                Delete
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() =>
+                                  handleDelete(item.id, item.fullName)
+                                }
+                                className="rounded-xl border border-red-200 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20 transition"
+                              >
+                                Delete
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

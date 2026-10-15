@@ -2,7 +2,7 @@ const prisma = require('../config/prisma');
 const generateId = require('../utils/generateId');
 
 const requireAdmin = (req, res) => {
-  if (req.user.role !== 'ADMIN') {
+  if (!['OWNER', 'ADMIN'].includes(req.user.role)) {
     res.status(403).json({ message: 'Access denied' });
     return true;
   }
@@ -64,7 +64,7 @@ const getUsers = async (req, res) => {
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 
-const VALID_ROLES = ['ADMIN', 'USER'];
+const VALID_ROLES = ['OWNER', 'ADMIN', 'USER'];
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_\-+=<>?/{}[\]|~`])/;
 
 const createUserByAdmin = async (req, res) => {
@@ -100,6 +100,11 @@ const createUserByAdmin = async (req, res) => {
 
     if (!VALID_ROLES.includes(role)) {
       return res.status(400).json({ message: `Invalid role. Must be one of: ${VALID_ROLES.join(', ')}` });
+    }
+
+    // Only an OWNER can create another OWNER
+    if (role === 'OWNER' && req.user.role !== 'OWNER') {
+      return res.status(403).json({ message: 'Only an Owner can designate another Owner' });
     }
 
     const existingUser = await prisma.user.findUnique({
@@ -156,6 +161,64 @@ const updateUser = async (req, res) => {
       return res.status(400).json({ message: 'fullName must be at least 2 characters' });
     }
 
+    const targetUser = await prisma.user.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, role: true, isActive: true },
+    });
+
+    if (!targetUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Security Guardrail 1: Only an OWNER can modify an OWNER
+    if (targetUser.role === 'OWNER' && req.user.role !== 'OWNER') {
+      return res.status(403).json({ message: 'Only an Owner can modify an Owner account' });
+    }
+
+    // Security Guardrail 2: Only an OWNER can grant the OWNER role
+    if (role === 'OWNER' && req.user.role !== 'OWNER') {
+      return res.status(403).json({ message: 'Only an Owner can grant Owner privileges' });
+    }
+
+    // Security Guardrail 3: Last Admin / Owner Protection
+    // Prevent demoting or deactivating the last active administrator
+    if (
+      ['OWNER', 'ADMIN'].includes(targetUser.role) &&
+      (role === 'USER' || isActive === false)
+    ) {
+      const remainingAdmins = await prisma.user.count({
+        where: {
+          role: { in: ['OWNER', 'ADMIN'] },
+          isActive: true,
+          id: { not: targetUser.id },
+        },
+      });
+
+      if (remainingAdmins === 0) {
+        return res.status(400).json({
+          message: 'Cannot demote or deactivate the last remaining administrator. Please promote another administrator first.',
+        });
+      }
+    }
+
+    // Security Guardrail 4: Last Owner Protection
+    // Prevent demoting the last active owner
+    if (targetUser.role === 'OWNER' && role && role !== 'OWNER') {
+      const remainingOwners = await prisma.user.count({
+        where: {
+          role: 'OWNER',
+          isActive: true,
+          id: { not: targetUser.id },
+        },
+      });
+
+      if (remainingOwners === 0) {
+        return res.status(400).json({
+          message: 'Cannot demote the last remaining Owner. Please designate another Owner first.',
+        });
+      }
+    }
+
     const updatedUser = await prisma.user.update({
       where: {
         id: req.params.id,
@@ -198,6 +261,54 @@ const deleteUser = async (req, res) => {
 
     if (userId === req.user.id) {
       return res.status(400).json({ message: 'You cannot delete your own account' });
+    }
+
+    const targetUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true },
+    });
+
+    if (!targetUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Security Guardrail 1: Only an OWNER can delete an OWNER account
+    if (targetUser.role === 'OWNER' && req.user.role !== 'OWNER') {
+      return res.status(403).json({ message: 'Only an Owner can delete an Owner account' });
+    }
+
+    // Security Guardrail 2: Last Admin Protection
+    if (['OWNER', 'ADMIN'].includes(targetUser.role)) {
+      const remainingAdmins = await prisma.user.count({
+        where: {
+          role: { in: ['OWNER', 'ADMIN'] },
+          isActive: true,
+          id: { not: targetUser.id },
+        },
+      });
+
+      if (remainingAdmins === 0) {
+        return res.status(400).json({
+          message: 'Cannot delete the last remaining administrator.',
+        });
+      }
+    }
+
+    // Security Guardrail 3: Last Owner Protection
+    if (targetUser.role === 'OWNER') {
+      const remainingOwners = await prisma.user.count({
+        where: {
+          role: 'OWNER',
+          isActive: true,
+          id: { not: targetUser.id },
+        },
+      });
+
+      if (remainingOwners === 0) {
+        return res.status(400).json({
+          message: 'Cannot delete the last remaining Owner. Please designate another Owner first.',
+        });
+      }
     }
 
     await prisma.$transaction(async (tx) => {

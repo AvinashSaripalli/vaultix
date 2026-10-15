@@ -40,7 +40,7 @@ function VaultSidebar() {
     (dm) => dm.user?.id === user?.id
   );
   const selectedFolderAccess = (() => {
-    if (user?.role === 'ADMIN') return 'ADMINISTRATOR';
+    if (['OWNER', 'ADMIN'].includes(user?.role)) return 'ADMINISTRATOR';
     const RANK = { READ_ONLY: 0, READ_WRITE: 1, FULL_ACCESS: 2, ADMINISTRATOR: 3 };
     const getRank = (lvl) => RANK[lvl] ?? -1;
     const direct = selectedFolderPermission?.accessLevel || null;
@@ -51,10 +51,10 @@ function VaultSidebar() {
     return getRank(direct) >= getRank(dept) ? direct : dept;
   })();
 
-  const canCreateFolder = user?.role === 'ADMIN';
+  const canCreateFolder = ['OWNER', 'ADMIN'].includes(user?.role);
 
   const canDeleteFolder =
-    user?.role === 'ADMIN' || selectedFolderAccess === 'ADMINISTRATOR';
+    ['OWNER', 'ADMIN'].includes(user?.role) || selectedFolderAccess === 'ADMINISTRATOR';
 
   const [confirmDelete, setConfirmDelete] = useState(false);
 

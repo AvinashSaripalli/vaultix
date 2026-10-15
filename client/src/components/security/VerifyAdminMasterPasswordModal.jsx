@@ -13,7 +13,7 @@ function VerifyAdminMasterPasswordModal({ open, onClose, onVerified }) {
   const { user } = useSelector((state) => state.auth);
   const companyPasswords = useSelector((state) => state.vault.passwords);
 
-  const isAdmin = user?.role === 'ADMIN';
+  const isAdmin = ['OWNER', 'ADMIN'].includes(user?.role);
 
   const [masterPassword, setMasterPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);

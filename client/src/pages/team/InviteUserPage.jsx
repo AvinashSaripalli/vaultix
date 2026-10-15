@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux';
 import { Navigate, useNavigate } from 'react-router-dom';
 import AppLayout from '../../components/layout/AppLayout';
 import api from '../../services/api';
+import { isAdmin, isOwner, ROLES, ROLE_DEFINITIONS } from '../../utils/roles';
 
 function InviteUserPage() {
   const { token, user } = useSelector((state) => state.auth);
@@ -14,7 +15,7 @@ function InviteUserPage() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
-  if (user?.role !== 'ADMIN') {
+  if (!isAdmin(user)) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -79,14 +80,26 @@ function InviteUserPage() {
               required
             />
 
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              className="w-full h-11 border border-slate-300 rounded-xl px-4 text-sm outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
-            >
-              <option value="USER">USER</option>
-              <option value="ADMIN">ADMIN</option>
-            </select>
+            <div>
+              <select
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                className="w-full h-11 border border-slate-300 rounded-xl px-4 text-sm outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
+              >
+                <option value="USER">Member</option>
+                <option value="ADMIN">Administrator</option>
+                {isOwner(user) && <option value="OWNER">Owner</option>}
+              </select>
+
+              <div className="mt-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700/80 dark:bg-slate-700/40 text-xs">
+                <p className="font-semibold text-slate-800 dark:text-slate-200">
+                  {ROLE_DEFINITIONS[role]?.tagline || role}
+                </p>
+                <p className="mt-1 text-slate-500 dark:text-slate-400 leading-relaxed">
+                  {ROLE_DEFINITIONS[role]?.description}
+                </p>
+              </div>
+            </div>
 
             <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
               <button

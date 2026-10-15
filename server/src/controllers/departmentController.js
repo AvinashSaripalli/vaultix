@@ -1,4 +1,4 @@
-﻿const prisma = require('../config/prisma');
+const prisma = require('../config/prisma');
 const generateId = require('../utils/generateId');
 const createNotification = require('../utils/createNotification');
 const { getVaultAccess, getFolderAccess } = require('../utils/permissions');
@@ -20,7 +20,7 @@ const logActivity = async (userId, action, targetType, targetId, metadata) => {
 };
 
 const requireAdmin = (req, res) => {
-  if (req.user.role !== 'ADMIN') {
+  if (!['OWNER', 'ADMIN'].includes(req.user.role)) {
     res.status(403).json({ message: 'Access denied' });
     return true;
   }
@@ -28,7 +28,7 @@ const requireAdmin = (req, res) => {
 };
 
 const requireDeptManager = async (req, res) => {
-  if (req.user.role === 'ADMIN') return { ok: true };
+  if (['OWNER', 'ADMIN'].includes(req.user.role)) return { ok: true };
 
   const membership = await prisma.departmentMember.findUnique({
     where: {

@@ -4,7 +4,7 @@ const { getVaultAccess } = require('../utils/permissions');
 
 const getAllActivityLogs = async (req, res) => {
   try {
-    const isAdmin = req.user.role === 'ADMIN';
+    const isAdmin = ['OWNER', 'ADMIN'].includes(req.user.role);
     const { departmentId } = req.query;
 
     let whereClause = isAdmin ? {} : { userId: req.user.id };
@@ -118,7 +118,7 @@ const exportVaultAudit = async (req, res) => {
 
     // Non-owners/admins: exclude other users' personal-vault noise and only
     // surface activity that pertains to this vault.
-    const filtered = req.user.role === 'ADMIN' || access === 'ADMINISTRATOR'
+    const filtered = ['OWNER', 'ADMIN'].includes(req.user.role) || access === 'ADMINISTRATOR'
       ? logs
       : logs.filter((log) => log.userId === req.user.id || log.metadata?.vaultId === vaultId);
 

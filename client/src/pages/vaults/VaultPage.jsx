@@ -112,7 +112,7 @@ function VaultPage() {
     (state) => state.auth
   );
 
-  const isAdminUser = user?.role === 'ADMIN';
+  const isAdminUser = ['OWNER', 'ADMIN'].includes(user?.role);
 
   const {
     selectedVault,
@@ -151,7 +151,7 @@ function VaultPage() {
   );
 
   const selectedFolderAccess = (() => {
-    if (user?.role === 'ADMIN') return 'ADMINISTRATOR';
+    if (isAdminUser) return 'ADMINISTRATOR';
     const RANK = { READ_ONLY: 0, READ_WRITE: 1, FULL_ACCESS: 2, ADMINISTRATOR: 3 };
     const getRank = (lvl) => RANK[lvl] ?? -1;
     const direct = selectedFolderPermission?.accessLevel || null;
@@ -313,16 +313,16 @@ function VaultPage() {
   }, [passwords, selectedFolder?.id]);
 
   const canAddPassword =
-    user?.role === 'ADMIN' ||
+    isAdminUser ||
     ['ADMINISTRATOR', 'READ_WRITE', 'FULL_ACCESS'].includes(selectedFolderAccess);
 
   const canShareFolder =
     !!selectedFolder &&
-    (user?.role === 'ADMIN' || selectedFolderAccess === 'ADMINISTRATOR');
+    (isAdminUser || selectedFolderAccess === 'ADMINISTRATOR');
 
   const canDeleteFolder =
     !!selectedFolder &&
-    (user?.role === 'ADMIN' || selectedFolderAccess === 'ADMINISTRATOR');
+    (isAdminUser || selectedFolderAccess === 'ADMINISTRATOR');
 
   const handleExport = (format) => {
     if (!selectedVault?.id) {

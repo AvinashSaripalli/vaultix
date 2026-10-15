@@ -321,7 +321,7 @@ function DepartmentsPage() {
   }, [authHeaders]);
 
   useEffect(() => {
-    if (user?.role !== 'ADMIN') return;
+    if (!['OWNER', 'ADMIN'].includes(user?.role)) return;
 
     fetchDepartments();
 
@@ -342,7 +342,7 @@ function DepartmentsPage() {
     fetchSupportData();
   }, [user, fetchDepartments, authHeaders]);
 
-  if (user?.role !== 'ADMIN') {
+  if (!['OWNER', 'ADMIN'].includes(user?.role)) {
     return <Navigate to="/dashboard" replace />;
   }
 

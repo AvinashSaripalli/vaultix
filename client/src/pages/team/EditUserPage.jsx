@@ -5,6 +5,8 @@ import AppLayout from '../../components/layout/AppLayout';
 import api from '../../services/api';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import ModalPortal from '../../components/common/ModalPortal';
+import RoleBadge from '../../components/common/RoleBadge';
+import { isAdmin, isOwner, ROLES, ROLE_DEFINITIONS } from '../../utils/roles';
 import { showToast } from '../../utils/toast';
 
 function EditUserPage() {
@@ -14,6 +16,7 @@ function EditUserPage() {
 
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState('');
+  const [targetUser, setTargetUser] = useState(null);
 
   const [form, setForm] = useState({
     fullName: '',
@@ -29,7 +32,7 @@ function EditUserPage() {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    if (user?.role !== 'ADMIN') return;
+    if (!isAdmin(user)) return;
 
     const loadData = async () => {
       try {
@@ -50,6 +53,7 @@ function EditUserPage() {
           return;
         }
 
+        setTargetUser(foundUser);
         setForm({
           fullName: foundUser.fullName || '',
           role: foundUser.role || 'USER',
@@ -64,9 +68,9 @@ function EditUserPage() {
     };
 
     loadData();
-  }, [id, token, user?.role]);
+  }, [id, token, user]);
 
-  if (user?.role !== 'ADMIN') {
+  if (!isAdmin(user)) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -206,15 +210,7 @@ function EditUserPage() {
                       </td>
 
                       <td className="px-5 py-4">
-                        <span
-                          className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
-                            u.role === 'ADMIN'
-                              ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'
-                              : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
-                          }`}
-                        >
-                          {u.role}
-                        </span>
+                        <RoleBadge role={u.role} />
                       </td>
 
                       <td className="px-5 py-4">
@@ -302,6 +298,15 @@ function EditUserPage() {
 
             {!pageLoading && !error && (
               <form onSubmit={handleSubmit} className="space-y-4">
+                {targetUser?.role === ROLES.OWNER && !isOwner(user) && (
+                  <div className="rounded-xl bg-amber-50 border border-amber-200/80 p-3.5 text-xs text-amber-800 dark:bg-amber-950/30 dark:border-amber-800/60 dark:text-amber-300">
+                    <p className="font-semibold">Protected Owner Account</p>
+                    <p className="mt-0.5">
+                      This user is an Organization Owner. Only an Owner can modify this account's role, name, or active status.
+                    </p>
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-sm text-slate-600 mb-2 dark:text-slate-300">
                     Full Name
@@ -310,7 +315,8 @@ function EditUserPage() {
                     name="fullName"
                     value={form.fullName}
                     onChange={handleChange}
-                    className="w-full h-12 border border-slate-300 rounded-xl px-4 outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
+                    disabled={targetUser?.role === ROLES.OWNER && !isOwner(user)}
+                    className="w-full h-12 border border-slate-300 rounded-xl px-4 outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 disabled:opacity-60 disabled:cursor-not-allowed"
                     placeholder="Enter full name"
                   />
                 </div>
@@ -323,11 +329,22 @@ function EditUserPage() {
                     name="role"
                     value={form.role}
                     onChange={handleChange}
-                    className="w-full h-12 border border-slate-300 rounded-xl px-4 outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
+                    disabled={targetUser?.role === ROLES.OWNER && !isOwner(user)}
+                    className="w-full h-12 border border-slate-300 rounded-xl px-4 outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    <option value="USER">USER</option>
-                    <option value="ADMIN">ADMIN</option>
+                    <option value="USER">Member</option>
+                    <option value="ADMIN">Administrator</option>
+                    {isOwner(user) && <option value="OWNER">Owner</option>}
                   </select>
+
+                  <div className="mt-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700/80 dark:bg-slate-700/40 text-xs">
+                    <p className="font-semibold text-slate-800 dark:text-slate-200">
+                      {ROLE_DEFINITIONS[form.role]?.tagline || form.role}
+                    </p>
+                    <p className="mt-1 text-slate-500 dark:text-slate-400 leading-relaxed">
+                      {ROLE_DEFINITIONS[form.role]?.description}
+                    </p>
+                  </div>
                 </div>
 
                 <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
@@ -336,7 +353,8 @@ function EditUserPage() {
                     name="isActive"
                     checked={form.isActive}
                     onChange={handleChange}
-                    className="w-4 h-4"
+                    disabled={targetUser?.role === ROLES.OWNER && !isOwner(user)}
+                    className="w-4 h-4 disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                   Active User
                 </label>
@@ -352,8 +370,8 @@ function EditUserPage() {
 
                   <button
                     type="submit"
-                    disabled={loading}
-                    className="px-6 py-2.5 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50"
+                    disabled={loading || (targetUser?.role === ROLES.OWNER && !isOwner(user))}
+                    className="px-6 py-2.5 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-xs"
                   >
                     {loading ? 'Updating...' : 'Update User'}
                   </button>

@@ -316,6 +316,7 @@ model Notification {
 }
 
 enum Role {
+  OWNER
   ADMIN
   USER
 }

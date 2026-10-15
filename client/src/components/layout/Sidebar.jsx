@@ -21,6 +21,7 @@ import FolderActionsMenu from '../folder/FolderActionsMenu';
 import ConfirmModal from '../common/ConfirmModal';
 import PasswordGeneratorModal from '../tools/PasswordGeneratorModal';
 import { showToast } from '../../utils/toast';
+import { isAdmin, getRoleLabel } from '../../utils/roles';
 import logo from '../../assets/Vaultix1.png';
 
 function Sidebar() {
@@ -75,7 +76,7 @@ function Sidebar() {
     { name: 'Personal Vault', path: '/my-vault', icon: LockKeyhole },
     { name: 'Shared With Me', path: '/shared-with-me', icon: Share2 },
   ];
-  const deptMenu = user?.role !== 'ADMIN'
+  const deptMenu = !isAdmin(user)
     ? [{ name: 'My Departments', path: '/my-departments', icon: Building2 }]
     : [];
   const securityMenu = [
@@ -89,7 +90,7 @@ function Sidebar() {
     { name: 'Clipboard', path: '/security/clipboard', icon: Clipboard },
   ];
   const toolsMenu = [{ name: 'Password Generator', icon: Sparkles }];
-  const adminMenu = user?.role === 'ADMIN'
+  const adminMenu = isAdmin(user)
     ? [
         { name: 'Team Management', path: '/team-management', icon: Users },
         { name: 'Departments', path: '/departments', icon: Building2 },
@@ -196,7 +197,7 @@ function Sidebar() {
                 Vault<span className="text-blue-600 dark:text-blue-400">ix</span>
               </p>
               <p className="text-[11px] text-[var(--text-muted)] truncate">
-                {user?.role === 'ADMIN' ? 'Administrator' : 'User'}
+                {getRoleLabel(user?.role)}
               </p>
             </div>
           )}
@@ -275,7 +276,7 @@ function Sidebar() {
                       </Link>
 
                       <div className="flex items-center gap-1 ml-1 shrink-0">
-                        {vaultActive && user?.role === 'ADMIN' && (
+                        {vaultActive && isAdmin(user) && (
                           <button
                             onClick={() => dispatch(openAddFolderModal())}
                             className="w-7 h-7 rounded-lg bg-[var(--bg-card)] border border-blue-200 dark:border-blue-700 flex items-center justify-center text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
@@ -312,10 +313,10 @@ function Sidebar() {
                             if (!deptAccess) return directAccess;
                             return getRank(directAccess) >= getRank(deptAccess) ? directAccess : deptAccess;
                           })();
-                          const folderAccess = user?.role === 'ADMIN'
+                          const folderAccess = isAdmin(user)
                             ? 'ADMINISTRATOR'
                             : bestAccess;
-                          const canManageFolder = user?.role === 'ADMIN' || folderAccess === 'ADMINISTRATOR';
+                          const canManageFolder = isAdmin(user) || folderAccess === 'ADMINISTRATOR';
 
                           return (
                             <div

@@ -19,7 +19,7 @@ const makeSlug = (name) =>
 
 const createVault = async (req, res) => {
   try {
-    if (req.user.role !== 'ADMIN') {
+    if (!['OWNER', 'ADMIN'].includes(req.user.role)) {
       return res.status(403).json({ message: 'Only admin can create vaults' });
     }
 
@@ -89,7 +89,7 @@ const getVaults = async (req, res) => {
   try {
     let vaults;
 
-    if (req.user.role === 'ADMIN') {
+    if (['OWNER', 'ADMIN'].includes(req.user.role)) {
       vaults = await prisma.vault.findMany({
   where: {
     type: {
@@ -226,7 +226,7 @@ const getVaultBySlug = async (req, res) => {
   try {
     let vault;
 
-    if (req.user.role === 'ADMIN') {
+    if (['OWNER', 'ADMIN'].includes(req.user.role)) {
       vault = await prisma.vault.findUnique({
         where: { slug: req.params.slug },
         include: {
@@ -586,7 +586,7 @@ const setVaultPolicy = async (req, res) => {
     if (vault.type === 'PERSONAL') {
       return res.status(400).json({ message: 'Policies cannot be set on personal vaults' });
     }
-    if (req.user.role !== 'ADMIN') {
+    if (!['OWNER', 'ADMIN'].includes(req.user.role)) {
       const access = await getVaultAccess(id, req.user.id);
       if (access !== 'ADMINISTRATOR') {
         return res.status(403).json({ message: 'Access denied' });

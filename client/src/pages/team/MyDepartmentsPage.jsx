@@ -148,7 +148,7 @@ function MyDepartmentsPage() {
     fetchDepartments();
   }, [fetchDepartments]);
 
-  if (user?.role === 'ADMIN') {
+  if (['OWNER', 'ADMIN'].includes(user?.role)) {
     return <Navigate to="/departments" replace />;
   }
 

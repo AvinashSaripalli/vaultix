@@ -7,11 +7,19 @@ const { renderEmail } = require('../utils/emailTemplate');
 
 const sendInvitation = async (req, res) => {
   try {
-    if (req.user.role !== 'ADMIN') {
+    if (!['OWNER', 'ADMIN'].includes(req.user.role)) {
       return res.status(403).json({ message: 'Access denied' });
     }
 
     const { email, role = 'USER' } = req.body;
+
+    if (!['OWNER', 'ADMIN', 'USER'].includes(role)) {
+      return res.status(400).json({ message: 'Invalid role specified' });
+    }
+
+    if (role === 'OWNER' && req.user.role !== 'OWNER') {
+      return res.status(403).json({ message: 'Only an Owner can invite an Owner' });
+    }
 
     if (!email) {
       return res.status(400).json({ message: 'Email is required' });
@@ -96,7 +104,7 @@ const getInvitationByToken = async (req, res) => {
 
 const getPendingInvitations = async (req, res) => {
   try {
-    if (req.user.role !== 'ADMIN') {
+    if (!['OWNER', 'ADMIN'].includes(req.user.role)) {
       return res.status(403).json({ message: 'Access denied' });
     }
 

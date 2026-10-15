@@ -5,6 +5,8 @@ import AppLayout from '../../components/layout/AppLayout';
 import api from '../../services/api';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import ModalPortal from '../../components/common/ModalPortal';
+import RoleBadge from '../../components/common/RoleBadge';
+import { isAdmin, isOwner, ROLES, ROLE_DEFINITIONS } from '../../utils/roles';
 import { showToast } from '../../utils/toast';
 
 function AddUserPage() {
@@ -28,7 +30,7 @@ function AddUserPage() {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    if (user?.role !== 'ADMIN') return;
+    if (!isAdmin(user)) return;
 
     const loadUsers = async () => {
       try {
@@ -48,9 +50,9 @@ function AddUserPage() {
     };
 
     loadUsers();
-  }, [token, user?.role]);
+  }, [token, user]);
 
-  if (user?.role !== 'ADMIN') {
+  if (!isAdmin(user)) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -176,15 +178,7 @@ function AddUserPage() {
                       </td>
 
                       <td className="px-5 py-4">
-                        <span
-                          className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
-                            u.role === 'ADMIN'
-                              ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'
-                              : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
-                          }`}
-                        >
-                          {u.role}
-                        </span>
+                        <RoleBadge role={u.role} />
                       </td>
 
                       <td className="px-5 py-4">
@@ -321,9 +315,19 @@ function AddUserPage() {
                   onChange={handleChange}
                   className="w-full h-12 border border-slate-300 rounded-xl px-4 outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
                 >
-                  <option value="USER">USER</option>
-                  <option value="ADMIN">ADMIN</option>
+                  <option value="USER">Member</option>
+                  <option value="ADMIN">Administrator</option>
+                  {isOwner(user) && <option value="OWNER">Owner</option>}
                 </select>
+
+                <div className="mt-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700/80 dark:bg-slate-700/40 text-xs">
+                  <p className="font-semibold text-slate-800 dark:text-slate-200">
+                    {ROLE_DEFINITIONS[form.role]?.tagline || form.role}
+                  </p>
+                  <p className="mt-1 text-slate-500 dark:text-slate-400 leading-relaxed">
+                    {ROLE_DEFINITIONS[form.role]?.description}
+                  </p>
+                </div>
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-2">

@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import api from '../../services/api';
 import ModalPortal from '../../components/common/ModalPortal';
+import RoleBadge from '../../components/common/RoleBadge';
+import { isOwner } from '../../utils/roles';
 
 function PendingInvitationsModal({ open, onClose }) {
-  const { token } = useSelector((state) => state.auth);
+  const { token, user } = useSelector((state) => state.auth);
 
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('USER');
@@ -125,8 +127,9 @@ function PendingInvitationsModal({ open, onClose }) {
               onChange={(e) => setRole(e.target.value)}
               className="h-12 border border-slate-300 rounded-xl px-4 outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
             >
-              <option value="USER">USER</option>
-              <option value="ADMIN">ADMIN</option>
+              <option value="USER">Member</option>
+              <option value="ADMIN">Administrator</option>
+              {isOwner(user) && <option value="OWNER">Owner</option>}
             </select>
 
             <button
@@ -183,15 +186,7 @@ function PendingInvitationsModal({ open, onClose }) {
                         </td>
 
                         <td className="px-5 py-4">
-                          <span
-                            className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
-                              item.role === 'ADMIN'
-                                ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'
-                                : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
-                            }`}
-                          >
-                            {item.role}
-                          </span>
+                          <RoleBadge role={item.role} />
                         </td>
 
                         <td className="px-5 py-4 text-slate-600 dark:text-slate-300">
