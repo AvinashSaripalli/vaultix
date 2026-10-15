@@ -13,6 +13,7 @@ import {
   RotateCcw,
   Building2,
   Lock,
+  UserCheck,
 } from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout';
 import api from '../../services/api';
@@ -59,6 +60,7 @@ function OrganizationPoliciesPage() {
   const [minMasterPasswordLength, setMinMasterPasswordLength] = useState(8);
   const [requireMasterPasswordSpecial, setRequireMasterPasswordSpecial] = useState(true);
   const [clipboardTimeoutSeconds, setClipboardTimeoutSeconds] = useState(null);
+  const [requireDualAdminApproval, setRequireDualAdminApproval] = useState(true);
 
   const [updatedAt, setUpdatedAt] = useState(null);
   const [updatedBy, setUpdatedBy] = useState(null);
@@ -76,13 +78,14 @@ function OrganizationPoliciesPage() {
         });
 
         if (cancelled) return;
-        const p = res.data;
+        const p = res.data?.policy || res.data;
         setOriginalPolicy(p);
         setRequireTwoFactor(Boolean(p.requireTwoFactor));
         setMaxVaultTimeoutMinutes(p.maxVaultTimeoutMinutes ?? null);
         setMinMasterPasswordLength(p.minMasterPasswordLength ?? 8);
         setRequireMasterPasswordSpecial(p.requireMasterPasswordSpecial !== false);
         setClipboardTimeoutSeconds(p.clipboardTimeoutSeconds ?? null);
+        setRequireDualAdminApproval(p.requireDualAdminApproval !== false);
         setUpdatedAt(p.updatedAt);
         setUpdatedBy(p.updatedBy);
       } catch (err) {
@@ -109,7 +112,8 @@ function OrganizationPoliciesPage() {
     maxVaultTimeoutMinutes !== (originalPolicy.maxVaultTimeoutMinutes ?? null) ||
     minMasterPasswordLength !== (originalPolicy.minMasterPasswordLength ?? 8) ||
     requireMasterPasswordSpecial !== (originalPolicy.requireMasterPasswordSpecial !== false) ||
-    clipboardTimeoutSeconds !== (originalPolicy.clipboardTimeoutSeconds ?? null)
+    clipboardTimeoutSeconds !== (originalPolicy.clipboardTimeoutSeconds ?? null) ||
+    requireDualAdminApproval !== (originalPolicy.requireDualAdminApproval !== false)
   );
 
   const handleReset = () => {
@@ -119,6 +123,7 @@ function OrganizationPoliciesPage() {
     setMinMasterPasswordLength(originalPolicy.minMasterPasswordLength ?? 8);
     setRequireMasterPasswordSpecial(originalPolicy.requireMasterPasswordSpecial !== false);
     setClipboardTimeoutSeconds(originalPolicy.clipboardTimeoutSeconds ?? null);
+    setRequireDualAdminApproval(originalPolicy.requireDualAdminApproval !== false);
     setSuccessMessage('');
     setErrorMessage('');
   };
@@ -136,6 +141,7 @@ function OrganizationPoliciesPage() {
         minMasterPasswordLength,
         requireMasterPasswordSpecial,
         clipboardTimeoutSeconds,
+        requireDualAdminApproval,
       };
 
       const res = await api.put('/organization-policy', payload, {
@@ -402,6 +408,52 @@ function OrganizationPoliciesPage() {
                       </button>
                     ))}
                   </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Policy 5: Dual-Admin Approval */}
+            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-sm transition hover:border-slate-300 dark:hover:border-slate-600">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                <div className="flex items-start gap-4">
+                  <div className="h-10 w-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+                    <UserCheck size={20} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2.5">
+                      <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100">
+                        Dual-Admin Approval (Four-Eyes Principle)
+                      </h2>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                          requireDualAdminApproval
+                            ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'
+                            : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        {requireDualAdminApproval ? 'Enforced' : 'Disabled'}
+                      </span>
+                    </div>
+                    <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-2xl leading-relaxed">
+                      High-stakes administrative operations (such as deleting an administrator account, company vault deletion, or emergency data exports) require authorization from a second administrator before execution.
+                    </p>
+                    <div className="mt-3 text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                      <Lock size={13} className="text-slate-400" />
+                      <span>The initiator of a request cannot approve their own action. Quorum requires consensus between two independent administrators.</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="sm:shrink-0 pt-1">
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={requireDualAdminApproval}
+                      onChange={(e) => setRequireDualAdminApproval(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-indigo-600"></div>
+                  </label>
                 </div>
               </div>
             </div>

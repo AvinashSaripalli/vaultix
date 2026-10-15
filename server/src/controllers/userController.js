@@ -1,5 +1,6 @@
 const prisma = require('../config/prisma');
 const generateId = require('../utils/generateId');
+const { getEffectiveOrganizationPolicy } = require('../utils/organizationPolicy');
 
 const requireAdmin = (req, res) => {
   if (!['OWNER', 'ADMIN'].includes(req.user.role)) {
@@ -265,7 +266,7 @@ const deleteUser = async (req, res) => {
 
     const targetUser = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, role: true },
+      select: { id: true, role: true, fullName: true, email: true },
     });
 
     if (!targetUser) {
@@ -307,6 +308,62 @@ const deleteUser = async (req, res) => {
       if (remainingOwners === 0) {
         return res.status(400).json({
           message: 'Cannot delete the last remaining Owner. Please designate another Owner first.',
+        });
+      }
+    }
+
+    // Security Guardrail 4: Dual-Admin Approval (Four-Eyes Principle)
+    const policy = await getEffectiveOrganizationPolicy();
+    if (['OWNER', 'ADMIN'].includes(targetUser.role) && policy?.requireDualAdminApproval) {
+      const otherAdminsCount = await prisma.user.count({
+        where: {
+          role: { in: ['OWNER', 'ADMIN'] },
+          isActive: true,
+          id: { not: req.user.id },
+        },
+      });
+
+      if (otherAdminsCount > 0) {
+        const approvalId = await generateId('req');
+        const roleLabel = targetUser.role === 'OWNER' ? 'Owner' : 'Administrator';
+        const targetName = targetUser.fullName || targetUser.email;
+
+        const approvalRequest = await prisma.adminApprovalRequest.create({
+          data: {
+            id: approvalId,
+            actionType: 'DELETE_ADMIN',
+            title: `Delete ${roleLabel}: ${targetName}`,
+            description: `Administrator ${req.user.fullName || req.user.email} initiated removal of ${roleLabel} account (${targetUser.email})`,
+            payload: {
+              userId: targetUser.id,
+              userEmail: targetUser.email,
+              userRole: targetUser.role,
+            },
+            requesterId: req.user.id,
+            status: 'PENDING',
+            expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000), // 48h
+          },
+        });
+
+        await prisma.activityLog.create({
+          data: {
+            id: await generateId('activity'),
+            userId: req.user.id,
+            action: 'CREATE_APPROVAL_REQUEST',
+            targetType: 'APPROVAL_REQUEST',
+            targetId: approvalId,
+            metadata: {
+              actionType: 'DELETE_ADMIN',
+              targetUserId: targetUser.id,
+              targetUserEmail: targetUser.email,
+            },
+          },
+        });
+
+        return res.status(202).json({
+          approvalRequired: true,
+          message: `Dual-Admin Approval Required: Deleting an ${roleLabel} account requires confirmation from a second administrator. A pending approval request (#${approvalId}) has been submitted for peer review.`,
+          approvalRequest,
         });
       }
     }

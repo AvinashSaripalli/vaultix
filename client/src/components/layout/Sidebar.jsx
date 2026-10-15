@@ -4,7 +4,7 @@ import {
   Shield, Users, Activity, Folder, FolderOpen,
   LogOut, Plus, ChevronDown, LockKeyhole, Share2, User, Sparkles, Building2,
   Smartphone, Clock, HeartPulse, MonitorCheck, Clipboard,
-  PanelLeftClose, PanelLeftOpen, X, Trash2, ShieldCheck,
+  PanelLeftClose, PanelLeftOpen, X, Trash2, ShieldCheck, UserCheck,
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { logoutUser } from '../../features/auth/authSlice';
@@ -44,6 +44,7 @@ function Sidebar() {
   const [actionFolder, setActionFolder] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState({ open: false, folder: null });
   const [unreadCount, setUnreadCount] = useState(0);
+  const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
   const [toolsOpen, setToolsOpen] = useState(false);
 
   useEffect(() => { dispatch(fetchVaults()); }, [dispatch]);
@@ -71,6 +72,21 @@ function Sidebar() {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    if (!isAdmin(user) || !localStorage.getItem('token')) return;
+    const fetchPendingApprovals = async () => {
+      try {
+        const res = await api.get('/admin-approvals/pending-count');
+        setPendingApprovalsCount(res.data?.count || 0);
+      } catch {
+        setPendingApprovalsCount(0);
+      }
+    };
+    fetchPendingApprovals();
+    const interval = setInterval(fetchPendingApprovals, 30000);
+    return () => clearInterval(interval);
+  }, [user]);
+
   const overviewMenu = [{ name: 'Security Dashboard', path: '/dashboard', icon: Shield }];
   const vaultMenu = [
     { name: 'Personal Vault', path: '/my-vault', icon: LockKeyhole },
@@ -95,6 +111,7 @@ function Sidebar() {
         { name: 'Team Management', path: '/team-management', icon: Users },
         { name: 'Departments', path: '/departments', icon: Building2 },
         { name: 'Security Policies', path: '/admin/policies', icon: ShieldCheck },
+        { name: 'Admin Approvals', path: '/admin/approvals', icon: UserCheck, badge: pendingApprovalsCount },
       ]
     : [];
 

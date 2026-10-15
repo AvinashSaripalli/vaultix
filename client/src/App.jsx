@@ -30,6 +30,7 @@ import MasterProtectedRoute from './routes/MasterProtectedRoute';
 import ActivityLogPage from './pages/activity/ActivityLogPage';
 import TeamManagementPage from './pages/team/TeamManagementPage';
 import OrganizationPoliciesPage from './pages/admin/OrganizationPoliciesPage';
+import AdminApprovalsPage from './pages/admin/AdminApprovalsPage';
 import DepartmentsPage from './pages/team/DepartmentsPage';
 import MyDepartmentsPage from './pages/team/MyDepartmentsPage';
 import EditUserPage from './pages/team/EditUserPage';
@@ -355,6 +356,15 @@ function App() {
         element={
           <MasterProtectedRoute>
             <OrganizationPoliciesPage />
+          </MasterProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/approvals"
+        element={
+          <MasterProtectedRoute>
+            <AdminApprovalsPage />
           </MasterProtectedRoute>
         }
       />

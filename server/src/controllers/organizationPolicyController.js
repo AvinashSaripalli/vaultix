@@ -28,9 +28,14 @@ const updateOrganizationPolicy = async (req, res) => {
       minMasterPasswordLength,
       requireMasterPasswordSpecial,
       clipboardTimeoutSeconds,
+      requireDualAdminApproval,
     } = req.body;
 
     const data = {};
+
+    if (requireDualAdminApproval !== undefined) {
+      data.requireDualAdminApproval = Boolean(requireDualAdminApproval);
+    }
 
     if (requireTwoFactor !== undefined) {
       data.requireTwoFactor = Boolean(requireTwoFactor);

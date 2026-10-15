@@ -7,6 +7,7 @@ const DEFAULT_POLICY = {
   minMasterPasswordLength: 8,
   requireMasterPasswordSpecial: true,
   clipboardTimeoutSeconds: null,
+  requireDualAdminApproval: true,
 };
 
 let cachedPolicy = null;

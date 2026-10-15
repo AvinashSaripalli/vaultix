@@ -82,6 +82,8 @@ model User {
   vaultPermissions        VaultPermission[]
   refreshTokens           RefreshToken[]    @relation("RefreshTokenUser")
   webAuthnCredentials     WebAuthnCredential[]
+  approvalRequestsRequested AdminApprovalRequest[] @relation("ApprovalRequester")
+  approvalRequestsApproved  AdminApprovalRequest[] @relation("ApprovalApprover")
 }
 
 model Folder {
@@ -322,9 +324,33 @@ model OrganizationPolicy {
   minMasterPasswordLength      Int      @default(8)
   requireMasterPasswordSpecial Boolean  @default(true)
   clipboardTimeoutSeconds      Int?
+  requireDualAdminApproval     Boolean  @default(true)
   updatedById                  String?
   updatedAt                    DateTime @updatedAt
   createdAt                    DateTime @default(now())
+}
+
+model AdminApprovalRequest {
+  id           String                @id
+  actionType   ApprovalActionType
+  title        String
+  description  String?
+  payload      Json
+  status       ApprovalRequestStatus @default(PENDING)
+  requesterId  String
+  approverId   String?
+  responseNote String?
+  expiresAt    DateTime
+  executedAt   DateTime?
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+
+  requester    User                  @relation("ApprovalRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  approver     User?                 @relation("ApprovalApprover", fields: [approverId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([requesterId])
+  @@index([approverId])
 }
 
 enum Role {
@@ -412,6 +438,25 @@ enum ActivityAction {
   DISABLE_2FA
   VERIFY_EMAIL
   UPDATE_ORGANIZATION_POLICY
+  CREATE_APPROVAL_REQUEST
+  APPROVE_REQUEST
+  REJECT_REQUEST
+  CANCEL_APPROVAL_REQUEST
+}
+
+enum ApprovalActionType {
+  DELETE_ADMIN
+  DELETE_FOLDER
+  PURGE_TRASH
+  EXPORT_AUDIT
+}
+
+enum ApprovalRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  EXPIRED
 }
 
 enum LoginStatus {
