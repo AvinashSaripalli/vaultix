@@ -37,6 +37,11 @@ const getPendingCount = async (req, res) => {
 
     await expireStaleRequests();
 
+    // Strict Owner-Only Policy: Only OWNER accounts have authority to approve requests
+    if (req.user.role !== 'OWNER') {
+      return res.json({ count: 0 });
+    }
+
     const count = await prisma.adminApprovalRequest.count({
       where: {
         status: 'PENDING',
@@ -66,6 +71,10 @@ const getApprovalRequests = async (req, res) => {
     let where = {};
 
     if (tab === 'actionable') {
+      // Strict Owner-Only Policy: Only OWNER accounts have actionable requests awaiting approval
+      if (req.user.role !== 'OWNER') {
+        return res.json([]);
+      }
       where = {
         status: 'PENDING',
         requesterId: { not: req.user.id },
@@ -210,10 +219,17 @@ const approveRequest = async (req, res) => {
       return res.status(400).json({ message: 'This approval request has expired' });
     }
 
+    // Strict Owner-Only Policy: Only an Organization Owner can approve requests
+    if (req.user.role !== 'OWNER') {
+      return res.status(403).json({
+        message: 'Strict Owner-Only Policy: Only an Organization Owner has authority to approve high-stakes actions.',
+      });
+    }
+
     // Four-Eyes Principle Invariant: The requester cannot approve their own request!
     if (request.requesterId === req.user.id) {
       return res.status(403).json({
-        message: 'Dual-Admin Security Violation: You cannot approve a request that you initiated yourself. A different administrator or owner must approve it.',
+        message: 'Security Violation: You cannot approve a request that you initiated yourself. Another Owner must approve it.',
       });
     }
 
@@ -346,6 +362,13 @@ const rejectRequest = async (req, res) => {
 
     if (request.status !== 'PENDING') {
       return res.status(400).json({ message: `Request is already ${request.status.toLowerCase()}` });
+    }
+
+    // Strict Owner-Only Policy: Only an Organization Owner can reject requests
+    if (req.user.role !== 'OWNER') {
+      return res.status(403).json({
+        message: 'Strict Owner-Only Policy: Only an Organization Owner has authority to reject approval requests.',
+      });
     }
 
     if (request.requesterId === req.user.id) {

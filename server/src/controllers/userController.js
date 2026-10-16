@@ -312,28 +312,73 @@ const deleteUser = async (req, res) => {
       }
     }
 
-    // Security Guardrail 4: Dual-Admin Approval (Four-Eyes Principle)
+    // Security Guardrail 4: Strict Owner-Only Approval Policy
     const policy = await getEffectiveOrganizationPolicy();
-    if (['OWNER', 'ADMIN'].includes(targetUser.role) && policy?.requireDualAdminApproval) {
-      const otherAdminsCount = await prisma.user.count({
+
+    // Case A: An ADMIN is attempting to delete another ADMIN -> Requires OWNER approval
+    if (targetUser.role === 'ADMIN' && req.user.role === 'ADMIN' && policy?.requireDualAdminApproval) {
+      const approvalId = await generateId('req');
+      const targetName = targetUser.fullName || targetUser.email;
+
+      const approvalRequest = await prisma.adminApprovalRequest.create({
+        data: {
+          id: approvalId,
+          actionType: 'DELETE_ADMIN',
+          title: `Delete Administrator: ${targetName}`,
+          description: `Administrator ${req.user.fullName || req.user.email} initiated removal of Administrator account (${targetUser.email}). Requires Owner approval.`,
+          payload: {
+            userId: targetUser.id,
+            userEmail: targetUser.email,
+            userRole: targetUser.role,
+          },
+          requesterId: req.user.id,
+          status: 'PENDING',
+          expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000), // 48h
+        },
+      });
+
+      await prisma.activityLog.create({
+        data: {
+          id: await generateId('activity'),
+          userId: req.user.id,
+          action: 'CREATE_APPROVAL_REQUEST',
+          targetType: 'APPROVAL_REQUEST',
+          targetId: approvalId,
+          metadata: {
+            actionType: 'DELETE_ADMIN',
+            targetUserId: targetUser.id,
+            targetUserEmail: targetUser.email,
+          },
+        },
+      });
+
+      return res.status(202).json({
+        approvalRequired: true,
+        message: `Owner Approval Required: Deleting an Administrator requires authorization from an Organization Owner. A pending approval request (#${approvalId}) has been submitted for Owner review.`,
+        approvalRequest,
+      });
+    }
+
+    // Case B: An OWNER is deleting another OWNER (if multiple owners exist) -> Requires Co-Owner confirmation
+    if (targetUser.role === 'OWNER' && req.user.role === 'OWNER' && policy?.requireDualAdminApproval) {
+      const otherOwnersCount = await prisma.user.count({
         where: {
-          role: { in: ['OWNER', 'ADMIN'] },
+          role: 'OWNER',
           isActive: true,
           id: { not: req.user.id },
         },
       });
 
-      if (otherAdminsCount > 0) {
+      if (otherOwnersCount > 0) {
         const approvalId = await generateId('req');
-        const roleLabel = targetUser.role === 'OWNER' ? 'Owner' : 'Administrator';
         const targetName = targetUser.fullName || targetUser.email;
 
         const approvalRequest = await prisma.adminApprovalRequest.create({
           data: {
             id: approvalId,
             actionType: 'DELETE_ADMIN',
-            title: `Delete ${roleLabel}: ${targetName}`,
-            description: `Administrator ${req.user.fullName || req.user.email} initiated removal of ${roleLabel} account (${targetUser.email})`,
+            title: `Delete Owner: ${targetName}`,
+            description: `Owner ${req.user.fullName || req.user.email} initiated removal of Co-Owner account (${targetUser.email}). Requires Co-Owner confirmation.`,
             payload: {
               userId: targetUser.id,
               userEmail: targetUser.email,
@@ -341,7 +386,7 @@ const deleteUser = async (req, res) => {
             },
             requesterId: req.user.id,
             status: 'PENDING',
-            expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000), // 48h
+            expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000),
           },
         });
 
@@ -362,7 +407,7 @@ const deleteUser = async (req, res) => {
 
         return res.status(202).json({
           approvalRequired: true,
-          message: `Dual-Admin Approval Required: Deleting an ${roleLabel} account requires confirmation from a second administrator. A pending approval request (#${approvalId}) has been submitted for peer review.`,
+          message: `Co-Owner Approval Required: Deleting an Owner account requires authorization from a second Owner. A pending approval request (#${approvalId}) has been submitted for review.`,
           approvalRequest,
         });
       }

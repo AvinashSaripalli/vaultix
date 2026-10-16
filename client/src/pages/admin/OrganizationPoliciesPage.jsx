@@ -422,7 +422,7 @@ function OrganizationPoliciesPage() {
                   <div>
                     <div className="flex items-center gap-2.5">
                       <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100">
-                        Dual-Admin Approval (Four-Eyes Principle)
+                        Strict Owner Approval for Critical Operations
                       </h2>
                       <span
                         className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
@@ -435,11 +435,11 @@ function OrganizationPoliciesPage() {
                       </span>
                     </div>
                     <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-2xl leading-relaxed">
-                      High-stakes administrative operations (such as deleting an administrator account, company vault deletion, or emergency data exports) require authorization from a second administrator before execution.
+                      High-stakes administrative operations initiated by administrators (such as deleting an administrator account, company vault resources, or purging data) require explicit sign-off from an Organization Owner.
                     </p>
                     <div className="mt-3 text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
                       <Lock size={13} className="text-slate-400" />
-                      <span>The initiator of a request cannot approve their own action. Quorum requires consensus between two independent administrators.</span>
+                      <span>Administrators can initiate requests, but only Organization Owners hold executive authority to authorize and execute them.</span>
                     </div>
                   </div>
                 </div>

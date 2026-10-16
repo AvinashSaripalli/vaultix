@@ -242,6 +242,16 @@ function AdminApprovalsPage() {
           </div>
         )}
 
+        {/* Strict Owner-Only Notification for Administrators */}
+        {user?.role !== 'OWNER' && activeTab === 'actionable' && (
+          <div className="rounded-2xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/70 dark:bg-indigo-950/30 p-4 text-xs sm:text-sm text-indigo-800 dark:text-indigo-300 flex items-center gap-3">
+            <ShieldAlert size={20} className="shrink-0 text-indigo-600 dark:text-indigo-400" />
+            <span>
+              <strong>Strict Owner-Only Approval Policy:</strong> Only Organization Owners have the executive authority to approve or reject pending requests. You can monitor requests you initiated under <strong>"My Initiated Requests"</strong>.
+            </span>
+          </div>
+        )}
+
         {/* Requests List */}
         {loading ? (
           <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-12 text-center text-slate-500">
@@ -255,15 +265,21 @@ function AdminApprovalsPage() {
             </div>
             <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">
               {activeTab === 'actionable'
-                ? 'No Pending Actions Awaiting Your Review'
+                ? user?.role === 'OWNER'
+                  ? 'No Pending Actions Awaiting Your Review'
+                  : 'Owner Authorization Required'
                 : activeTab === 'my-requests'
                 ? 'You have not submitted any approval requests'
                 : 'No Approval History Recorded'}
             </h3>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
               {activeTab === 'actionable'
-                ? 'When another administrator requests a critical action (such as deleting an admin account or company vault resources), it will appear here for your approval.'
-                : 'High-risk actions initiated by administrators will appear here for consensus authorization.'}
+                ? user?.role === 'OWNER'
+                  ? 'When an administrator requests a critical action (such as deleting an admin account), it will appear here for your approval.'
+                  : 'Under the Strict Owner-Only Policy, only Organization Owners have the authority to authorize or reject pending requests.'
+                : activeTab === 'my-requests'
+                ? 'High-stakes actions you initiate (such as deleting an administrator) will appear here for tracking.'
+                : 'A permanent audit log of all authorized, rejected, and expired requests is stored here.'}
             </p>
           </div>
         ) : (
@@ -275,7 +291,7 @@ function AdminApprovalsPage() {
                 color: 'text-slate-600 bg-slate-100 border-slate-200',
               };
               const ActionIcon = meta.icon;
-              const isActionable = req.status === 'PENDING' && req.requesterId !== user?.id;
+              const isActionable = req.status === 'PENDING' && req.requesterId !== user?.id && user?.role === 'OWNER';
               const isMyPending = req.status === 'PENDING' && req.requesterId === user?.id;
 
               return (
