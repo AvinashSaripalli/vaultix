@@ -242,12 +242,12 @@ function AdminApprovalsPage() {
           </div>
         )}
 
-        {/* Strict Owner-Only Notification for Administrators */}
+        {/* Strict Super Admin Approval Notification for Administrators */}
         {user?.role !== 'OWNER' && activeTab === 'actionable' && (
           <div className="rounded-2xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/70 dark:bg-indigo-950/30 p-4 text-xs sm:text-sm text-indigo-800 dark:text-indigo-300 flex items-center gap-3">
             <ShieldAlert size={20} className="shrink-0 text-indigo-600 dark:text-indigo-400" />
             <span>
-              <strong>Strict Owner-Only Approval Policy:</strong> Only Organization Owners have the executive authority to approve or reject pending requests. You can monitor requests you initiated under <strong>"My Initiated Requests"</strong>.
+              <strong>Strict Super Admin Approval Policy:</strong> Only Super Admins have the executive authority to approve or reject pending requests. You can monitor requests you initiated under <strong>"My Initiated Requests"</strong>.
             </span>
           </div>
         )}
@@ -267,7 +267,7 @@ function AdminApprovalsPage() {
               {activeTab === 'actionable'
                 ? user?.role === 'OWNER'
                   ? 'No Pending Actions Awaiting Your Review'
-                  : 'Owner Authorization Required'
+                  : 'Super Admin Authorization Required'
                 : activeTab === 'my-requests'
                 ? 'You have not submitted any approval requests'
                 : 'No Approval History Recorded'}
@@ -276,7 +276,7 @@ function AdminApprovalsPage() {
               {activeTab === 'actionable'
                 ? user?.role === 'OWNER'
                   ? 'When an administrator requests a critical action (such as deleting an admin account), it will appear here for your approval.'
-                  : 'Under the Strict Owner-Only Policy, only Organization Owners have the authority to authorize or reject pending requests.'
+                  : 'Under the Strict Super Admin Policy, only Super Admins have the authority to authorize or reject pending requests.'
                 : activeTab === 'my-requests'
                 ? 'High-stakes actions you initiate (such as deleting an administrator) will appear here for tracking.'
                 : 'A permanent audit log of all authorized, rejected, and expired requests is stored here.'}

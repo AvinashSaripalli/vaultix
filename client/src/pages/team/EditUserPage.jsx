@@ -303,9 +303,9 @@ function EditUserPage() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 {targetUser?.role === ROLES.OWNER && !isOwner(user) && (
                   <div className="rounded-xl bg-amber-50 border border-amber-200/80 p-3.5 text-xs text-amber-800 dark:bg-amber-950/30 dark:border-amber-800/60 dark:text-amber-300">
-                    <p className="font-semibold">Protected Owner Account</p>
+                    <p className="font-semibold">Protected Super Admin Account</p>
                     <p className="mt-0.5">
-                      This user is an Organization Owner. Only an Owner can modify this account's role, name, or active status.
+                      This user is a Super Admin. Only a Super Admin can modify this account's role, name, or active status.
                     </p>
                   </div>
                 )}
@@ -337,7 +337,7 @@ function EditUserPage() {
                   >
                     <option value="USER">Member</option>
                     <option value="ADMIN">Administrator</option>
-                    {isOwner(user) && <option value="OWNER">Owner</option>}
+                    {isOwner(user) && <option value="OWNER">Super Admin</option>}
                   </select>
 
                   <div className="mt-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700/80 dark:bg-slate-700/40 text-xs">

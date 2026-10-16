@@ -129,7 +129,7 @@ function PendingInvitationsModal({ open, onClose }) {
             >
               <option value="USER">Member</option>
               <option value="ADMIN">Administrator</option>
-              {isOwner(user) && <option value="OWNER">Owner</option>}
+              {isOwner(user) && <option value="OWNER">Super Admin</option>}
             </select>
 
             <button

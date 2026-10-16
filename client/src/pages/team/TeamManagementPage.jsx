@@ -253,7 +253,7 @@ function TeamManagementPage() {
                               <button
                                 type="button"
                                 disabled
-                                title="Only an Owner can edit an Owner account"
+                                title="Only a Super Admin can edit a Super Admin account"
                                 className="rounded-xl border border-slate-200 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-slate-400 dark:border-slate-700 dark:text-slate-600 cursor-not-allowed opacity-60"
                               >
                                 Protected
@@ -283,7 +283,7 @@ function TeamManagementPage() {
                               <button
                                 type="button"
                                 disabled
-                                title="Only an Owner can delete an Owner account"
+                                title="Only a Super Admin can delete a Super Admin account"
                                 className="rounded-xl border border-slate-200 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-slate-400 dark:border-slate-700 dark:text-slate-600 cursor-not-allowed opacity-60"
                               >
                                 Delete

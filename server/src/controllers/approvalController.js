@@ -219,17 +219,17 @@ const approveRequest = async (req, res) => {
       return res.status(400).json({ message: 'This approval request has expired' });
     }
 
-    // Strict Owner-Only Policy: Only an Organization Owner can approve requests
+    // Strict Super Admin Policy: Only a Super Admin can approve requests
     if (req.user.role !== 'OWNER') {
       return res.status(403).json({
-        message: 'Strict Owner-Only Policy: Only an Organization Owner has authority to approve high-stakes actions.',
+        message: 'Strict Super Admin Policy: Only a Super Admin has authority to approve high-stakes actions.',
       });
     }
 
     // Four-Eyes Principle Invariant: The requester cannot approve their own request!
     if (request.requesterId === req.user.id) {
       return res.status(403).json({
-        message: 'Security Violation: You cannot approve a request that you initiated yourself. Another Owner must approve it.',
+        message: 'Security Violation: You cannot approve a request that you initiated yourself. Another Super Admin must approve it.',
       });
     }
 
@@ -386,10 +386,10 @@ const rejectRequest = async (req, res) => {
       return res.status(400).json({ message: `Request is already ${request.status.toLowerCase()}` });
     }
 
-    // Strict Owner-Only Policy: Only an Organization Owner can reject requests
+    // Strict Super Admin Policy: Only a Super Admin can reject requests
     if (req.user.role !== 'OWNER') {
       return res.status(403).json({
-        message: 'Strict Owner-Only Policy: Only an Organization Owner has authority to reject approval requests.',
+        message: 'Strict Super Admin Policy: Only a Super Admin has authority to reject approval requests.',
       });
     }
 
@@ -441,7 +441,7 @@ const rejectRequest = async (req, res) => {
 
 /**
  * POST /api/v1/admin-approvals/:id/cancel
- * Allows the requester (or an Owner) to cancel a pending request
+ * Allows the requester (or a Super Admin) to cancel a pending request
  */
 const cancelRequest = async (req, res) => {
   try {
@@ -462,7 +462,7 @@ const cancelRequest = async (req, res) => {
     }
 
     if (request.requesterId !== req.user.id && req.user.role !== 'OWNER') {
-      return res.status(403).json({ message: 'Only the original requester or an Owner can cancel this request' });
+      return res.status(403).json({ message: 'Only the original requester or a Super Admin can cancel this request' });
     }
 
     const updated = await prisma.adminApprovalRequest.update({

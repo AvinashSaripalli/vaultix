@@ -103,9 +103,9 @@ const createUserByAdmin = async (req, res) => {
       return res.status(400).json({ message: `Invalid role. Must be one of: ${VALID_ROLES.join(', ')}` });
     }
 
-    // Only an OWNER can create another OWNER
+    // Only a Super Admin can create another Super Admin
     if (role === 'OWNER' && req.user.role !== 'OWNER') {
-      return res.status(403).json({ message: 'Only an Owner can designate another Owner' });
+      return res.status(403).json({ message: 'Only a Super Admin can designate another Super Admin' });
     }
 
     const existingUser = await prisma.user.findUnique({
@@ -171,17 +171,17 @@ const updateUser = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Security Guardrail 1: Only an OWNER can modify an OWNER
+    // Security Guardrail 1: Only a Super Admin can modify a Super Admin
     if (targetUser.role === 'OWNER' && req.user.role !== 'OWNER') {
-      return res.status(403).json({ message: 'Only an Owner can modify an Owner account' });
+      return res.status(403).json({ message: 'Only a Super Admin can modify a Super Admin account' });
     }
 
-    // Security Guardrail 2: Only an OWNER can grant the OWNER role
+    // Security Guardrail 2: Only a Super Admin can grant the Super Admin role
     if (role === 'OWNER' && req.user.role !== 'OWNER') {
-      return res.status(403).json({ message: 'Only an Owner can grant Owner privileges' });
+      return res.status(403).json({ message: 'Only a Super Admin can grant Super Admin privileges' });
     }
 
-    // Security Guardrail 3: Last Admin / Owner Protection
+    // Security Guardrail 3: Last Admin / Super Admin Protection
     // Prevent demoting or deactivating the last active administrator
     if (
       ['OWNER', 'ADMIN'].includes(targetUser.role) &&
@@ -202,8 +202,8 @@ const updateUser = async (req, res) => {
       }
     }
 
-    // Security Guardrail 4: Last Owner Protection
-    // Prevent demoting the last active owner
+    // Security Guardrail 4: Last Super Admin Protection
+    // Prevent demoting the last active Super Admin
     if (targetUser.role === 'OWNER' && role && role !== 'OWNER') {
       const remainingOwners = await prisma.user.count({
         where: {
@@ -215,7 +215,7 @@ const updateUser = async (req, res) => {
 
       if (remainingOwners === 0) {
         return res.status(400).json({
-          message: 'Cannot demote the last remaining Owner. Please designate another Owner first.',
+          message: 'Cannot demote the last remaining Super Admin. Please designate another Super Admin first.',
         });
       }
     }
@@ -273,9 +273,9 @@ const deleteUser = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Security Guardrail 1: Only an OWNER can delete an OWNER account
+    // Security Guardrail 1: Only a Super Admin can delete a Super Admin account
     if (targetUser.role === 'OWNER' && req.user.role !== 'OWNER') {
-      return res.status(403).json({ message: 'Only an Owner can delete an Owner account' });
+      return res.status(403).json({ message: 'Only a Super Admin can delete a Super Admin account' });
     }
 
     // Security Guardrail 2: Last Admin Protection
@@ -295,7 +295,7 @@ const deleteUser = async (req, res) => {
       }
     }
 
-    // Security Guardrail 3: Last Owner Protection
+    // Security Guardrail 3: Last Super Admin Protection
     if (targetUser.role === 'OWNER') {
       const remainingOwners = await prisma.user.count({
         where: {
@@ -307,15 +307,15 @@ const deleteUser = async (req, res) => {
 
       if (remainingOwners === 0) {
         return res.status(400).json({
-          message: 'Cannot delete the last remaining Owner. Please designate another Owner first.',
+          message: 'Cannot delete the last remaining Super Admin. Please designate another Super Admin first.',
         });
       }
     }
 
-    // Security Guardrail 4: Strict Owner-Only Approval Policy
+    // Security Guardrail 4: Strict Super Admin Approval Policy
     const policy = await getEffectiveOrganizationPolicy();
 
-    // Case A: An ADMIN is attempting to delete another ADMIN -> Requires OWNER approval
+    // Case A: An ADMIN is attempting to delete another ADMIN -> Requires Super Admin approval
     if (targetUser.role === 'ADMIN' && req.user.role === 'ADMIN' && policy?.requireDualAdminApproval) {
       const approvalId = await generateId('req');
       const targetName = targetUser.fullName || targetUser.email;
@@ -325,7 +325,7 @@ const deleteUser = async (req, res) => {
           id: approvalId,
           actionType: 'DELETE_ADMIN',
           title: `Delete Administrator: ${targetName}`,
-          description: `Administrator ${req.user.fullName || req.user.email} initiated removal of Administrator account (${targetUser.email}). Requires Owner approval.`,
+          description: `Administrator ${req.user.fullName || req.user.email} initiated removal of Administrator account (${targetUser.email}). Requires Super Admin approval.`,
           payload: {
             userId: targetUser.id,
             userEmail: targetUser.email,
@@ -354,12 +354,12 @@ const deleteUser = async (req, res) => {
 
       return res.status(202).json({
         approvalRequired: true,
-        message: `Owner Approval Required: Deleting an Administrator requires authorization from an Organization Owner. A pending approval request (#${approvalId}) has been submitted for Owner review.`,
+        message: `Super Admin Approval Required: Deleting an Administrator requires authorization from a Super Admin. A pending approval request (#${approvalId}) has been submitted for Super Admin review.`,
         approvalRequest,
       });
     }
 
-    // Case B: An OWNER is deleting another OWNER (if multiple owners exist) -> Requires Co-Owner confirmation
+    // Case B: A Super Admin is deleting another Super Admin (if multiple exist) -> Requires Co-Super Admin confirmation
     if (targetUser.role === 'OWNER' && req.user.role === 'OWNER' && policy?.requireDualAdminApproval) {
       const otherOwnersCount = await prisma.user.count({
         where: {
@@ -377,8 +377,8 @@ const deleteUser = async (req, res) => {
           data: {
             id: approvalId,
             actionType: 'DELETE_ADMIN',
-            title: `Delete Owner: ${targetName}`,
-            description: `Owner ${req.user.fullName || req.user.email} initiated removal of Co-Owner account (${targetUser.email}). Requires Co-Owner confirmation.`,
+            title: `Delete Super Admin: ${targetName}`,
+            description: `Super Admin ${req.user.fullName || req.user.email} initiated removal of Co-Super Admin account (${targetUser.email}). Requires Co-Super Admin confirmation.`,
             payload: {
               userId: targetUser.id,
               userEmail: targetUser.email,
@@ -407,7 +407,7 @@ const deleteUser = async (req, res) => {
 
         return res.status(202).json({
           approvalRequired: true,
-          message: `Co-Owner Approval Required: Deleting an Owner account requires authorization from a second Owner. A pending approval request (#${approvalId}) has been submitted for review.`,
+          message: `Co-Super Admin Approval Required: Deleting a Super Admin account requires authorization from a second Super Admin. A pending approval request (#${approvalId}) has been submitted for review.`,
           approvalRequest,
         });
       }

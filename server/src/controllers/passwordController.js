@@ -1065,7 +1065,7 @@ const purgePassword = async (req, res) => {
           id: approvalId,
           actionType: 'PURGE_TRASH',
           title: `Purge Password: ${password.name}`,
-          description: `Administrator ${req.user.fullName || req.user.email} requested permanent purge of "${password.name}" from Trash in "${vaultName}". Requires Owner approval.`,
+          description: `Administrator ${req.user.fullName || req.user.email} requested permanent purge of "${password.name}" from Trash in "${vaultName}". Requires Super Admin approval.`,
           payload: {
             passwordId: password.id,
             passwordName: password.name,
@@ -1096,7 +1096,7 @@ const purgePassword = async (req, res) => {
 
       return res.status(202).json({
         approvalRequired: true,
-        message: `Owner Approval Required: Permanently purging passwords from Trash requires authorization from an Organization Owner. A pending approval request (#${approvalId}) has been submitted for Owner review.`,
+        message: `Super Admin Approval Required: Permanently purging passwords from Trash requires authorization from a Super Admin. A pending approval request (#${approvalId}) has been submitted for Super Admin review.`,
         approvalRequest,
       });
     }

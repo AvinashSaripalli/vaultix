@@ -17,7 +17,7 @@ export const isAdmin = (userOrRole) => {
 export const getRoleLabel = (role) => {
   switch (role) {
     case ROLES.OWNER:
-      return 'Owner';
+      return 'Super Admin';
     case ROLES.ADMIN:
       return 'Admin';
     case ROLES.USER:
@@ -28,8 +28,8 @@ export const getRoleLabel = (role) => {
 
 export const ROLE_DEFINITIONS = {
   OWNER: {
-    title: 'Owner',
-    tagline: 'Primary organization steward',
+    title: 'Super Admin',
+    tagline: 'Supreme organization administrator',
     description:
       'Full authority over organization settings, all company vaults, billing, and administrators. Cannot be removed or demoted by Admins.',
     color: 'amber',

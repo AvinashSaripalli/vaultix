@@ -9,7 +9,7 @@ const {
 const getOrganizationPolicy = async (req, res) => {
   try {
     if (req.user.role !== 'OWNER') {
-      return res.status(403).json({ message: 'Access denied: Only Organization Owners can access security policies' });
+      return res.status(403).json({ message: 'Access denied: Only Super Admins can access security policies' });
     }
 
     const policy = await getEffectiveOrganizationPolicy();
@@ -23,7 +23,7 @@ const getOrganizationPolicy = async (req, res) => {
 const updateOrganizationPolicy = async (req, res) => {
   try {
     if (req.user.role !== 'OWNER') {
-      return res.status(403).json({ message: 'Access denied: Only Organization Owners can manage organization policies' });
+      return res.status(403).json({ message: 'Access denied: Only Super Admins can manage organization policies' });
     }
 
     const {
