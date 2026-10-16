@@ -542,9 +542,8 @@ const vaultSlice = createSlice({
         state.error = action.payload;
       })
 
-      .addCase(fetchVaultTrash.pending, (state, action) => {
+      .addCase(fetchVaultTrash.pending, (state) => {
         state.trashLoading = true;
-        state.error = null;
       })
       .addCase(fetchVaultTrash.fulfilled, (state, action) => {
         state.trashLoading = false;
@@ -552,7 +551,10 @@ const vaultSlice = createSlice({
       })
       .addCase(fetchVaultTrash.rejected, (state, action) => {
         state.trashLoading = false;
-        state.error = action.payload;
+        const vaultId = action.meta?.arg;
+        if (vaultId) {
+          state.trashByVault[vaultId] = [];
+        }
       })
 
       .addCase(restorePassword.fulfilled, (state, action) => {

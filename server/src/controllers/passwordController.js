@@ -1165,19 +1165,119 @@ const getTrash = async (req, res) => {
   try {
     const { vaultId } = req.params;
 
-    const access = await getVaultAccess(vaultId, req.user.id);
-    if (!access) {
+    const vaultType = await getVaultType(vaultId);
+    if (!vaultType || vaultType === 'PERSONAL') {
+      return res.json([]);
+    }
+
+    const admin = await isAdminUser(req.user.id);
+    const vaultAccess = await getVaultAccess(vaultId, req.user.id);
+    const hasVaultLevelAccess =
+      admin || (vaultAccess && ['ADMINISTRATOR', 'FULL_ACCESS'].includes(vaultAccess));
+
+    if (hasVaultLevelAccess) {
+      const trash = await prisma.passwordEntry.findMany({
+        where: {
+          vaultId,
+          deletedAt: { not: null },
+        },
+        include: {
+          folder: true,
+          tags: { include: { tag: true } },
+        },
+        orderBy: { deletedAt: 'desc' },
+      });
+
+      return res.json(trash);
+    }
+
+    // Check folder permissions for non-admin users
+    const memberOfIds = await getUserDepartmentIds(req.user.id);
+    const departmentIds = await getDepartmentIdsWithAncestors(memberOfIds);
+
+    const candidateFolders = await prisma.folder.findMany({
+      where: {
+        vaultId,
+        OR: [
+          { permissions: { some: { userId: req.user.id } } },
+          ...(departmentIds.length
+            ? [{ departmentPermissions: { some: { departmentId: { in: departmentIds } } } }]
+            : []),
+        ],
+      },
+      select: {
+        id: true,
+        blockedUserIds: true,
+        permissions: { select: { userId: true, accessLevel: true } },
+        departmentPermissions: { select: { departmentId: true, accessLevel: true } },
+      },
+    });
+
+    const DEPT_TO_FOLDER_MAP = {
+      NOT_SET: null,
+      FORBIDDEN: null,
+      READ_ONLY: 'READ_ONLY',
+      READ_WRITE: 'READ_WRITE',
+      FULL_ACCESS: 'FULL_ACCESS',
+      ADMINISTRATOR: 'ADMINISTRATOR',
+    };
+    const LEVEL_RANK = { READ_ONLY: 0, READ_WRITE: 1, FULL_ACCESS: 2, ADMINISTRATOR: 3 };
+    const getHighest = (levels) =>
+      levels.reduce((best, lvl) => (!best || (lvl && LEVEL_RANK[lvl] > LEVEL_RANK[best]) ? lvl : best), null);
+
+    const accessibleFolderIds = [];
+    let hasAnyFolderAccess = false;
+
+    for (const f of candidateFolders) {
+      const hasDirectNonForbidden = f.permissions.some((p) => p.userId === req.user.id && p.accessLevel !== 'FORBIDDEN');
+      const blocked = Array.isArray(f.blockedUserIds) ? f.blockedUserIds : [];
+      const isBlocked = blocked.includes(req.user.id) && !hasDirectNonForbidden;
+
+      const deptGrants = f.departmentPermissions.filter((g) => departmentIds.includes(g.departmentId));
+      const hasDeptForbidden = deptGrants.some((g) => g.accessLevel === 'FORBIDDEN');
+      let deptAccess = null;
+      if (!hasDeptForbidden) {
+        const levels = deptGrants.map((g) => DEPT_TO_FOLDER_MAP[g.accessLevel]).filter(Boolean);
+        deptAccess = getHighest(levels);
+      } else {
+        continue;
+      }
+
+      const directPerm = f.permissions.find((p) => p.userId === req.user.id);
+      if (directPerm) {
+        if (directPerm.accessLevel === 'FORBIDDEN') continue;
+        const directAccess = directPerm.accessLevel;
+        const effective = getHighest([directAccess, deptAccess]);
+        if (effective && !isBlocked) {
+          hasAnyFolderAccess = true;
+          if (['ADMINISTRATOR', 'FULL_ACCESS'].includes(effective)) {
+            accessibleFolderIds.push(f.id);
+          }
+        }
+        continue;
+      }
+
+      if (isBlocked) continue;
+      if (deptAccess) {
+        hasAnyFolderAccess = true;
+        if (['ADMINISTRATOR', 'FULL_ACCESS'].includes(deptAccess)) {
+          accessibleFolderIds.push(f.id);
+        }
+      }
+    }
+
+    if (!hasAnyFolderAccess && !vaultAccess) {
       return res.status(403).json({ message: 'Access denied' });
     }
 
-    const vaultType = await getVaultType(vaultId);
-    if (!vaultType || vaultType === 'PERSONAL') {
+    if (!accessibleFolderIds.length) {
       return res.json([]);
     }
 
     const trash = await prisma.passwordEntry.findMany({
       where: {
         vaultId,
+        folderId: { in: accessibleFolderIds },
         deletedAt: { not: null },
       },
       include: {
