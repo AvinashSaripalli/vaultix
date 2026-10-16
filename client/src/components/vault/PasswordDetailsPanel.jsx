@@ -60,11 +60,12 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
   );
 
   const selectedFolder = folders.find((f) => f.id === selectedFolderId);
+  const effectiveFolder = selectedFolder || folders.find((f) => f.id === selectedPassword?.folderId);
 
-  const selectedFolderPermission = selectedFolder?.permissions?.find(
+  const selectedFolderPermission = effectiveFolder?.permissions?.find(
     (item) => item.userId === user?.id || item.user?.id === user?.id
   );
-  const selectedFolderDeptMember = selectedFolder?.departmentMembers?.find(
+  const selectedFolderDeptMember = effectiveFolder?.departmentMembers?.find(
     (dm) => dm.user?.id === user?.id
   );
   const selectedFolderAccess = (() => {
@@ -79,20 +80,25 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
     return getRank(direct) >= getRank(dept) ? direct : dept;
   })();
 
+  const isCreator = selectedPassword?.createdById === user?.id;
+
   const canView =
     ['SUPER_ADMIN', 'ADMIN'].includes(user?.role) ||
+    isCreator ||
     ['ADMINISTRATOR', 'READ_WRITE', 'READ_ONLY', 'FULL_ACCESS'].includes(
       selectedFolderAccess
     );
 
   const canEdit =
     ['SUPER_ADMIN', 'ADMIN'].includes(user?.role) ||
+    isCreator ||
     ['ADMINISTRATOR', 'READ_WRITE', 'FULL_ACCESS'].includes(
       selectedFolderAccess
     );
 
   const canDelete =
     ['SUPER_ADMIN', 'ADMIN'].includes(user?.role) ||
+    isCreator ||
     ['ADMINISTRATOR', 'FULL_ACCESS'].includes(selectedFolderAccess);
 
   const [visiblePasswords, setVisiblePasswords] = useState({});

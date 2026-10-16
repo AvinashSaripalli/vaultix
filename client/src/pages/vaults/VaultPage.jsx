@@ -53,6 +53,8 @@ import {
   restorePassword,
   purgePassword,
   selectPassword,
+  selectFolder,
+  clearSelectedFolder,
 } from '../../features/vault/vaultSlice';
 
 import VaultPolicyModal from '../../components/vault/VaultPolicyModal';
@@ -629,7 +631,20 @@ function VaultPage() {
     if (restorePassword.fulfilled.match(result)) {
       dispatch(fetchPasswordsByVault(selectedVault.id));
       dispatch(fetchVaultTrash(selectedVault.id));
-      showToast(`Restored "${item.name}"`);
+
+      const targetFolder = folders.find((f) => f.id === item.folderId);
+      const folderName = item.folder?.name || targetFolder?.name;
+
+      if (item.folderId && targetFolder) {
+        dispatch(selectFolder(item.folderId));
+        showToast(`Restored "${item.name}" to folder "${folderName}"`);
+      } else {
+        dispatch(clearSelectedFolder());
+        showToast(`Restored "${item.name}" to vault`);
+      }
+
+      dispatch(selectPassword(item.id));
+      setTrashOpen(false);
     } else {
       showToast(result.payload || 'Failed to restore password', 'error');
     }
@@ -735,9 +750,9 @@ function VaultPage() {
 
                 <h1
                   className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-slate-900 mt-1 dark:text-slate-100 truncate max-w-2xl"
-                  title={selectedFolder?.name || selectedVault?.name || 'Company Vault'}
+                  title={selectedFolder?.name || `${selectedVault?.name || 'Company Vault'} — All Passwords`}
                 >
-                  {selectedFolder?.name || selectedVault?.name || 'Company Vault'}
+                  {selectedFolder?.name || `${selectedVault?.name || 'Company Vault'} — All Passwords`}
                 </h1>
 
                 <FolderMembersSummary onClick={() => setUsersOpen(true)} />
@@ -753,7 +768,7 @@ function VaultPage() {
                   </button>
                 )}
 
-                {selectedFolder && canAddPassword && (
+                {(selectedFolder ? canAddPassword : (isAdminUser || folders.length > 0)) && (
                   <button
                     onClick={() => {
                       setPrefillData(null);
@@ -1113,41 +1128,23 @@ function VaultPage() {
         )}
 
         {!vaultsLoading && !passwordsLoading && !error && !trashOpen && (
-          <>
-            {!selectedFolderId ? (
-              <div className="min-h-[640px] flex flex-col items-center justify-center text-center px-6">
-                <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-4 dark:bg-indigo-900/40 dark:text-indigo-300">
-                  <Users size={28} />
-                </div>
-
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                  Select a folder
-                </h2>
-
-                <p className="text-slate-500 mt-2 text-sm dark:text-slate-400">
-                  Click a folder from the left sidebar to view your passwords.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] lg:grid-cols-[320px_1fr] xl:grid-cols-[360px_1fr] min-h-[640px] divide-y md:divide-y-0 md:divide-x divide-slate-200 dark:divide-slate-700 min-w-0">
-                <div className={`${selectedPasswordId ? 'hidden md:block' : 'block'} min-w-0`}>
-                  <PasswordListPanel />
-                </div>
-                <div className={`${!selectedPasswordId ? 'hidden md:block' : 'block'} min-w-0`}>
-                  <PasswordDetailsPanel
-                    onBackToList={() => dispatch(selectPassword(null))}
-                    onShareVault={() => setVaultShareOpen(true)}
-                    onAddLogin={(data) => {
-                      // data can be string (legacy) or {name, url, tags}
-                      const prefill = typeof data === 'string' ? { name: data } : data;
-                      setPrefillData(prefill);
-                      dispatch(openAddPasswordModal());
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-          </>
+          <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] lg:grid-cols-[320px_1fr] xl:grid-cols-[360px_1fr] min-h-[640px] divide-y md:divide-y-0 md:divide-x divide-slate-200 dark:divide-slate-700 min-w-0">
+            <div className={`${selectedPasswordId ? 'hidden md:block' : 'block'} min-w-0`}>
+              <PasswordListPanel />
+            </div>
+            <div className={`${!selectedPasswordId ? 'hidden md:block' : 'block'} min-w-0`}>
+              <PasswordDetailsPanel
+                onBackToList={() => dispatch(selectPassword(null))}
+                onShareVault={() => setVaultShareOpen(true)}
+                onAddLogin={(data) => {
+                  // data can be string (legacy) or {name, url, tags}
+                  const prefill = typeof data === 'string' ? { name: data } : data;
+                  setPrefillData(prefill);
+                  dispatch(openAddPasswordModal());
+                }}
+              />
+            </div>
+          </div>
         )}
       </div>
       

@@ -69,6 +69,7 @@ function AddPasswordModal({ prefill, prefillName, onPrefillConsumed }) {
 
   const [formData, setFormData] = useState({
     name: '',
+    folderId: selectedFolderId || (folders[0]?.id || ''),
     type: 'LOGIN',
     login: '',
     encryptedPassword: '',
@@ -89,6 +90,15 @@ function AddPasswordModal({ prefill, prefillName, onPrefillConsumed }) {
     'w-full border border-slate-300 rounded-xl px-4 py-3 outline-none dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600';
 
   const effectivePrefill = prefill || (prefillName ? (typeof prefillName === 'string' ? { name: prefillName } : prefillName) : null);
+
+  useEffect(() => {
+    if (isAddPasswordModalOpen) {
+      setFormData((prev) => ({
+        ...prev,
+        folderId: selectedFolderId || prev.folderId || (folders[0]?.id || ''),
+      }));
+    }
+  }, [isAddPasswordModalOpen, selectedFolderId, folders]);
 
   useEffect(() => {
     if (isAddPasswordModalOpen && effectivePrefill) {
@@ -179,7 +189,8 @@ function AddPasswordModal({ prefill, prefillName, onPrefillConsumed }) {
 
   const validateForm = () => {
     if (!selectedVault?.id) return 'Vault is required';
-    if (!selectedFolderId) return 'Please select a folder first';
+    const effectiveFolderId = formData.folderId || selectedFolderId;
+    if (!effectiveFolderId) return 'Please select a folder';
     if (!formData.name.trim()) return 'Password name is required';
 
     if (formData.type === 'LOGIN') {
@@ -221,6 +232,8 @@ function AddPasswordModal({ prefill, prefillName, onPrefillConsumed }) {
       return;
     }
 
+    const effectiveFolderId = formData.folderId || selectedFolderId;
+
     const payload = {
       name: formData.name.trim(),
       type: formData.type,
@@ -229,7 +242,7 @@ function AddPasswordModal({ prefill, prefillName, onPrefillConsumed }) {
       note: formData.encryptedNote || '',
       url: formData.type === 'LOGIN' ? formData.url.trim() : '',
       vaultId: selectedVault?.id,
-      folderId: selectedFolderId,
+      folderId: effectiveFolderId,
       tags: formData.tags,
       isSensitive: formData.isSensitive,
       fields: formData.fields,
@@ -298,10 +311,11 @@ function AddPasswordModal({ prefill, prefillName, onPrefillConsumed }) {
       if (aesKeyJwk) {
         // Wrap for every authorized user: folder members, admins and
         // department members — so anyone with access can decrypt.
+        const targetFolder = folders.find((f) => f.id === payload.folderId) || selectedFolder;
         const recipientIds = await getWrapRecipients(
           payload.folderId,
           user.id,
-          selectedFolder?.permissions || []
+          targetFolder?.permissions || []
         );
 
         const wrapped = await wrapItemKeysForUsers(aesKeyJwk, recipientIds);
@@ -392,6 +406,28 @@ function AddPasswordModal({ prefill, prefillName, onPrefillConsumed }) {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {!selectedFolderId && folders.length > 0 && (
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Folder <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="folderId"
+                  value={formData.folderId}
+                  onChange={handleChange}
+                  className={inputClass}
+                  required
+                >
+                  <option value="" disabled>Select a folder</option>
+                  {folders.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <ItemFormFields
               formData={formData}
               onChange={(field, val) => {

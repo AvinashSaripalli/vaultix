@@ -581,14 +581,28 @@ const getPasswordsByVault = async (req, res) => {
       }
       const folderIds = accessibleFolderIds.filter(Boolean);
 
-      if (!folderIds.length) {
+      const vaultAccess = await getVaultAccess(req.params.vaultId, req.user.id);
+      const hasVaultLevelAccess =
+        vaultAccess &&
+        ['ADMINISTRATOR', 'FULL_ACCESS', 'READ_WRITE', 'READ_ONLY'].includes(vaultAccess);
+
+      const orConditions = [];
+      if (folderIds.length > 0) {
+        orConditions.push({ folderId: { in: folderIds } });
+      }
+      if (hasVaultLevelAccess) {
+        orConditions.push({ folderId: null });
+      }
+      orConditions.push({ createdById: req.user.id, folderId: null });
+
+      if (orConditions.length === 0) {
         passwords = [];
       } else {
         passwords = await prisma.passwordEntry.findMany({
           where: {
             vaultId: req.params.vaultId,
-            folderId: { in: folderIds },
             deletedAt: null,
+            OR: orConditions,
           },
           include: {
             tags: { include: { tag: true } },

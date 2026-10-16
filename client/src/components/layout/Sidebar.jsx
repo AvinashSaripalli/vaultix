@@ -4,7 +4,7 @@ import {
   Shield, Users, Activity, Folder, FolderOpen,
   LogOut, Plus, ChevronDown, LockKeyhole, Share2, User, Sparkles, Building2,
   Smartphone, Clock, HeartPulse, MonitorCheck, Clipboard,
-  PanelLeftClose, PanelLeftOpen, X, Trash2, ShieldCheck, UserCheck,
+  PanelLeftClose, PanelLeftOpen, X, Trash2, ShieldCheck, UserCheck, Layers,
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { logoutUser } from '../../features/auth/authSlice';
@@ -312,6 +312,38 @@ function Sidebar() {
                     {/* Folders */}
                     {vaultActive && (
                       <div className="ml-4 mt-1 space-y-0.5 border-l-2 border-blue-100 dark:border-blue-800 pl-3">
+                        {/* All Passwords Entry */}
+                        {(() => {
+                          const isTrashActive = vaultActive && location.search.includes('tab=trash');
+                          const isAllSelected = vaultActive && !isTrashActive && !selectedFolderId;
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                dispatch(clearSelectedFolder());
+                                navigate(`/vaults/${vault.slug}`);
+                                onNavigate();
+                              }}
+                              className={`w-full flex items-center gap-2.5 pl-2.5 pr-1.5 py-2 rounded-xl text-left text-sm transition-all duration-150 ${
+                                isAllSelected
+                                  ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-semibold'
+                                  : 'text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-secondary)] font-medium'
+                              }`}
+                              title="View all passwords in this vault"
+                            >
+                              <Layers
+                                size={16}
+                                className={`shrink-0 ${
+                                  isAllSelected ? 'text-blue-500 dark:text-blue-400' : 'text-[var(--text-muted)]'
+                                }`}
+                              />
+                              <span className="truncate flex-1 min-w-0 text-sm">
+                                All Passwords
+                              </span>
+                            </button>
+                          );
+                        })()}
+
                         {foldersLoading && (
                           <p className="text-xs text-[var(--text-muted)] py-1">Loading folders...</p>
                         )}

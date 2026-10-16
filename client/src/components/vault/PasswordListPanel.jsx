@@ -15,6 +15,7 @@ function PasswordListPanel() {
     selectedPasswordId,
     searchTerm,
     selectedFolderId,
+    folders = [],
   } = useSelector((state) => state.vault);
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -74,7 +75,7 @@ function PasswordListPanel() {
   }, [groupedPasswords, startIndex, endIndex]);
 
   useEffect(() => {
-    if (!selectedFolderId || !paginatedGroups.length) {
+    if (!paginatedGroups.length) {
       if (selectedPasswordId !== null) {
         dispatch(selectPassword(null));
       }
@@ -177,6 +178,14 @@ function PasswordListPanel() {
                       ? `${group.items.length} accounts`
                       : firstItem?.login || meta.label}
                   </span>
+                  {!selectedFolderId && (
+                    <span
+                      className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-750 text-slate-600 dark:text-slate-300 truncate max-w-[110px]"
+                      title={firstItem?.folder?.name || folders.find((f) => f.id === firstItem?.folderId)?.name || 'Vault Root'}
+                    >
+                      {firstItem?.folder?.name || folders.find((f) => f.id === firstItem?.folderId)?.name || 'Vault Root'}
+                    </span>
+                  )}
                   <ItemTypeBadge type={firstItem?.type} />
                 </div>
               </button>
