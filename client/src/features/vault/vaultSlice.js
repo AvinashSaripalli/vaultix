@@ -179,9 +179,7 @@ export const fetchVaultTrash = createAsyncThunk(
       });
       return { vaultId, trash: res.data || [] };
     } catch (error) {
-      return thunkAPI.rejectWithValue(
-        error.response?.data?.message || 'Failed to load trash'
-      );
+      return { vaultId, trash: [] };
     }
   }
 );
