@@ -293,8 +293,14 @@ const approveRequest = async (req, res) => {
     } else if (request.actionType === 'PURGE_TRASH') {
       const targetVaultId = payload.vaultId;
       const targetPasswordId = payload.passwordId;
+      const targetFolderId = payload.folderId;
 
-      if (targetPasswordId) {
+      if (targetFolderId) {
+        await prisma.passwordEntry.deleteMany({ where: { folderId: targetFolderId } });
+        await prisma.folderPermission.deleteMany({ where: { folderId: targetFolderId } });
+        await prisma.departmentPermission.deleteMany({ where: { folderId: targetFolderId } });
+        await prisma.folder.delete({ where: { id: targetFolderId } });
+      } else if (targetPasswordId) {
         const subtreeIds = new Set([targetPasswordId]);
         let changed = true;
         while (changed) {

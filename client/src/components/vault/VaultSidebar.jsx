@@ -13,6 +13,9 @@ import {
   clearSelectedFolder,
   deleteFolder,
   clearVaultError,
+  fetchVaultTrash,
+  fetchVaultFolderTrash,
+  fetchPasswordsByVault,
 } from '../../features/vault/vaultSlice';
 import ConfirmModal from '../common/ConfirmModal';
 import { showToast } from '../../utils/toast';
@@ -66,9 +69,18 @@ function VaultSidebar() {
 
   const executeDeleteFolder = async () => {
     if (!selectedFolder) return;
+    const folderName = selectedFolder.name;
+    const vaultId = selectedVault?.id;
     const result = await dispatch(deleteFolder(selectedFolder.id));
     if (deleteFolder.rejected.match(result)) {
-      showToast(result.payload || 'Failed to delete folder', 'error');
+      showToast(result.payload || 'Failed to move folder to Trash', 'error');
+    } else {
+      showToast(`Folder "${folderName}" and its passwords moved to Trash`, 'info');
+      if (vaultId) {
+        dispatch(fetchVaultTrash(vaultId));
+        dispatch(fetchVaultFolderTrash(vaultId));
+        dispatch(fetchPasswordsByVault(vaultId));
+      }
     }
     setConfirmDelete(false);
   };
@@ -169,9 +181,9 @@ function VaultSidebar() {
 
       <ConfirmModal
         open={confirmDelete}
-        title="Delete Folder"
-        message={`Are you sure you want to delete "${selectedFolder?.name}"? This action cannot be undone.`}
-        confirmLabel="Delete"
+        title="Move Folder to Trash"
+        message={`Are you sure you want to move "${selectedFolder?.name}" and all its passwords to Trash? You can restore them anytime.`}
+        confirmLabel="Move to Trash"
         onConfirm={executeDeleteFolder}
         onCancel={() => setConfirmDelete(false)}
         loading={actionLoading}

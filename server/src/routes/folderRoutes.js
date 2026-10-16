@@ -9,6 +9,9 @@ const {
   shareFolder,
   getFolderActivityLogs,
   deleteFolder,
+  restoreFolder,
+  purgeFolder,
+  getFolderTrash,
   getFolderById,
   updateFolderPermission,
   deleteFolderPermission,
@@ -24,9 +27,27 @@ router.post(
 );
 
 router.get(
+  '/vault/:vaultId/trash',
+  authenticate,
+  getFolderTrash
+);
+
+router.get(
   '/vault/:vaultId',
   authenticate,
   getFoldersByVault
+);
+
+router.post(
+  '/:id/restore',
+  authenticate,
+  restoreFolder
+);
+
+router.delete(
+  '/:id/purge',
+  authenticate,
+  purgeFolder
 );
 
 router.put(

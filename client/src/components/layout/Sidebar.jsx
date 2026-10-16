@@ -14,6 +14,7 @@ import api from '../../services/api';
 import {
   fetchVaults, fetchFoldersByVault, selectFolder, clearSelectedFolder,
   openAddFolderModal, deleteFolder, clearVaultError, fetchVaultTrash,
+  fetchVaultFolderTrash, fetchPasswordsByVault,
 } from '../../features/vault/vaultSlice';
 import ShareFolderModal from '../folder/ShareFolderModal';
 import RenameFolderModal from '../folder/RenameFolderModal';
@@ -126,9 +127,17 @@ function Sidebar() {
   const handleDeleteFolder = (folder) => { dispatch(clearVaultError()); setConfirmDelete({ open: true, folder }); };
   const executeDeleteFolder = async () => {
     if (!confirmDelete.folder) return;
+    const folderName = confirmDelete.folder.name;
     const result = await dispatch(deleteFolder(confirmDelete.folder.id));
     if (deleteFolder.rejected.match(result)) {
-      showToast(result.payload || 'Failed to delete folder', 'error');
+      showToast(result.payload || 'Failed to move folder to Trash', 'error');
+    } else {
+      showToast(`Folder "${folderName}" and its passwords moved to Trash`, 'info');
+      if (currentVaultId) {
+        dispatch(fetchVaultTrash(currentVaultId));
+        dispatch(fetchVaultFolderTrash(currentVaultId));
+        dispatch(fetchPasswordsByVault(currentVaultId));
+      }
     }
     setConfirmDelete({ open: false, folder: null });
   };
@@ -626,9 +635,9 @@ function Sidebar() {
       />
       <ConfirmModal
         open={confirmDelete.open}
-        title="Delete Folder"
-        message={`Are you sure you want to delete "${confirmDelete.folder?.name}"? This action cannot be undone.`}
-        confirmLabel="Delete"
+        title="Move Folder to Trash"
+        message={`Are you sure you want to move "${confirmDelete.folder?.name}" and all its passwords to Trash? You can restore them anytime.`}
+        confirmLabel="Move to Trash"
         onConfirm={executeDeleteFolder}
         onCancel={() => setConfirmDelete({ open: false, folder: null })}
       />

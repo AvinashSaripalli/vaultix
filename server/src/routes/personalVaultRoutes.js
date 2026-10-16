@@ -9,6 +9,9 @@ const {
   getMyVaultPasswords,
   updateMyVaultFolder,
   deleteMyVaultFolder,
+  restoreMyVaultFolder,
+  purgeMyVaultFolder,
+  getMyVaultFolderTrash,
   updateMyVaultPassword,
   deleteMyVaultPassword,
   restoreMyVaultPassword,
@@ -23,10 +26,13 @@ router.use(authenticate);
 
 router.get('/', getOrCreateMyVault);
 
+router.get('/folders/trash', getMyVaultFolderTrash);
 router.get('/folders', getMyVaultFolders);
 router.post('/folders', createMyVaultFolder);
 router.put('/folders/:folderId', updateMyVaultFolder);
 router.delete('/folders/:folderId', deleteMyVaultFolder);
+router.post('/folders/:folderId/restore', restoreMyVaultFolder);
+router.delete('/folders/:folderId/purge', purgeMyVaultFolder);
 
 router.get('/passwords', getMyVaultPasswords);
 router.post('/passwords', createMyVaultPassword);

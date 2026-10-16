@@ -147,6 +147,7 @@ const getMyVaultFolders = async (req, res) => {
     const folders = await prisma.folder.findMany({
       where: {
         vaultId: vault.id,
+        deletedAt: null,
       },
       orderBy: {
         createdAt: 'asc',
@@ -448,7 +449,161 @@ const deleteMyVaultFolder = async (req, res) => {
       return res.status(404).json({ message: 'Folder not found' });
     }
 
+    if (folder.deletedAt) {
+      return res.status(400).json({ message: 'Folder is already in trash' });
+    }
+
+    const now = new Date();
+
     await prisma.$transaction(async (tx) => {
+      // 1. Soft-delete folder
+      await tx.folder.update({
+        where: { id: folderId },
+        data: { deletedAt: now },
+      });
+
+      // 2. Soft-delete active passwords inside this folder
+      await tx.passwordEntry.updateMany({
+        where: {
+          folderId,
+          deletedAt: null,
+        },
+        data: { deletedAt: now },
+      });
+
+      await tx.activityLog.create({
+        data: {
+          id: await generateId('activityLog'),
+          userId: req.user.id,
+          action: 'DELETE_FOLDER',
+          targetType: 'Folder',
+          targetId: folder.id,
+          metadata: {
+            name: folder.name,
+            vaultId: vault.id,
+            folderId: folder.id,
+            personalVault: true,
+            softDelete: true,
+          },
+        },
+      });
+    });
+
+    res.json({ message: 'Folder and its passwords moved to trash' });
+  } catch (error) {
+    console.error('Delete my vault folder error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+const restoreMyVaultFolder = async (req, res) => {
+  try {
+    const { folderId } = req.params;
+
+    const vault = await prisma.vault.findFirst({
+      where: {
+        ownerId: req.user.id,
+        type: 'PERSONAL',
+      },
+    });
+
+    if (!vault) {
+      return res.status(404).json({ message: 'Personal vault not found' });
+    }
+
+    const folder = await prisma.folder.findFirst({
+      where: {
+        id: folderId,
+        vaultId: vault.id,
+      },
+    });
+
+    if (!folder) {
+      return res.status(404).json({ message: 'Folder not found' });
+    }
+
+    if (!folder.deletedAt) {
+      return res.status(400).json({ message: 'Folder is not in trash' });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Restore folder
+      await tx.folder.update({
+        where: { id: folderId },
+        data: { deletedAt: null },
+      });
+
+      // 2. Restore all passwords in this folder that were in trash
+      await tx.passwordEntry.updateMany({
+        where: {
+          folderId,
+          deletedAt: { not: null },
+        },
+        data: { deletedAt: null },
+      });
+
+      await tx.activityLog.create({
+        data: {
+          id: await generateId('activityLog'),
+          userId: req.user.id,
+          action: 'UPDATE_FOLDER',
+          targetType: 'Folder',
+          targetId: folder.id,
+          metadata: {
+            name: folder.name,
+            vaultId: vault.id,
+            folderId: folder.id,
+            personalVault: true,
+            restored: true,
+          },
+        },
+      });
+    });
+
+    res.json({ message: 'Folder and passwords restored successfully' });
+  } catch (error) {
+    console.error('Restore my vault folder error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+const purgeMyVaultFolder = async (req, res) => {
+  try {
+    const { folderId } = req.params;
+
+    const vault = await prisma.vault.findFirst({
+      where: {
+        ownerId: req.user.id,
+        type: 'PERSONAL',
+      },
+    });
+
+    if (!vault) {
+      return res.status(404).json({ message: 'Personal vault not found' });
+    }
+
+    const folder = await prisma.folder.findFirst({
+      where: {
+        id: folderId,
+        vaultId: vault.id,
+      },
+    });
+
+    if (!folder) {
+      return res.status(404).json({ message: 'Folder not found' });
+    }
+
+    if (!folder.deletedAt) {
+      return res.status(400).json({ message: 'Folder is not in trash' });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Permanently delete all passwords in this folder
+      await tx.passwordEntry.deleteMany({
+        where: { folderId },
+      });
+
+      // 2. Permanently delete folder
       await tx.folder.delete({
         where: { id: folderId },
       });
@@ -465,14 +620,50 @@ const deleteMyVaultFolder = async (req, res) => {
             vaultId: vault.id,
             folderId: folder.id,
             personalVault: true,
+            purged: true,
           },
         },
       });
     });
 
-    res.json({ message: 'Folder deleted successfully' });
+    res.json({ message: 'Folder and contents permanently deleted' });
   } catch (error) {
-    console.error('Delete my vault folder error:', error);
+    console.error('Purge my vault folder error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+const getMyVaultFolderTrash = async (req, res) => {
+  try {
+    const vault = await prisma.vault.findFirst({
+      where: {
+        ownerId: req.user.id,
+        type: 'PERSONAL',
+      },
+    });
+
+    if (!vault) {
+      return res.json([]);
+    }
+
+    const trash = await prisma.folder.findMany({
+      where: {
+        vaultId: vault.id,
+        deletedAt: { not: null },
+      },
+      include: {
+        _count: {
+          select: { passwords: true },
+        },
+      },
+      orderBy: {
+        deletedAt: 'desc',
+      },
+    });
+
+    res.json(trash);
+  } catch (error) {
+    console.error('Get my vault folder trash error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -939,6 +1130,9 @@ module.exports = {
   getMyVaultPasswords,
   updateMyVaultFolder,
   deleteMyVaultFolder,
+  restoreMyVaultFolder,
+  purgeMyVaultFolder,
+  getMyVaultFolderTrash,
   updateMyVaultPassword,
   deleteMyVaultPassword,
   restoreMyVaultPassword,

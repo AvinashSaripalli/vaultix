@@ -158,6 +158,48 @@ export const purgeMyVaultPassword = createAsyncThunk(
   }
 );
 
+export const fetchMyVaultFolderTrash = createAsyncThunk(
+  'myVault/fetchMyVaultFolderTrash',
+  async (_, { rejectWithValue }) => {
+    try {
+      const res = await api.get('/my-vault/folders/trash');
+      return res.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || 'Failed to load folder trash'
+      );
+    }
+  }
+);
+
+export const restoreMyVaultFolder = createAsyncThunk(
+  'myVault/restoreMyVaultFolder',
+  async (folderId, { rejectWithValue }) => {
+    try {
+      await api.post(`/my-vault/folders/${folderId}/restore`);
+      return folderId;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || 'Failed to restore folder'
+      );
+    }
+  }
+);
+
+export const purgeMyVaultFolder = createAsyncThunk(
+  'myVault/purgeMyVaultFolder',
+  async (folderId, { rejectWithValue }) => {
+    try {
+      await api.delete(`/my-vault/folders/${folderId}/purge`);
+      return folderId;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || 'Failed to permanently delete folder'
+      );
+    }
+  }
+);
+
 const removeEntrySubtree = (passwords, id) => {
   const idsToRemove = new Set([id]);
   let changed = true;
@@ -187,10 +229,12 @@ const myVaultSlice = createSlice({
     folders: [],
     passwords: [],
     trash: [],
+    folderTrash: [],
     selectedFolderId: null,
     loading: false,
     actionLoading: false,
     trashLoading: false,
+    folderTrashLoading: false,
     error: null,
   },
 
@@ -350,6 +394,25 @@ const myVaultSlice = createSlice({
 
       .addCase(purgeMyVaultPassword.fulfilled, (state, action) => {
         state.trash = state.trash.filter((item) => item.id !== action.payload);
+      })
+
+      .addCase(fetchMyVaultFolderTrash.pending, (state) => {
+        state.folderTrashLoading = true;
+      })
+      .addCase(fetchMyVaultFolderTrash.fulfilled, (state, action) => {
+        state.folderTrashLoading = false;
+        state.folderTrash = action.payload || [];
+      })
+      .addCase(fetchMyVaultFolderTrash.rejected, (state) => {
+        state.folderTrashLoading = false;
+      })
+
+      .addCase(restoreMyVaultFolder.fulfilled, (state, action) => {
+        state.folderTrash = state.folderTrash.filter((f) => f.id !== action.payload);
+      })
+
+      .addCase(purgeMyVaultFolder.fulfilled, (state, action) => {
+        state.folderTrash = state.folderTrash.filter((f) => f.id !== action.payload);
       });
   },
 });

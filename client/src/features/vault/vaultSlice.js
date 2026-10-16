@@ -179,7 +179,9 @@ export const fetchVaultTrash = createAsyncThunk(
       });
       return { vaultId, trash: res.data || [] };
     } catch (error) {
-      return { vaultId, trash: [] };
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || 'Failed to load trash'
+      );
     }
   }
 );
@@ -239,6 +241,72 @@ export const deleteFolder = createAsyncThunk(
     } catch (error) {
       return thunkAPI.rejectWithValue(
         error.response?.data?.message || 'Failed to delete folder'
+      );
+    }
+  }
+);
+
+export const fetchVaultFolderTrash = createAsyncThunk(
+  'vault/fetchVaultFolderTrash',
+  async (vaultId, thunkAPI) => {
+    try {
+      const token = thunkAPI.getState().auth.token;
+      const response = await api.get(`/folders/vault/${vaultId}/trash`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return { vaultId, folders: response.data };
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || 'Failed to fetch folder trash'
+      );
+    }
+  }
+);
+
+export const restoreFolder = createAsyncThunk(
+  'vault/restoreFolder',
+  async ({ folderId, vaultId }, thunkAPI) => {
+    try {
+      const token = thunkAPI.getState().auth.token;
+      const response = await api.post(
+        `/folders/${folderId}/restore`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      return { folderId, vaultId, message: response.data?.message };
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || 'Failed to restore folder'
+      );
+    }
+  }
+);
+
+export const purgeFolder = createAsyncThunk(
+  'vault/purgeFolder',
+  async ({ folderId, vaultId }, thunkAPI) => {
+    try {
+      const token = thunkAPI.getState().auth.token;
+      const response = await api.delete(`/folders/${folderId}/purge`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return {
+        folderId,
+        vaultId,
+        approvalRequired: response.data?.approvalRequired,
+        message: response.data?.message,
+      };
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || 'Failed to permanently delete folder'
       );
     }
   }
@@ -313,6 +381,7 @@ const initialState = {
   folders: [],
   trash: [],
   trashByVault: {},
+  folderTrashByVault: {},
   activityLogs: [],
   selectedPasswordId: null,
   selectedFolderId: null,
@@ -327,6 +396,7 @@ const initialState = {
   activityLoading: false,
   actionLoading: false,
   trashLoading: false,
+  folderTrashLoading: false,
 
   searchTerm: '',
   collapsedFolders: {},
@@ -637,6 +707,37 @@ const vaultSlice = createSlice({
       .addCase(fetchActivityLogs.rejected, (state, action) => {
         state.activityLoading = false;
         state.error = action.payload;
+      })
+
+      .addCase(fetchVaultFolderTrash.pending, (state) => {
+        state.folderTrashLoading = true;
+      })
+      .addCase(fetchVaultFolderTrash.fulfilled, (state, action) => {
+        state.folderTrashLoading = false;
+        state.folderTrashByVault[action.payload.vaultId] = action.payload.folders;
+      })
+      .addCase(fetchVaultFolderTrash.rejected, (state) => {
+        state.folderTrashLoading = false;
+      })
+
+      .addCase(restoreFolder.fulfilled, (state, action) => {
+        const list = state.folderTrashByVault[action.payload.vaultId];
+        if (list) {
+          state.folderTrashByVault[action.payload.vaultId] = list.filter(
+            (item) => item.id !== action.payload.folderId
+          );
+        }
+      })
+
+      .addCase(purgeFolder.fulfilled, (state, action) => {
+        if (!action.payload?.approvalRequired) {
+          const list = state.folderTrashByVault[action.payload.vaultId];
+          if (list) {
+            state.folderTrashByVault[action.payload.vaultId] = list.filter(
+              (item) => item.id !== action.payload.folderId
+            );
+          }
+        }
       });
   },
 });

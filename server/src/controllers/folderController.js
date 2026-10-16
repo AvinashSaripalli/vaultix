@@ -6,7 +6,10 @@ const {
   getFolderDepartmentMembers,
   getUserDepartmentIds,
   getDepartmentIdsWithAncestors,
+  getVaultType,
+  getVaultAccess,
 } = require('../utils/permissions');
+const { getEffectiveOrganizationPolicy } = require('../utils/organizationPolicy');
 const generateId = require('../utils/generateId');
 
 const ALLOWED_ACCESS_LEVELS = [
@@ -192,7 +195,7 @@ const updateFolder = async (req, res) => {
       where: { id: req.params.id },
     });
 
-    if (!existingFolder) {
+    if (!existingFolder || existingFolder.deletedAt) {
       return res.status(404).json({ message: 'Folder not found' });
     }
 
@@ -248,7 +251,10 @@ const getFoldersByVault = async (req, res) => {
 
     if (admin) {
       folders = await prisma.folder.findMany({
-        where: { vaultId: req.params.vaultId },
+        where: {
+          vaultId: req.params.vaultId,
+          deletedAt: null,
+        },
         include: {
           vault: {
             include: {
@@ -278,6 +284,7 @@ const getFoldersByVault = async (req, res) => {
       let candidateFolders = await prisma.folder.findMany({
         where: {
           vaultId: req.params.vaultId,
+          deletedAt: null,
           OR: [
             {
               permissions: {
@@ -409,7 +416,7 @@ const getFolderById = async (req, res) => {
       },
     });
 
-    if (!folder) {
+    if (!folder || folder.deletedAt) {
       return res.status(404).json({ message: 'Folder not found' });
     }
 
@@ -613,16 +620,14 @@ const deleteFolder = async (req, res) => {
 
     const folder = await prisma.folder.findUnique({
       where: { id: folderId },
-      include: {
-        passwords: {
-          where: { deletedAt: null },
-        },
-        permissions: true,
-      },
     });
 
     if (!folder) {
       return res.status(404).json({ message: 'Folder not found' });
+    }
+
+    if (folder.deletedAt) {
+      return res.status(400).json({ message: 'Folder is already in trash' });
     }
 
     const access = await getFolderAccess(folderId, req.user.id);
@@ -630,20 +635,25 @@ const deleteFolder = async (req, res) => {
       return res.status(403).json({ message: 'Access denied' });
     }
 
-    if (folder.passwords.length > 0) {
-      return res.status(400).json({
-        message: 'Cannot delete folder because it contains passwords',
-      });
-    }
+    const now = new Date();
 
-    await prisma.$transaction([
-      prisma.folderPermission.deleteMany({
-        where: { folderId },
-      }),
-      prisma.folder.delete({
+    await prisma.$transaction(async (tx) => {
+      // 1. Soft-delete the folder
+      await tx.folder.update({
         where: { id: folderId },
-      }),
-      prisma.activityLog.create({
+        data: { deletedAt: now },
+      });
+
+      // 2. Soft-delete all active passwords in this folder
+      await tx.passwordEntry.updateMany({
+        where: {
+          folderId,
+          deletedAt: null,
+        },
+        data: { deletedAt: now },
+      });
+
+      await tx.activityLog.create({
         data: {
           id: await generateId('activityLog'),
           userId: req.user.id,
@@ -654,14 +664,256 @@ const deleteFolder = async (req, res) => {
             name: folder.name,
             vaultId: folder.vaultId,
             folderId: folder.id,
+            softDelete: true,
           },
         },
-      }),
-    ]);
+      });
+    });
 
-    res.json({ message: 'Folder deleted successfully' });
+    res.json({ message: 'Folder and its passwords moved to trash' });
   } catch (error) {
     console.error('Delete folder error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+const restoreFolder = async (req, res) => {
+  try {
+    const folderId = req.params.id;
+
+    const folder = await prisma.folder.findUnique({
+      where: { id: folderId },
+    });
+
+    if (!folder) {
+      return res.status(404).json({ message: 'Folder not found' });
+    }
+
+    if (!folder.deletedAt) {
+      return res.status(400).json({ message: 'Folder is not in trash' });
+    }
+
+    const access = await getFolderAccess(folderId, req.user.id);
+    if (!access || access !== 'ADMINISTRATOR') {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Restore the folder
+      await tx.folder.update({
+        where: { id: folderId },
+        data: { deletedAt: null },
+      });
+
+      // 2. Restore all passwords in this folder that were in trash
+      await tx.passwordEntry.updateMany({
+        where: {
+          folderId,
+          deletedAt: { not: null },
+        },
+        data: { deletedAt: null },
+      });
+
+      await tx.activityLog.create({
+        data: {
+          id: await generateId('activityLog'),
+          userId: req.user.id,
+          action: 'UPDATE_FOLDER',
+          targetType: 'Folder',
+          targetId: folderId,
+          metadata: {
+            name: folder.name,
+            vaultId: folder.vaultId,
+            folderId: folder.id,
+            restored: true,
+          },
+        },
+      });
+    });
+
+    res.json({ message: 'Folder and passwords restored successfully' });
+  } catch (error) {
+    console.error('Restore folder error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+const purgeFolder = async (req, res) => {
+  try {
+    const folderId = req.params.id;
+
+    const folder = await prisma.folder.findUnique({
+      where: { id: folderId },
+      include: { vault: true },
+    });
+
+    if (!folder) {
+      return res.status(404).json({ message: 'Folder not found' });
+    }
+
+    if (!folder.deletedAt) {
+      return res.status(400).json({ message: 'Folder is not in trash' });
+    }
+
+    const access = await getFolderAccess(folderId, req.user.id);
+    if (!access || access !== 'ADMINISTRATOR') {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    const vaultType = await getVaultType(folder.vaultId);
+    const policy = await getEffectiveOrganizationPolicy();
+
+    if (vaultType !== 'PERSONAL' && req.user.role === 'ADMIN' && policy?.requireDualAdminApproval) {
+      const approvalId = await generateId('req');
+      const approvalRequest = await prisma.adminApprovalRequest.create({
+        data: {
+          id: approvalId,
+          actionType: 'PURGE_TRASH',
+          title: `Purge Folder: ${folder.name}`,
+          description: `Administrator ${req.user.fullName || req.user.email} requested permanent purge of folder "${folder.name}" and its credentials from Trash. Requires Super Admin approval.`,
+          payload: {
+            folderId: folder.id,
+            folderName: folder.name,
+            vaultId: folder.vaultId,
+            vaultName: folder.vault?.name || 'Company Vault',
+          },
+          requesterId: req.user.id,
+          status: 'PENDING',
+          expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000),
+        },
+      });
+
+      await prisma.activityLog.create({
+        data: {
+          id: await generateId('activity'),
+          userId: req.user.id,
+          action: 'CREATE_APPROVAL_REQUEST',
+          targetType: 'APPROVAL_REQUEST',
+          targetId: approvalId,
+          metadata: {
+            actionType: 'PURGE_TRASH',
+            folderId: folder.id,
+            folderName: folder.name,
+            vaultId: folder.vaultId,
+          },
+        },
+      });
+
+      return res.status(202).json({
+        approvalRequired: true,
+        message: `Super Admin Approval Required: Permanently purging folder requires authorization from a Super Admin. Pending request #${approvalId} submitted.`,
+        approvalRequest,
+      });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Delete all passwords in this folder
+      await tx.passwordEntry.deleteMany({
+        where: { folderId },
+      });
+
+      // 2. Delete permissions
+      await tx.folderPermission.deleteMany({
+        where: { folderId },
+      });
+      await tx.departmentPermission.deleteMany({
+        where: { folderId },
+      });
+
+      // 3. Delete the folder itself
+      await tx.folder.delete({
+        where: { id: folderId },
+      });
+
+      await tx.activityLog.create({
+        data: {
+          id: await generateId('activityLog'),
+          userId: req.user.id,
+          action: 'DELETE_FOLDER',
+          targetType: 'Folder',
+          targetId: folderId,
+          metadata: {
+            name: folder.name,
+            vaultId: folder.vaultId,
+            folderId: folder.id,
+            purged: true,
+          },
+        },
+      });
+    });
+
+    res.json({ message: 'Folder and contents permanently deleted' });
+  } catch (error) {
+    console.error('Purge folder error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+const getFolderTrash = async (req, res) => {
+  try {
+    const { vaultId } = req.params;
+
+    const vaultType = await getVaultType(vaultId);
+    if (!vaultType || vaultType === 'PERSONAL') {
+      return res.json([]);
+    }
+
+    const admin = await isAdminUser(req.user.id);
+    const vaultAccess = await getVaultAccess(vaultId, req.user.id);
+    const hasVaultLevelAccess =
+      admin || (vaultAccess && ['ADMINISTRATOR', 'FULL_ACCESS'].includes(vaultAccess));
+
+    if (hasVaultLevelAccess) {
+      const trash = await prisma.folder.findMany({
+        where: {
+          vaultId,
+          deletedAt: { not: null },
+        },
+        include: {
+          _count: {
+            select: { passwords: true },
+          },
+        },
+        orderBy: { deletedAt: 'desc' },
+      });
+
+      return res.json(trash);
+    }
+
+    // Check folder permissions for non-admin users
+    const memberOfIds = await getUserDepartmentIds(req.user.id);
+    const departmentIds = await getDepartmentIdsWithAncestors(memberOfIds);
+
+    const candidateFolders = await prisma.folder.findMany({
+      where: {
+        vaultId,
+        deletedAt: { not: null },
+        OR: [
+          { permissions: { some: { userId: req.user.id } } },
+          ...(departmentIds.length
+            ? [{ departmentPermissions: { some: { departmentId: { in: departmentIds } } } }]
+            : []),
+        ],
+      },
+      include: {
+        _count: {
+          select: { passwords: true },
+        },
+      },
+      orderBy: { deletedAt: 'desc' },
+    });
+
+    const allowed = [];
+    for (const f of candidateFolders) {
+      const access = await getFolderAccess(f.id, req.user.id);
+      if (access && ['ADMINISTRATOR', 'FULL_ACCESS'].includes(access)) {
+        allowed.push(f);
+      }
+    }
+
+    res.json(allowed);
+  } catch (error) {
+    console.error('Get folder trash error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -699,6 +951,9 @@ module.exports = {
   shareFolder,
   getFolderActivityLogs,
   deleteFolder,
+  restoreFolder,
+  purgeFolder,
+  getFolderTrash,
   updateFolderPermission,
   deleteFolderPermission,
   getFolderWrapRecipients,

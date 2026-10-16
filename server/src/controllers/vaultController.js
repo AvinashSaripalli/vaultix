@@ -105,6 +105,7 @@ const getVaults = async (req, res) => {
       },
     },
     folders: {
+      where: { deletedAt: null },
       include: {
         permissions: {
           include: {
@@ -134,6 +135,7 @@ const getVaults = async (req, res) => {
       // OR access via a department they belong to (including parent
       // departments), granted directly on the folder.
       const folderAccessFilter = {
+        deletedAt: null,
         OR: [
           {
             permissions: {
@@ -249,6 +251,7 @@ const getVaultBySlug = async (req, res) => {
             },
           },
           folders: {
+            where: { deletedAt: null },
             include: {
               permissions: {
                 include: {
@@ -289,6 +292,7 @@ const getVaultBySlug = async (req, res) => {
 
       const folderAccessFilter = {
         vaultId: targetVault.id,
+        deletedAt: null,
         OR: [
           {
             permissions: {

@@ -93,6 +93,7 @@ model Folder {
   parentId              String?
   wrappedKeys           Json?
   blockedUserIds        Json?
+  deletedAt             DateTime?
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
   departmentPermissions DepartmentPermission[]
@@ -101,6 +102,9 @@ model Folder {
   vault                 Vault                  @relation(fields: [vaultId], references: [id], onDelete: Cascade)
   permissions           FolderPermission[]
   passwords             PasswordEntry[]
+
+  @@index([deletedAt])
+  @@index([vaultId])
 }
 
 model FolderPermission {

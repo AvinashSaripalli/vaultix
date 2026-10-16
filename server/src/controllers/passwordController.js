@@ -1266,6 +1266,10 @@ const getTrash = async (req, res) => {
       }
     }
 
+    if (!hasAnyFolderAccess && !vaultAccess) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
     if (!accessibleFolderIds.length) {
       return res.json([]);
     }
