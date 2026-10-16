@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout';
 import api from '../../services/api';
-import { isAdmin } from '../../utils/roles';
+import { isOwner } from '../../utils/roles';
 import { showToast } from '../../utils/toast';
 
 const TIMEOUT_OPTIONS = [
@@ -66,7 +66,7 @@ function OrganizationPoliciesPage() {
   const [updatedBy, setUpdatedBy] = useState(null);
 
   useEffect(() => {
-    if (!isAdmin(user)) return;
+    if (!isOwner(user)) return;
 
     let cancelled = false;
     const fetchPolicy = async () => {
@@ -103,7 +103,7 @@ function OrganizationPoliciesPage() {
     };
   }, [user, token]);
 
-  if (!isAdmin(user)) {
+  if (!isOwner(user)) {
     return <Navigate to="/dashboard" replace />;
   }
 

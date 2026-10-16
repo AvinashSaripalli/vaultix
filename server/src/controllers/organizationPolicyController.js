@@ -8,6 +8,10 @@ const {
 
 const getOrganizationPolicy = async (req, res) => {
   try {
+    if (req.user.role !== 'OWNER') {
+      return res.status(403).json({ message: 'Access denied: Only Organization Owners can access security policies' });
+    }
+
     const policy = await getEffectiveOrganizationPolicy();
     res.json({ policy });
   } catch (error) {
@@ -18,8 +22,8 @@ const getOrganizationPolicy = async (req, res) => {
 
 const updateOrganizationPolicy = async (req, res) => {
   try {
-    if (!['OWNER', 'ADMIN'].includes(req.user.role)) {
-      return res.status(403).json({ message: 'Access denied: Only Admins and Owners can manage organization policies' });
+    if (req.user.role !== 'OWNER') {
+      return res.status(403).json({ message: 'Access denied: Only Organization Owners can manage organization policies' });
     }
 
     const {
