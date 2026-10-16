@@ -5,13 +5,14 @@ const authController = require('../controllers/authController');
 const { authenticate } = require('../middlewares/authMiddleware');
 const {
   authLimiter,
+  refreshLimiter,
   sensitiveLimiter,
   masterPasswordLimiter,
 } = require('../utils/rateLimiters');
 
 router.post('/register', authLimiter, authController.register);
 router.post('/login', authLimiter, authController.login);
-router.post('/refresh', authLimiter, authController.refresh);
+router.post('/refresh', refreshLimiter, authController.refresh);
 router.post('/logout', authController.logout);
 router.post('/forgot-password', authLimiter, authController.requestPasswordReset);
 router.post('/reset-password', sensitiveLimiter, authController.resetPassword);

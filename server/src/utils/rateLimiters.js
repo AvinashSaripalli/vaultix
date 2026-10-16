@@ -69,7 +69,12 @@ function createRateLimitStore(windowMs) {
   return undefined;
 }
 
-const createLimiter = ({ windowMs = 15 * 60 * 1000, max, message }) => {
+const createLimiter = ({
+  windowMs = 15 * 60 * 1000,
+  max,
+  message,
+  skipSuccessfulRequests = false,
+}) => {
   const store = createRateLimitStore(windowMs);
 
   return rateLimit({
@@ -79,33 +84,46 @@ const createLimiter = ({ windowMs = 15 * 60 * 1000, max, message }) => {
     legacyHeaders: false,
     skip: skipInDev,
     message: { message },
+    skipSuccessfulRequests,
+    validate: { xForwardedForHeader: false, trustProxy: false },
     ...(store && { store }),
   });
 };
 
 const globalLimiter = createLimiter({
-  max: 500,
+  max: 1000,
   message: 'Too many requests. Please try again later.',
 });
 
+// Dedicated login/auth limiter: only failed attempts count against brute-force limit
 const authLimiter = createLimiter({
-  max: 30,
+  max: 60,
+  skipSuccessfulRequests: true,
   message: 'Too many login attempts. Please wait a few minutes and try again.',
 });
 
+// Dedicated session refresh limiter: high ceiling for active multi-tab usage
+const refreshLimiter = createLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 500,
+  message: 'Too many session refresh requests. Please wait a moment and try again.',
+});
+
 const sensitiveLimiter = createLimiter({
-  max: 10,
+  max: 30,
   message: 'Too many attempts. Please try again later.',
 });
 
 const masterPasswordLimiter = createLimiter({
-  max: 20,
+  max: 30,
+  skipSuccessfulRequests: true,
   message: 'Too many master password attempts. Please try again later.',
 });
 
 module.exports = {
   globalLimiter,
   authLimiter,
+  refreshLimiter,
   sensitiveLimiter,
   masterPasswordLimiter,
 };

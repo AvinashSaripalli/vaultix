@@ -30,9 +30,9 @@ const app = express();
 
 app.disable('x-powered-by');
 
-// When running behind a trusted reverse proxy (docker/production), honor the
-// real client IP for rate-limiting and audit logs. Set TRUST_PROXY=true.
-if (process.env.TRUST_PROXY === 'true') {
+// When running behind a trusted reverse proxy (nginx/production), honor the
+// real client IP (X-Forwarded-For) for rate-limiting and audit logs.
+if (process.env.TRUST_PROXY === 'true' || process.env.NODE_ENV === 'production') {
   app.set('trust proxy', 1);
 }
 

@@ -28,12 +28,12 @@ const forceLogout = () => {
   window.location.href = '/login';
 };
 
-const flushQueue = (token) => {
+const flushQueue = (token, refreshStatus) => {
   waitQueue.forEach(({ resolve, reject }) => {
     if (token) {
       resolve(token);
     } else {
-      reject(new Error('refresh_failed'));
+      reject({ error: new Error('refresh_failed'), refreshStatus });
     }
   });
   waitQueue = [];
@@ -55,9 +55,9 @@ const refreshAccessToken = async () => {
     if (newToken) {
       localStorage.setItem('token', newToken);
     }
-    return newToken || null;
-  } catch {
-    return null;
+    return { token: newToken || null, status: res.status };
+  } catch (err) {
+    return { token: null, status: err.response?.status || 0 };
   }
 };
 
@@ -109,28 +109,31 @@ api.interceptors.response.use(
             config.headers.Authorization = `Bearer ${newToken}`;
             return api(config);
           }
-          forceLogout();
           return Promise.reject(error);
         })
-        .catch(() => {
-          forceLogout();
+        .catch(({ refreshStatus } = {}) => {
+          if (refreshStatus === 401) {
+            forceLogout();
+          }
           return Promise.reject(error);
         });
     }
 
     isRefreshing = true;
-    const newToken = await refreshAccessToken();
+    const { token: newToken, status: refreshStatus } = await refreshAccessToken();
     isRefreshing = false;
 
     if (newToken) {
-      flushQueue(newToken);
+      flushQueue(newToken, 200);
       config._retry = true;
       config.headers.Authorization = `Bearer ${newToken}`;
       return api(config);
     }
 
-    flushQueue(null);
-    forceLogout();
+    flushQueue(null, refreshStatus);
+    if (refreshStatus === 401) {
+      forceLogout();
+    }
     return Promise.reject(error);
   }
 );
