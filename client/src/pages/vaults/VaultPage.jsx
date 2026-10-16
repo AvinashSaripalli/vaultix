@@ -90,6 +90,7 @@ function VaultPage() {
   const [confirmPurge, setConfirmPurge] = useState({ open: false, item: null });
   const [policyOpen, setPolicyOpen] = useState(false);
   const [auditExportOpen, setAuditExportOpen] = useState(false);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!menuOpen) return;
