@@ -569,7 +569,7 @@ const blockFolderUser = async (req, res) => {
     }
 
     if (folder.vault.ownerId === userId) {
-      return res.status(400).json({ message: 'The vault owner cannot be removed from the folder' });
+      return res.status(400).json({ message: 'The Super Admin cannot be removed from the folder' });
     }
 
     const currentBlocked = Array.isArray(folder.blockedUserIds)

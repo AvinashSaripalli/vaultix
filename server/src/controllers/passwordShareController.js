@@ -29,7 +29,7 @@ const sharePassword = async (req, res) => {
 
     if (!isOwner) {
       return res.status(403).json({
-        message: 'Only owner can share this password',
+        message: 'Only the creator or Super Admin can share this password',
       });
     }
 

@@ -75,7 +75,7 @@ function ViewSharedPasswordModal({ open, item, decryptedData, onClose }) {
             <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-slate-200 dark:divide-slate-600">
               <div className="p-3.5 sm:p-4 space-y-3">
                 <MetaItem icon={User} label="Shared by" value={item.sharedBy?.fullName} />
-                <MetaItem icon={User} label="Owner" value={password?.vault?.owner?.fullName || 'Unknown'} />
+                <MetaItem icon={User} label="Super Admin" value={password?.vault?.owner?.fullName || 'Unknown'} />
               </div>
               <div className="p-3.5 sm:p-4 space-y-3">
                 <MetaItem icon={Folder} label="Vault" value={password?.vault?.name || '-'} />

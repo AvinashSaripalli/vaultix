@@ -308,7 +308,7 @@ function FolderUsersModal({ open, onClose, folderId, folderName, onSaved }) {
                             <span className="truncate">{item.user?.fullName || 'Unknown user'}</span>
                             {item.isOwner && (
                               <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 font-semibold shrink-0">
-                                Owner
+                                Super Admin
                               </span>
                             )}
                             {item.viaDepartment && (

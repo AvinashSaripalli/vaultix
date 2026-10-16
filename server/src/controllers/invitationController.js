@@ -18,7 +18,7 @@ const sendInvitation = async (req, res) => {
     }
 
     if (role === 'OWNER' && req.user.role !== 'OWNER') {
-      return res.status(403).json({ message: 'Only an Owner can invite an Owner' });
+      return res.status(403).json({ message: 'Only a Super Admin can invite a Super Admin' });
     }
 
     if (!email) {

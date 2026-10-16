@@ -63,7 +63,7 @@ function FolderPermissionsPanel() {
                 </td>
                 <td className="py-4">{item.user?.email || '-'}</td>
                 <td className="py-4">
-                  {item.isOwner ? 'ADMINISTRATOR (Owner)' : item.accessLevel}
+                  {item.isOwner ? 'ADMINISTRATOR (Super Admin)' : item.accessLevel}
                 </td>
               </tr>
             ))}

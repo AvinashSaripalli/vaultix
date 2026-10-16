@@ -644,7 +644,7 @@ function VaultPage() {
     const result = await dispatch(purgePassword({ passwordId: item.id, vaultId: selectedVault.id }));
     if (purgePassword.fulfilled.match(result)) {
       if (result.payload?.approvalRequired) {
-        showToast(result.payload.message || 'Permanent purge request submitted for Owner approval', 'info');
+        showToast(result.payload.message || 'Permanent purge request submitted for Super Admin approval', 'info');
       } else {
         dispatch(fetchVaultTrash(selectedVault.id));
         showToast(`Permanently deleted "${item.name}"`);
