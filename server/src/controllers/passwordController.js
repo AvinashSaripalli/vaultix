@@ -42,7 +42,7 @@ const notifyCollaboratorsOnPasswordChange = async ({
         select: { name: true, type: true, ownerId: true },
       }),
       prisma.user.findMany({
-        where: { role: { in: ['SUPER_ADMIN', 'ADMIN', 'OWNER'] }, isActive: true },
+        where: { role: { in: ['SUPER_ADMIN', 'ADMIN'] }, isActive: true },
         select: { id: true },
       }),
     ]);
@@ -1049,8 +1049,8 @@ const purgePassword = async (req, res) => {
     const subtreeIds = await collectSubtreeIds(req.params.id);
     const vaultType = await getVaultType(password.vaultId);
 
-    // Strict Owner-Only Policy for Password Purging in Company/Shared Vaults:
-    // If an ADMIN attempts to permanently purge a credential from trash, require OWNER authorization
+    // Strict Super Admin Policy for Password Purging in Company/Shared Vaults:
+    // If an ADMIN attempts to permanently purge a credential from trash, require Super Admin authorization
     const policy = await getEffectiveOrganizationPolicy();
     if (vaultType !== 'PERSONAL' && req.user.role === 'ADMIN' && policy?.requireDualAdminApproval) {
       const approvalId = await generateId('req');

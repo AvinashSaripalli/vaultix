@@ -68,7 +68,7 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
     (dm) => dm.user?.id === user?.id
   );
   const selectedFolderAccess = (() => {
-    if (['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user?.role)) return 'ADMINISTRATOR';
+    if (['SUPER_ADMIN', 'ADMIN'].includes(user?.role)) return 'ADMINISTRATOR';
     const RANK = { READ_ONLY: 0, READ_WRITE: 1, FULL_ACCESS: 2, ADMINISTRATOR: 3 };
     const getRank = (lvl) => RANK[lvl] ?? -1;
     const direct = selectedFolderPermission?.accessLevel || null;
@@ -80,19 +80,19 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
   })();
 
   const canView =
-    ['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user?.role) ||
+    ['SUPER_ADMIN', 'ADMIN'].includes(user?.role) ||
     ['ADMINISTRATOR', 'READ_WRITE', 'READ_ONLY', 'FULL_ACCESS'].includes(
       selectedFolderAccess
     );
 
   const canEdit =
-    ['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user?.role) ||
+    ['SUPER_ADMIN', 'ADMIN'].includes(user?.role) ||
     ['ADMINISTRATOR', 'READ_WRITE', 'FULL_ACCESS'].includes(
       selectedFolderAccess
     );
 
   const canDelete =
-    ['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user?.role) ||
+    ['SUPER_ADMIN', 'ADMIN'].includes(user?.role) ||
     ['ADMINISTRATOR', 'FULL_ACCESS'].includes(selectedFolderAccess);
 
   const [visiblePasswords, setVisiblePasswords] = useState({});
@@ -149,7 +149,7 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
         <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm mb-4">
           Select an item from the list to view its credentials, secrets, and details.
         </p>
-        {['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user?.role) && onShareVault && selectedVault && (
+        {['SUPER_ADMIN', 'ADMIN'].includes(user?.role) && onShareVault && selectedVault && (
           <button
             onClick={onShareVault}
             className="h-10 px-5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 transition shadow-sm"
@@ -398,7 +398,7 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
   const isLoginGroup = !selectedPassword.type || selectedPassword.type === 'LOGIN';
   const canAddLogin =
     isLoginGroup &&
-    (['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user?.role) || ['ADMINISTRATOR', 'READ_WRITE'].includes(selectedFolderAccess));
+    (['SUPER_ADMIN', 'ADMIN'].includes(user?.role) || ['ADMINISTRATOR', 'READ_WRITE'].includes(selectedFolderAccess));
 
   return (
     <div className="p-3.5 sm:p-6 lg:p-8 min-w-0">

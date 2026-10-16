@@ -5,7 +5,7 @@ export default function RoleBadge({ role, size = 'sm', showIcon = true }) {
   const isSm = size === 'sm';
   const iconSize = isSm ? 12 : 14;
 
-  if (role === ROLES.SUPER_ADMIN || role === 'OWNER') {
+  if (role === ROLES.SUPER_ADMIN) {
     return (
       <span
         className={`inline-flex items-center gap-1.5 font-semibold rounded-full border transition-colors shadow-2xs ${

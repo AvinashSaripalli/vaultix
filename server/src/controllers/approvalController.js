@@ -2,8 +2,8 @@ const prisma = require('../config/prisma');
 const generateId = require('../utils/generateId');
 const { getEffectiveOrganizationPolicy } = require('../utils/organizationPolicy');
 
-const isSuperAdminRole = (role) => role === 'SUPER_ADMIN' || role === 'OWNER';
-const isAdminRole = (role) => ['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(role);
+const isSuperAdminRole = (role) => role === 'SUPER_ADMIN';
+const isAdminRole = (role) => ['SUPER_ADMIN', 'ADMIN'].includes(role);
 
 const requireAdmin = (req, res) => {
   if (!isAdminRole(req.user.role)) {

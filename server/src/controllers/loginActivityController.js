@@ -3,7 +3,7 @@ const prisma = require('../config/prisma');
 const getLoginActivities = async (req, res) => {
   try {
     const where =
-      ['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(req.user.role)
+      ['SUPER_ADMIN', 'ADMIN'].includes(req.user.role)
         ? {}
         : {
             userId: req.user.id,

@@ -6,7 +6,7 @@ import api from '../../services/api';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import ModalPortal from '../../components/common/ModalPortal';
 import RoleBadge from '../../components/common/RoleBadge';
-import { isAdmin, isOwner, ROLES, ROLE_DEFINITIONS } from '../../utils/roles';
+import { isAdmin, isSuperAdmin, ROLES, ROLE_DEFINITIONS } from '../../utils/roles';
 import { showToast } from '../../utils/toast';
 
 function AddUserPage() {
@@ -321,7 +321,7 @@ function AddUserPage() {
                 >
                   <option value="USER">Member</option>
                   <option value="ADMIN">Administrator</option>
-                  {isOwner(user) && <option value="SUPER_ADMIN">Super Admin</option>}
+                  {isSuperAdmin(user) && <option value="SUPER_ADMIN">Super Admin</option>}
                 </select>
 
                 <div className="mt-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700/80 dark:bg-slate-700/40 text-xs">

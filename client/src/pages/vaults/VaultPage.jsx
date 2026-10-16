@@ -113,7 +113,7 @@ function VaultPage() {
     (state) => state.auth
   );
 
-  const isAdminUser = ['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user?.role);
+  const isAdminUser = ['SUPER_ADMIN', 'ADMIN'].includes(user?.role);
 
   const {
     selectedVault,

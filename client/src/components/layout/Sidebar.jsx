@@ -21,7 +21,7 @@ import FolderActionsMenu from '../folder/FolderActionsMenu';
 import ConfirmModal from '../common/ConfirmModal';
 import PasswordGeneratorModal from '../tools/PasswordGeneratorModal';
 import { showToast } from '../../utils/toast';
-import { isAdmin, isOwner, getRoleLabel } from '../../utils/roles';
+import { isAdmin, isSuperAdmin, getRoleLabel } from '../../utils/roles';
 import logo from '../../assets/Vaultix1.png';
 
 function Sidebar() {
@@ -110,7 +110,7 @@ function Sidebar() {
     ? [
         { name: 'Team Management', path: '/team-management', icon: Users },
         { name: 'Departments', path: '/departments', icon: Building2 },
-        ...(isOwner(user)
+        ...(isSuperAdmin(user)
           ? [{ name: 'Security Policies', path: '/admin/policies', icon: ShieldCheck }]
           : []),
         { name: 'Admin Approvals', path: '/admin/approvals', icon: UserCheck, badge: pendingApprovalsCount },

@@ -6,7 +6,7 @@ import api from '../../services/api';
 import PendingInvitationsModal from './PendingInvitationsModal';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import RoleBadge from '../../components/common/RoleBadge';
-import { isAdmin, isOwner, isSuperAdmin, ROLES } from '../../utils/roles';
+import { isAdmin, isSuperAdmin, ROLES } from '../../utils/roles';
 import { showToast } from '../../utils/toast';
 
 const USERS_PER_PAGE = 10;
@@ -199,7 +199,7 @@ function TeamManagementPage() {
                           <div className="flex items-center gap-3">
                             <div
                               className={`flex h-9 sm:h-10 w-9 sm:w-10 items-center justify-center rounded-full text-xs sm:text-sm font-bold shrink-0 ${
-                                item.role === ROLES.SUPER_ADMIN || item.role === 'OWNER'
+                                item.role === ROLES.SUPER_ADMIN
                                   ? 'bg-amber-100 text-amber-800 border border-amber-300/80 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-700/60'
                                   : item.role === ROLES.ADMIN
                                   ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'
@@ -249,7 +249,7 @@ function TeamManagementPage() {
 
                         <td className="px-4 sm:px-5 py-3.5 sm:py-4">
                           <div className="flex justify-end gap-2">
-                            {isSuperAdmin(item) && !isOwner(user) ? (
+                            {isSuperAdmin(item) && !isSuperAdmin(user) ? (
                               <button
                                 type="button"
                                 disabled
@@ -262,7 +262,7 @@ function TeamManagementPage() {
                               <button
                                 type="button"
                                 onClick={() =>
-                                  navigate(`/team-management/edit/${item.id}`)
+                                   navigate(`/team-management/edit/${item.id}`)
                                 }
                                 className="rounded-xl border border-slate-300 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700 transition"
                               >
@@ -279,7 +279,7 @@ function TeamManagementPage() {
                               >
                                 Delete
                               </button>
-                            ) : isSuperAdmin(item) && !isOwner(user) ? (
+                            ) : isSuperAdmin(item) && !isSuperAdmin(user) ? (
                               <button
                                 type="button"
                                 disabled

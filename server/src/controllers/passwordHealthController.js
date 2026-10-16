@@ -30,7 +30,7 @@ const BREACHED_PASSWORDS = new Set([
 
 const getPasswordHealth = async (req, res) => {
   try {
-    const where = ['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(req.user.role)
+    const where = ['SUPER_ADMIN', 'ADMIN'].includes(req.user.role)
       ? { vault: { type: 'COMPANY' }, deletedAt: null }
       : { vault: { ownerId: req.user.id, type: 'PERSONAL' }, deletedAt: null };
 

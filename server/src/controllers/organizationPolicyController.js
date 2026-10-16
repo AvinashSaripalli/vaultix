@@ -6,7 +6,7 @@ const {
   DEFAULT_POLICY,
 } = require('../utils/organizationPolicy');
 
-const isSuperAdminRole = (role) => role === 'SUPER_ADMIN' || role === 'OWNER';
+const isSuperAdminRole = (role) => role === 'SUPER_ADMIN';
 
 const getOrganizationPolicy = async (req, res) => {
   try {

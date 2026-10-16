@@ -3,7 +3,7 @@ import { useSelector } from 'react-redux';
 import api from '../../services/api';
 import ModalPortal from '../../components/common/ModalPortal';
 import RoleBadge from '../../components/common/RoleBadge';
-import { isOwner } from '../../utils/roles';
+import { isSuperAdmin } from '../../utils/roles';
 
 function PendingInvitationsModal({ open, onClose }) {
   const { token, user } = useSelector((state) => state.auth);
@@ -129,7 +129,7 @@ function PendingInvitationsModal({ open, onClose }) {
             >
               <option value="USER">Member</option>
               <option value="ADMIN">Administrator</option>
-              {isOwner(user) && <option value="SUPER_ADMIN">Super Admin</option>}
+              {isSuperAdmin(user) && <option value="SUPER_ADMIN">Super Admin</option>}
             </select>
 
             <button

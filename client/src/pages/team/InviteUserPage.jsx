@@ -3,7 +3,7 @@ import { useSelector } from 'react-redux';
 import { Navigate, useNavigate } from 'react-router-dom';
 import AppLayout from '../../components/layout/AppLayout';
 import api from '../../services/api';
-import { isAdmin, isOwner, ROLES, ROLE_DEFINITIONS } from '../../utils/roles';
+import { isAdmin, isSuperAdmin, ROLES, ROLE_DEFINITIONS } from '../../utils/roles';
 
 function InviteUserPage() {
   const { token, user } = useSelector((state) => state.auth);
@@ -88,7 +88,7 @@ function InviteUserPage() {
               >
                 <option value="USER">Member</option>
                 <option value="ADMIN">Administrator</option>
-                {isOwner(user) && <option value="SUPER_ADMIN">Super Admin</option>}
+                {isSuperAdmin(user) && <option value="SUPER_ADMIN">Super Admin</option>}
               </select>
 
               <div className="mt-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700/80 dark:bg-slate-700/40 text-xs">

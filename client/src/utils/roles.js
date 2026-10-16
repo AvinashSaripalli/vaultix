@@ -2,27 +2,21 @@ export const ROLES = {
   SUPER_ADMIN: 'SUPER_ADMIN',
   ADMIN: 'ADMIN',
   USER: 'USER',
-  // Backward compatibility alias:
-  OWNER: 'SUPER_ADMIN',
 };
 
 export const isSuperAdmin = (userOrRole) => {
   const role = typeof userOrRole === 'string' ? userOrRole : userOrRole?.role;
-  return role === ROLES.SUPER_ADMIN || role === 'OWNER';
+  return role === ROLES.SUPER_ADMIN;
 };
-
-// Alias for existing call sites
-export const isOwner = isSuperAdmin;
 
 export const isAdmin = (userOrRole) => {
   const role = typeof userOrRole === 'string' ? userOrRole : userOrRole?.role;
-  return role === ROLES.SUPER_ADMIN || role === 'OWNER' || role === ROLES.ADMIN;
+  return role === ROLES.SUPER_ADMIN || role === ROLES.ADMIN;
 };
 
 export const getRoleLabel = (role) => {
   switch (role) {
     case ROLES.SUPER_ADMIN:
-    case 'OWNER':
       return 'Super Admin';
     case ROLES.ADMIN:
       return 'Admin';
@@ -32,17 +26,14 @@ export const getRoleLabel = (role) => {
   }
 };
 
-const superAdminDef = {
-  title: 'Super Admin',
-  tagline: 'Supreme organization administrator',
-  description:
-    'Full authority over organization settings, all company vaults, billing, and administrators. Cannot be removed or demoted by Admins.',
-  color: 'amber',
-};
-
 export const ROLE_DEFINITIONS = {
-  SUPER_ADMIN: superAdminDef,
-  OWNER: superAdminDef,
+  SUPER_ADMIN: {
+    title: 'Super Admin',
+    tagline: 'Supreme organization administrator',
+    description:
+      'Full authority over organization settings, all company vaults, billing, and administrators. Cannot be removed or demoted by Admins.',
+    color: 'amber',
+  },
   ADMIN: {
     title: 'Administrator',
     tagline: 'Team & vault manager',

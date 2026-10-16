@@ -5,8 +5,8 @@ const sendMail = require('../utils/sendMail');
 const { clientUrl } = require('../utils/clientUrl');
 const { renderEmail } = require('../utils/emailTemplate');
 
-const isSuperAdminRole = (role) => role === 'SUPER_ADMIN' || role === 'OWNER';
-const isAdminRole = (role) => ['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(role);
+const isSuperAdminRole = (role) => role === 'SUPER_ADMIN';
+const isAdminRole = (role) => ['SUPER_ADMIN', 'ADMIN'].includes(role);
 
 const sendInvitation = async (req, res) => {
   try {
@@ -15,9 +15,9 @@ const sendInvitation = async (req, res) => {
     }
 
     const { email, role = 'USER' } = req.body;
-    const targetRole = role === 'OWNER' ? 'SUPER_ADMIN' : role;
+    const targetRole = role;
 
-    if (!['SUPER_ADMIN', 'ADMIN', 'USER', 'OWNER'].includes(role)) {
+    if (!['SUPER_ADMIN', 'ADMIN', 'USER'].includes(role)) {
       return res.status(400).json({ message: 'Invalid role specified' });
     }
 
