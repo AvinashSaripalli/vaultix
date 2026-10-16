@@ -20,7 +20,7 @@ const logActivity = async (userId, action, targetType, targetId, metadata) => {
 };
 
 const requireAdmin = (req, res) => {
-  if (!['OWNER', 'ADMIN'].includes(req.user.role)) {
+  if (!['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(req.user.role)) {
     res.status(403).json({ message: 'Access denied' });
     return true;
   }
@@ -28,7 +28,7 @@ const requireAdmin = (req, res) => {
 };
 
 const requireDeptManager = async (req, res) => {
-  if (['OWNER', 'ADMIN'].includes(req.user.role)) return { ok: true };
+  if (['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(req.user.role)) return { ok: true };
 
   const membership = await prisma.departmentMember.findUnique({
     where: {

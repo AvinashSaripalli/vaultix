@@ -111,7 +111,7 @@ function DashboardPage() {
   } = useSelector((state) => state.dashboard);
 
   const [range, setRange] = useState('7D');
-  const [vaultType, setVaultType] = useState(() => ['OWNER', 'ADMIN'].includes(user?.role) ? 'COMPANY' : 'PERSONAL');
+  const [vaultType, setVaultType] = useState(() => ['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user?.role) ? 'COMPANY' : 'PERSONAL');
   const [selectedFolderId, setSelectedFolderId] = useState('ALL');
   const [tableFilter, setTableFilter] = useState('ALL');
 
@@ -214,7 +214,7 @@ function DashboardPage() {
             </p>
             <p className={`text-xs mt-0.5 ${vaultType === 'COMPANY' ? 'text-indigo-700 dark:text-indigo-300' : 'text-emerald-700 dark:text-emerald-300'}`}>
               {vaultType === 'COMPANY'
-                ? ['OWNER', 'ADMIN'].includes(user?.role)
+                ? ['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user?.role)
                   ? 'Showing organization-wide analytics — shared passwords, team activity, and overall security health for your Company Vault.'
                   : 'Showing analytics for shared Company Vault folders you have access to — shared passwords, team additions, and security health.'
                 : 'Showing private analytics — your personal passwords, weak/old/at-risk counts, and your own security score.'}
@@ -545,7 +545,7 @@ function DashboardPage() {
                     </div>
                     <ArrowRight size={16} className="text-slate-400 dark:text-slate-500 group-hover:text-emerald-600 transition shrink-0" />
                   </button>
-                  {['OWNER', 'ADMIN'].includes(user?.role) && (
+                  {['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user?.role) && (
                     <>
                       <button onClick={() => firstCompanyVaultSlug ? navigate(`/vaults/${firstCompanyVaultSlug}`) : null} className="w-full flex items-center gap-3 p-3 sm:p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-600 hover:bg-emerald-50/40 dark:hover:bg-emerald-900/20 transition group text-left">
                         <div className="h-9 sm:h-10 w-9 sm:w-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center group-hover:bg-emerald-200 dark:group-hover:bg-emerald-800/50 transition shrink-0">

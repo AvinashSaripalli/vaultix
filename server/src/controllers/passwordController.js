@@ -42,7 +42,7 @@ const notifyCollaboratorsOnPasswordChange = async ({
         select: { name: true, type: true, ownerId: true },
       }),
       prisma.user.findMany({
-        where: { role: { in: ['OWNER', 'ADMIN'] }, isActive: true },
+        where: { role: { in: ['SUPER_ADMIN', 'ADMIN', 'OWNER'] }, isActive: true },
         select: { id: true },
       }),
     ]);

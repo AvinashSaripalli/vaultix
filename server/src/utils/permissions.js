@@ -25,7 +25,7 @@ const isAdminUser = async (userId) => {
     select: { role: true },
   });
 
-  return ['OWNER', 'ADMIN'].includes(user?.role);
+  return ['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user?.role);
 };
 
 const getUserDepartmentIds = async (userId) => {
@@ -230,7 +230,7 @@ const getFolderAuthorizedUserIds = async (folderId) => {
     }
 
     const [admins, grants] = await Promise.all([
-      prisma.user.findMany({ where: { role: { in: ['OWNER', 'ADMIN'] } }, select: { id: true } }),
+      prisma.user.findMany({ where: { role: { in: ['SUPER_ADMIN', 'ADMIN', 'OWNER'] } }, select: { id: true } }),
       prisma.departmentPermission.findMany({
         where: { folderId },
         select: { departmentId: true },

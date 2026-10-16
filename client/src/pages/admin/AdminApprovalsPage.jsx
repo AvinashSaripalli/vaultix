@@ -20,7 +20,7 @@ import AppLayout from '../../components/layout/AppLayout';
 import RoleBadge from '../../components/common/RoleBadge';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import api from '../../services/api';
-import { isAdmin } from '../../utils/roles';
+import { isAdmin, isSuperAdmin } from '../../utils/roles';
 import { showToast } from '../../utils/toast';
 
 const ACTION_LABELS = {
@@ -243,7 +243,7 @@ function AdminApprovalsPage() {
         )}
 
         {/* Strict Super Admin Approval Notification for Administrators */}
-        {user?.role !== 'OWNER' && activeTab === 'actionable' && (
+        {!isSuperAdmin(user) && activeTab === 'actionable' && (
           <div className="rounded-2xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/70 dark:bg-indigo-950/30 p-4 text-xs sm:text-sm text-indigo-800 dark:text-indigo-300 flex items-center gap-3">
             <ShieldAlert size={20} className="shrink-0 text-indigo-600 dark:text-indigo-400" />
             <span>
@@ -265,7 +265,7 @@ function AdminApprovalsPage() {
             </div>
             <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">
               {activeTab === 'actionable'
-                ? user?.role === 'OWNER'
+                ? isSuperAdmin(user)
                   ? 'No Pending Actions Awaiting Your Review'
                   : 'Super Admin Authorization Required'
                 : activeTab === 'my-requests'
@@ -274,7 +274,7 @@ function AdminApprovalsPage() {
             </h3>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
               {activeTab === 'actionable'
-                ? user?.role === 'OWNER'
+                ? isSuperAdmin(user)
                   ? 'When an administrator requests a critical action (such as deleting an admin account), it will appear here for your approval.'
                   : 'Under the Strict Super Admin Policy, only Super Admins have the authority to authorize or reject pending requests.'
                 : activeTab === 'my-requests'
@@ -291,7 +291,7 @@ function AdminApprovalsPage() {
                 color: 'text-slate-600 bg-slate-100 border-slate-200',
               };
               const ActionIcon = meta.icon;
-              const isActionable = req.status === 'PENDING' && req.requesterId !== user?.id && user?.role === 'OWNER';
+              const isActionable = req.status === 'PENDING' && req.requesterId !== user?.id && isSuperAdmin(user);
               const isMyPending = req.status === 'PENDING' && req.requesterId === user?.id;
 
               return (

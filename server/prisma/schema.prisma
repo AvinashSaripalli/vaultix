@@ -354,7 +354,7 @@ model AdminApprovalRequest {
 }
 
 enum Role {
-  OWNER
+  SUPER_ADMIN
   ADMIN
   USER
 }

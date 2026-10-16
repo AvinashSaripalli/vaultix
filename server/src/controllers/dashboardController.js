@@ -26,7 +26,7 @@ const getAccessibleCompanyScope = async (user) => {
   });
   const vaultIds = vaults.map((v) => v.id);
 
-  if (['OWNER', 'ADMIN'].includes(user.role)) {
+  if (['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user.role)) {
     return { vaultIds, folderIds: null, isAdmin: true };
   }
 

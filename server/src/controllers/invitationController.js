@@ -5,19 +5,23 @@ const sendMail = require('../utils/sendMail');
 const { clientUrl } = require('../utils/clientUrl');
 const { renderEmail } = require('../utils/emailTemplate');
 
+const isSuperAdminRole = (role) => role === 'SUPER_ADMIN' || role === 'OWNER';
+const isAdminRole = (role) => ['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(role);
+
 const sendInvitation = async (req, res) => {
   try {
-    if (!['OWNER', 'ADMIN'].includes(req.user.role)) {
+    if (!isAdminRole(req.user.role)) {
       return res.status(403).json({ message: 'Access denied' });
     }
 
     const { email, role = 'USER' } = req.body;
+    const targetRole = role === 'OWNER' ? 'SUPER_ADMIN' : role;
 
-    if (!['OWNER', 'ADMIN', 'USER'].includes(role)) {
+    if (!['SUPER_ADMIN', 'ADMIN', 'USER', 'OWNER'].includes(role)) {
       return res.status(400).json({ message: 'Invalid role specified' });
     }
 
-    if (role === 'OWNER' && req.user.role !== 'OWNER') {
+    if (isSuperAdminRole(targetRole) && !isSuperAdminRole(req.user.role)) {
       return res.status(403).json({ message: 'Only a Super Admin can invite a Super Admin' });
     }
 
@@ -55,7 +59,7 @@ const sendInvitation = async (req, res) => {
         id: await generateId('invitation'),
         email,
         token,
-        role,
+        role: targetRole,
         invitedBy: req.user.id,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
@@ -104,7 +108,7 @@ const getInvitationByToken = async (req, res) => {
 
 const getPendingInvitations = async (req, res) => {
   try {
-    if (!['OWNER', 'ADMIN'].includes(req.user.role)) {
+    if (!isAdminRole(req.user.role)) {
       return res.status(403).json({ message: 'Access denied' });
     }
 

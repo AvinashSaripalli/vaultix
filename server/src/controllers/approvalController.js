@@ -2,8 +2,11 @@ const prisma = require('../config/prisma');
 const generateId = require('../utils/generateId');
 const { getEffectiveOrganizationPolicy } = require('../utils/organizationPolicy');
 
+const isSuperAdminRole = (role) => role === 'SUPER_ADMIN' || role === 'OWNER';
+const isAdminRole = (role) => ['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(role);
+
 const requireAdmin = (req, res) => {
-  if (!['OWNER', 'ADMIN'].includes(req.user.role)) {
+  if (!isAdminRole(req.user.role)) {
     res.status(403).json({ message: 'Access denied: Administrator privileges required' });
     return true;
   }
@@ -37,8 +40,8 @@ const getPendingCount = async (req, res) => {
 
     await expireStaleRequests();
 
-    // Strict Owner-Only Policy: Only OWNER accounts have authority to approve requests
-    if (req.user.role !== 'OWNER') {
+    // Strict Super Admin Policy: Only Super Admins have authority to approve requests
+    if (!isSuperAdminRole(req.user.role)) {
       return res.json({ count: 0 });
     }
 
@@ -71,8 +74,8 @@ const getApprovalRequests = async (req, res) => {
     let where = {};
 
     if (tab === 'actionable') {
-      // Strict Owner-Only Policy: Only OWNER accounts have actionable requests awaiting approval
-      if (req.user.role !== 'OWNER') {
+      // Strict Super Admin Policy: Only Super Admins have actionable requests awaiting approval
+      if (!isSuperAdminRole(req.user.role)) {
         return res.json([]);
       }
       where = {
@@ -220,7 +223,7 @@ const approveRequest = async (req, res) => {
     }
 
     // Strict Super Admin Policy: Only a Super Admin can approve requests
-    if (req.user.role !== 'OWNER') {
+    if (!isSuperAdminRole(req.user.role)) {
       return res.status(403).json({
         message: 'Strict Super Admin Policy: Only a Super Admin has authority to approve high-stakes actions.',
       });
@@ -387,7 +390,7 @@ const rejectRequest = async (req, res) => {
     }
 
     // Strict Super Admin Policy: Only a Super Admin can reject requests
-    if (req.user.role !== 'OWNER') {
+    if (!isSuperAdminRole(req.user.role)) {
       return res.status(403).json({
         message: 'Strict Super Admin Policy: Only a Super Admin has authority to reject approval requests.',
       });
@@ -461,7 +464,7 @@ const cancelRequest = async (req, res) => {
       return res.status(400).json({ message: `Request is already ${request.status.toLowerCase()}` });
     }
 
-    if (request.requesterId !== req.user.id && req.user.role !== 'OWNER') {
+    if (request.requesterId !== req.user.id && !isSuperAdminRole(req.user.role)) {
       return res.status(403).json({ message: 'Only the original requester or a Super Admin can cancel this request' });
     }
 

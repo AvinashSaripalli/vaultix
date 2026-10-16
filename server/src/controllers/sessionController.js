@@ -8,7 +8,7 @@ const hashRefreshToken = (token) =>
 
 const getActiveSessions = async (req, res) => {
   try {
-    const where = ['OWNER', 'ADMIN'].includes(req.user.role)
+    const where = ['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(req.user.role)
       ? {}
       : { userId: req.user.id };
 
@@ -112,7 +112,7 @@ const revokeSession = async (req, res) => {
       return res.status(404).json({ message: 'Session not found' });
     }
 
-    if (!['OWNER', 'ADMIN'].includes(req.user.role) && session.userId !== req.user.id) {
+    if (!['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(req.user.role) && session.userId !== req.user.id) {
       return res.status(403).json({ message: 'Not authorized to revoke this session' });
     }
 
@@ -134,7 +134,7 @@ const revokeAllSessions = async (req, res) => {
     const currentTokenHash = currentCookie ? hashRefreshToken(currentCookie) : null;
 
     // Non-admins revoke only their own sessions (except the current one).
-    if (!['OWNER', 'ADMIN'].includes(req.user.role)) {
+    if (!['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(req.user.role)) {
       const where = { userId: req.user.id, revokedAt: null };
       if (currentTokenHash) where.tokenHash = { not: currentTokenHash };
       await prisma.refreshToken.updateMany({

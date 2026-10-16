@@ -62,7 +62,7 @@ function FolderUsersModal({ open, onClose, folderId, folderName, onSaved }) {
   const isCurrentUserOwner = owner?.id === user?.id;
 
   const currentUserAccess = (() => {
-    if (['OWNER', 'ADMIN'].includes(user?.role) || isCurrentUserOwner) return 'ADMINISTRATOR';
+    if (['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user?.role) || isCurrentUserOwner) return 'ADMINISTRATOR';
     const RANK = { READ_ONLY: 0, READ_WRITE: 1, FULL_ACCESS: 2, ADMINISTRATOR: 3 };
     const getRank = (lvl) => RANK[lvl] ?? -1;
     const direct = currentUserPermission?.accessLevel || null;
@@ -74,7 +74,7 @@ function FolderUsersModal({ open, onClose, folderId, folderName, onSaved }) {
   })();
 
   const canManageMembers =
-    ['OWNER', 'ADMIN'].includes(user?.role) || currentUserAccess === 'ADMINISTRATOR';
+    ['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user?.role) || currentUserAccess === 'ADMINISTRATOR';
 
   useEffect(() => {
     if (!open || !folderId) return;

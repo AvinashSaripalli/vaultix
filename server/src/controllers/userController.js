@@ -2,8 +2,11 @@ const prisma = require('../config/prisma');
 const generateId = require('../utils/generateId');
 const { getEffectiveOrganizationPolicy } = require('../utils/organizationPolicy');
 
+const isSuperAdminRole = (role) => role === 'SUPER_ADMIN' || role === 'OWNER';
+const isAdminRole = (role) => ['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(role);
+
 const requireAdmin = (req, res) => {
-  if (!['OWNER', 'ADMIN'].includes(req.user.role)) {
+  if (!isAdminRole(req.user.role)) {
     res.status(403).json({ message: 'Access denied' });
     return true;
   }
@@ -65,7 +68,7 @@ const getUsers = async (req, res) => {
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 
-const VALID_ROLES = ['OWNER', 'ADMIN', 'USER'];
+const VALID_ROLES = ['SUPER_ADMIN', 'ADMIN', 'USER', 'OWNER'];
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_\-+=<>?/{}[\]|~`])/;
 
 const createUserByAdmin = async (req, res) => {
@@ -73,6 +76,7 @@ const createUserByAdmin = async (req, res) => {
     if (requireAdmin(req, res)) return;
 
     const { fullName, email, password, role = 'USER' } = req.body;
+    const targetRole = role === 'OWNER' ? 'SUPER_ADMIN' : role;
 
     if (!fullName || !email || !password) {
       return res.status(400).json({
@@ -99,12 +103,12 @@ const createUserByAdmin = async (req, res) => {
       });
     }
 
-    if (!VALID_ROLES.includes(role)) {
-      return res.status(400).json({ message: `Invalid role. Must be one of: ${VALID_ROLES.join(', ')}` });
+    if (!VALID_ROLES.includes(targetRole)) {
+      return res.status(400).json({ message: `Invalid role. Must be one of: SUPER_ADMIN, ADMIN, USER` });
     }
 
     // Only a Super Admin can create another Super Admin
-    if (role === 'OWNER' && req.user.role !== 'OWNER') {
+    if (isSuperAdminRole(targetRole) && !isSuperAdminRole(req.user.role)) {
       return res.status(403).json({ message: 'Only a Super Admin can designate another Super Admin' });
     }
 
@@ -129,7 +133,7 @@ const createUserByAdmin = async (req, res) => {
         email,
         passwordHash,
         encryptionSalt,
-        role,
+        role: targetRole,
       },
       select: {
         id: true,
@@ -171,25 +175,27 @@ const updateUser = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    const targetRole = role === 'OWNER' ? 'SUPER_ADMIN' : role;
+
     // Security Guardrail 1: Only a Super Admin can modify a Super Admin
-    if (targetUser.role === 'OWNER' && req.user.role !== 'OWNER') {
+    if (isSuperAdminRole(targetUser.role) && !isSuperAdminRole(req.user.role)) {
       return res.status(403).json({ message: 'Only a Super Admin can modify a Super Admin account' });
     }
 
     // Security Guardrail 2: Only a Super Admin can grant the Super Admin role
-    if (role === 'OWNER' && req.user.role !== 'OWNER') {
+    if (isSuperAdminRole(targetRole) && !isSuperAdminRole(req.user.role)) {
       return res.status(403).json({ message: 'Only a Super Admin can grant Super Admin privileges' });
     }
 
     // Security Guardrail 3: Last Admin / Super Admin Protection
     // Prevent demoting or deactivating the last active administrator
     if (
-      ['OWNER', 'ADMIN'].includes(targetUser.role) &&
-      (role === 'USER' || isActive === false)
+      isAdminRole(targetUser.role) &&
+      (targetRole === 'USER' || isActive === false)
     ) {
       const remainingAdmins = await prisma.user.count({
         where: {
-          role: { in: ['OWNER', 'ADMIN'] },
+          role: { in: ['SUPER_ADMIN', 'ADMIN', 'OWNER'] },
           isActive: true,
           id: { not: targetUser.id },
         },
@@ -204,10 +210,10 @@ const updateUser = async (req, res) => {
 
     // Security Guardrail 4: Last Super Admin Protection
     // Prevent demoting the last active Super Admin
-    if (targetUser.role === 'OWNER' && role && role !== 'OWNER') {
+    if (isSuperAdminRole(targetUser.role) && targetRole && !isSuperAdminRole(targetRole)) {
       const remainingOwners = await prisma.user.count({
         where: {
-          role: 'OWNER',
+          role: { in: ['SUPER_ADMIN', 'OWNER'] },
           isActive: true,
           id: { not: targetUser.id },
         },
@@ -226,7 +232,7 @@ const updateUser = async (req, res) => {
       },
       data: {
         fullName,
-        role,
+        ...(targetRole && { role: targetRole }),
         isActive,
         ...(isActive === false && { tokenVersion: { increment: 1 } }),
       },
@@ -274,15 +280,15 @@ const deleteUser = async (req, res) => {
     }
 
     // Security Guardrail 1: Only a Super Admin can delete a Super Admin account
-    if (targetUser.role === 'OWNER' && req.user.role !== 'OWNER') {
+    if (isSuperAdminRole(targetUser.role) && !isSuperAdminRole(req.user.role)) {
       return res.status(403).json({ message: 'Only a Super Admin can delete a Super Admin account' });
     }
 
     // Security Guardrail 2: Last Admin Protection
-    if (['OWNER', 'ADMIN'].includes(targetUser.role)) {
+    if (isAdminRole(targetUser.role)) {
       const remainingAdmins = await prisma.user.count({
         where: {
-          role: { in: ['OWNER', 'ADMIN'] },
+          role: { in: ['SUPER_ADMIN', 'ADMIN', 'OWNER'] },
           isActive: true,
           id: { not: targetUser.id },
         },
@@ -296,10 +302,10 @@ const deleteUser = async (req, res) => {
     }
 
     // Security Guardrail 3: Last Super Admin Protection
-    if (targetUser.role === 'OWNER') {
+    if (isSuperAdminRole(targetUser.role)) {
       const remainingOwners = await prisma.user.count({
         where: {
-          role: 'OWNER',
+          role: { in: ['SUPER_ADMIN', 'OWNER'] },
           isActive: true,
           id: { not: targetUser.id },
         },
@@ -360,10 +366,10 @@ const deleteUser = async (req, res) => {
     }
 
     // Case B: A Super Admin is deleting another Super Admin (if multiple exist) -> Requires Co-Super Admin confirmation
-    if (targetUser.role === 'OWNER' && req.user.role === 'OWNER' && policy?.requireDualAdminApproval) {
+    if (isSuperAdminRole(targetUser.role) && isSuperAdminRole(req.user.role) && policy?.requireDualAdminApproval) {
       const otherOwnersCount = await prisma.user.count({
         where: {
-          role: 'OWNER',
+          role: { in: ['SUPER_ADMIN', 'OWNER'] },
           isActive: true,
           id: { not: req.user.id },
         },

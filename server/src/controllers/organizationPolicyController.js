@@ -6,9 +6,11 @@ const {
   DEFAULT_POLICY,
 } = require('../utils/organizationPolicy');
 
+const isSuperAdminRole = (role) => role === 'SUPER_ADMIN' || role === 'OWNER';
+
 const getOrganizationPolicy = async (req, res) => {
   try {
-    if (req.user.role !== 'OWNER') {
+    if (!isSuperAdminRole(req.user.role)) {
       return res.status(403).json({ message: 'Access denied: Only Super Admins can access security policies' });
     }
 
@@ -22,7 +24,7 @@ const getOrganizationPolicy = async (req, res) => {
 
 const updateOrganizationPolicy = async (req, res) => {
   try {
-    if (req.user.role !== 'OWNER') {
+    if (!isSuperAdminRole(req.user.role)) {
       return res.status(403).json({ message: 'Access denied: Only Super Admins can manage organization policies' });
     }
 

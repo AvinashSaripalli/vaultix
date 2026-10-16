@@ -324,7 +324,7 @@ function ActivityLogPage() {
 
   useEffect(() => {
     // The departments endpoint is admin-only; skip for regular users.
-    if (!['OWNER', 'ADMIN'].includes(user?.role)) return;
+    if (!['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user?.role)) return;
 
     const fetchDepts = async () => {
       try {

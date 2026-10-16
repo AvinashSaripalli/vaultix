@@ -6,7 +6,7 @@ import api from '../../services/api';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import ModalPortal from '../../components/common/ModalPortal';
 import RoleBadge from '../../components/common/RoleBadge';
-import { isAdmin, isOwner, ROLES, ROLE_DEFINITIONS } from '../../utils/roles';
+import { isAdmin, isOwner, isSuperAdmin, ROLES, ROLE_DEFINITIONS } from '../../utils/roles';
 import { showToast } from '../../utils/toast';
 
 function EditUserPage() {
@@ -301,7 +301,7 @@ function EditUserPage() {
 
             {!pageLoading && !error && (
               <form onSubmit={handleSubmit} className="space-y-4">
-                {targetUser?.role === ROLES.OWNER && !isOwner(user) && (
+                {isSuperAdmin(targetUser) && !isOwner(user) && (
                   <div className="rounded-xl bg-amber-50 border border-amber-200/80 p-3.5 text-xs text-amber-800 dark:bg-amber-950/30 dark:border-amber-800/60 dark:text-amber-300">
                     <p className="font-semibold">Protected Super Admin Account</p>
                     <p className="mt-0.5">
@@ -318,7 +318,7 @@ function EditUserPage() {
                     name="fullName"
                     value={form.fullName}
                     onChange={handleChange}
-                    disabled={targetUser?.role === ROLES.OWNER && !isOwner(user)}
+                    disabled={isSuperAdmin(targetUser) && !isOwner(user)}
                     className="w-full h-12 border border-slate-300 rounded-xl px-4 outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 disabled:opacity-60 disabled:cursor-not-allowed"
                     placeholder="Enter full name"
                   />
@@ -332,12 +332,12 @@ function EditUserPage() {
                     name="role"
                     value={form.role}
                     onChange={handleChange}
-                    disabled={targetUser?.role === ROLES.OWNER && !isOwner(user)}
+                    disabled={isSuperAdmin(targetUser) && !isOwner(user)}
                     className="w-full h-12 border border-slate-300 rounded-xl px-4 outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     <option value="USER">Member</option>
                     <option value="ADMIN">Administrator</option>
-                    {isOwner(user) && <option value="OWNER">Super Admin</option>}
+                    {isOwner(user) && <option value="SUPER_ADMIN">Super Admin</option>}
                   </select>
 
                   <div className="mt-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700/80 dark:bg-slate-700/40 text-xs">
@@ -356,7 +356,7 @@ function EditUserPage() {
                     name="isActive"
                     checked={form.isActive}
                     onChange={handleChange}
-                    disabled={targetUser?.role === ROLES.OWNER && !isOwner(user)}
+                    disabled={isSuperAdmin(targetUser) && !isOwner(user)}
                     className="w-4 h-4 disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                   Active User
@@ -373,7 +373,7 @@ function EditUserPage() {
 
                   <button
                     type="submit"
-                    disabled={loading || (targetUser?.role === ROLES.OWNER && !isOwner(user))}
+                    disabled={loading || (isSuperAdmin(targetUser) && !isOwner(user))}
                     className="px-6 py-2.5 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-xs"
                   >
                     {loading ? 'Updating...' : 'Update User'}

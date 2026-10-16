@@ -321,7 +321,7 @@ function AddUserPage() {
                 >
                   <option value="USER">Member</option>
                   <option value="ADMIN">Administrator</option>
-                  {isOwner(user) && <option value="OWNER">Super Admin</option>}
+                  {isOwner(user) && <option value="SUPER_ADMIN">Super Admin</option>}
                 </select>
 
                 <div className="mt-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700/80 dark:bg-slate-700/40 text-xs">
