@@ -128,6 +128,8 @@ const getDepartmentFolderAccess = async (folderId, userId) => {
 };
 
 const getFolderAccess = async (folderId, userId) => {
+  if (!folderId) return null;
+
   const folder = await prisma.folder.findUnique({
     where: { id: folderId },
     include: {
@@ -200,6 +202,7 @@ const getVaultAccess = async (vaultId, userId) => {
 };
 
 const getFolderAuthorizedUserIds = async (folderId) => {
+  if (!folderId) return [];
   try {
     const folder = await prisma.folder.findUnique({
       where: { id: folderId },
@@ -412,12 +415,28 @@ const getFolderDepartmentMembers = async (folderId) => {
   }
 };
 
+const getPasswordItemAccess = async (password, userId) => {
+  if (!password) return null;
+
+  if (password.folderId) {
+    const folderAccess = await getFolderAccess(password.folderId, userId);
+    if (folderAccess) return folderAccess;
+  }
+
+  if (password.vaultId) {
+    return await getVaultAccess(password.vaultId, userId);
+  }
+
+  return null;
+};
+
 module.exports = {
   isAdminUser,
   getUserDepartmentIds,
   getDepartmentIdsWithAncestors,
   getVaultAccess,
   getFolderAccess,
+  getPasswordItemAccess,
   getFolderAuthorizedUserIds,
   getFolderDepartmentMembers,
   requireFolderAccess,

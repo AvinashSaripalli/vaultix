@@ -1,6 +1,7 @@
 const prisma = require('../config/prisma');
 const {
   getFolderAccess,
+  getPasswordItemAccess,
   isAdminUser,
   getFolderAuthorizedUserIds,
   getVaultAccess,
@@ -633,7 +634,7 @@ const getPasswordById = async (req, res) => {
       return res.status(404).json({ message: 'Password not found' });
     }
 
-    const access = await getFolderAccess(password.folderId, req.user.id);
+    const access = await getPasswordItemAccess(password, req.user.id);
     if (!access || !['ADMINISTRATOR', 'READ_WRITE', 'READ_ONLY', 'FULL_ACCESS'].includes(access)) {
       return res.status(403).json({ message: 'Access denied' });
     }
@@ -687,7 +688,7 @@ const updatePassword = async (req, res) => {
       return res.status(404).json({ message: 'Password not found' });
     }
 
-    const access = await getFolderAccess(existingPassword.folderId, req.user.id);
+    const access = await getPasswordItemAccess(existingPassword, req.user.id);
 
     if (
       !access ||
@@ -933,7 +934,7 @@ const deletePassword = async (req, res) => {
       return res.status(404).json({ message: 'Password not found' });
     }
 
-    const access = await getFolderAccess(password.folderId, req.user.id);
+    const access = await getPasswordItemAccess(password, req.user.id);
     if (!access || !['ADMINISTRATOR', 'FULL_ACCESS'].includes(access)) {
       return res.status(403).json({ message: 'Access denied' });
     }
@@ -988,9 +989,21 @@ const restorePassword = async (req, res) => {
       return res.status(400).json({ message: 'Password is not in the trash' });
     }
 
-    const access = await getFolderAccess(password.folderId, req.user.id);
+    const access = await getPasswordItemAccess(password, req.user.id);
     if (!access || !['ADMINISTRATOR', 'FULL_ACCESS'].includes(access)) {
       return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // If folder was deleted while password was in trash, detach it safely to vault root
+    let targetFolderId = password.folderId;
+    if (targetFolderId) {
+      const folderExists = await prisma.folder.findUnique({
+        where: { id: targetFolderId },
+        select: { id: true },
+      });
+      if (!folderExists) {
+        targetFolderId = null;
+      }
     }
 
     const subtreeIds = await collectSubtreeIds(req.params.id);
@@ -999,7 +1012,10 @@ const restorePassword = async (req, res) => {
     await prisma.$transaction(async (tx) => {
       await tx.passwordEntry.updateMany({
         where: { id: { in: subtreeIds } },
-        data: { deletedAt: null },
+        data: {
+          deletedAt: null,
+          ...(targetFolderId !== password.folderId ? { folderId: targetFolderId } : {}),
+        },
       });
 
       await tx.activityLog.create({
@@ -1011,7 +1027,7 @@ const restorePassword = async (req, res) => {
           targetId: req.params.id,
           metadata: {
             name: password.name,
-            folderId: password.folderId,
+            folderId: targetFolderId,
             vaultId: password.vaultId,
             vaultType,
             restored: true,
@@ -1041,7 +1057,7 @@ const purgePassword = async (req, res) => {
       return res.status(400).json({ message: 'Password is not in the trash' });
     }
 
-    const access = await getFolderAccess(password.folderId, req.user.id);
+    const access = await getPasswordItemAccess(password, req.user.id);
     if (!access || !['ADMINISTRATOR', 'FULL_ACCESS'].includes(access)) {
       return res.status(403).json({ message: 'Access denied' });
     }
@@ -1178,7 +1194,7 @@ const logCopyPassword = async (req, res) => {
       return res.status(404).json({ message: 'Password not found' });
     }
 
-    const hasFolderAccess = await getFolderAccess(password.folderId, req.user.id);
+    const hasItemAccess = await getPasswordItemAccess(password, req.user.id);
     const hasShare = await prisma.passwordShare.findFirst({
       where: {
         passwordId: password.id,
@@ -1186,9 +1202,9 @@ const logCopyPassword = async (req, res) => {
       },
     });
 
-    const hasAccessViaFolder = hasFolderAccess && ['ADMINISTRATOR', 'READ_WRITE', 'READ_ONLY', 'FULL_ACCESS'].includes(hasFolderAccess);
+    const hasAccess = hasItemAccess && ['ADMINISTRATOR', 'READ_WRITE', 'READ_ONLY', 'FULL_ACCESS'].includes(hasItemAccess);
 
-    if (!hasAccessViaFolder && !hasShare) {
+    if (!hasAccess && !hasShare) {
       return res.status(403).json({ message: 'Access denied' });
     }
 
@@ -1231,7 +1247,7 @@ const logViewPassword = async (req, res) => {
       return res.status(404).json({ message: 'Password not found' });
     }
 
-    const hasFolderAccess = await getFolderAccess(password.folderId, req.user.id);
+    const hasItemAccess = await getPasswordItemAccess(password, req.user.id);
     const hasShare = await prisma.passwordShare.findFirst({
       where: {
         passwordId: password.id,
@@ -1239,9 +1255,9 @@ const logViewPassword = async (req, res) => {
       },
     });
 
-    const hasAccessViaFolder = hasFolderAccess && ['ADMINISTRATOR', 'READ_WRITE', 'READ_ONLY', 'FULL_ACCESS'].includes(hasFolderAccess);
+    const hasAccess = hasItemAccess && ['ADMINISTRATOR', 'READ_WRITE', 'READ_ONLY', 'FULL_ACCESS'].includes(hasItemAccess);
 
-    if (!hasAccessViaFolder && !hasShare) {
+    if (!hasAccess && !hasShare) {
       return res.status(403).json({ message: 'Access denied' });
     }
 
