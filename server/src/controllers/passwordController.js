@@ -11,6 +11,7 @@ const generateId = require('../utils/generateId');
 const createNotification = require('../utils/createNotification');
 const { VALID_ITEM_TYPES, validateItemFields, validateLoginForType } = require('../utils/itemFieldSchemas');
 const { getVaultPolicy, validateAgainstPolicy } = require('../utils/vaultPolicy');
+const { getEffectiveOrganizationPolicy } = require('../utils/organizationPolicy');
 
 const notifyCollaboratorsOnPasswordChange = async ({
   folderId,
@@ -1047,6 +1048,58 @@ const purgePassword = async (req, res) => {
 
     const subtreeIds = await collectSubtreeIds(req.params.id);
     const vaultType = await getVaultType(password.vaultId);
+
+    // Strict Owner-Only Policy for Password Purging in Company/Shared Vaults:
+    // If an ADMIN attempts to permanently purge a credential from trash, require OWNER authorization
+    const policy = await getEffectiveOrganizationPolicy();
+    if (vaultType !== 'PERSONAL' && req.user.role === 'ADMIN' && policy?.requireDualAdminApproval) {
+      const approvalId = await generateId('req');
+      const targetVault = await prisma.vault.findUnique({
+        where: { id: password.vaultId },
+        select: { name: true },
+      });
+      const vaultName = targetVault?.name || 'Company Vault';
+
+      const approvalRequest = await prisma.adminApprovalRequest.create({
+        data: {
+          id: approvalId,
+          actionType: 'PURGE_TRASH',
+          title: `Purge Password: ${password.name}`,
+          description: `Administrator ${req.user.fullName || req.user.email} requested permanent purge of "${password.name}" from Trash in "${vaultName}". Requires Owner approval.`,
+          payload: {
+            passwordId: password.id,
+            passwordName: password.name,
+            vaultId: password.vaultId,
+            vaultName,
+          },
+          requesterId: req.user.id,
+          status: 'PENDING',
+          expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000), // 48h
+        },
+      });
+
+      await prisma.activityLog.create({
+        data: {
+          id: await generateId('activity'),
+          userId: req.user.id,
+          action: 'CREATE_APPROVAL_REQUEST',
+          targetType: 'APPROVAL_REQUEST',
+          targetId: approvalId,
+          metadata: {
+            actionType: 'PURGE_TRASH',
+            passwordId: password.id,
+            passwordName: password.name,
+            vaultId: password.vaultId,
+          },
+        },
+      });
+
+      return res.status(202).json({
+        approvalRequired: true,
+        message: `Owner Approval Required: Permanently purging passwords from Trash requires authorization from an Organization Owner. A pending approval request (#${approvalId}) has been submitted for Owner review.`,
+        approvalRequest,
+      });
+    }
 
     await prisma.$transaction(async (tx) => {
       await tx.passwordEntry.deleteMany({

@@ -208,10 +208,15 @@ export const purgePassword = createAsyncThunk(
   async ({ passwordId, vaultId }, thunkAPI) => {
     try {
       const token = thunkAPI.getState().auth.token;
-      await api.delete(`/passwords/${passwordId}/purge`, {
+      const res = await api.delete(`/passwords/${passwordId}/purge`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      return { passwordId, vaultId };
+      return {
+        passwordId,
+        vaultId,
+        approvalRequired: res.data?.approvalRequired,
+        message: res.data?.message,
+      };
     } catch (error) {
       return thunkAPI.rejectWithValue(
         error.response?.data?.message || 'Failed to permanently delete password'
@@ -560,11 +565,13 @@ const vaultSlice = createSlice({
       })
 
       .addCase(purgePassword.fulfilled, (state, action) => {
-        const list = state.trashByVault[action.payload.vaultId];
-        if (list) {
-          state.trashByVault[action.payload.vaultId] = list.filter(
-            (item) => item.id !== action.payload.passwordId
-          );
+        if (!action.payload?.approvalRequired) {
+          const list = state.trashByVault[action.payload.vaultId];
+          if (list) {
+            state.trashByVault[action.payload.vaultId] = list.filter(
+              (item) => item.id !== action.payload.passwordId
+            );
+          }
         }
       })
 

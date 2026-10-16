@@ -289,7 +289,29 @@ const approveRequest = async (req, res) => {
       ]);
     } else if (request.actionType === 'PURGE_TRASH') {
       const targetVaultId = payload.vaultId;
-      if (targetVaultId) {
+      const targetPasswordId = payload.passwordId;
+
+      if (targetPasswordId) {
+        const subtreeIds = new Set([targetPasswordId]);
+        let changed = true;
+        while (changed) {
+          changed = false;
+          const rows = await prisma.passwordEntry.findMany({
+            where: { parentId: { in: [...subtreeIds] } },
+            select: { id: true },
+          });
+          for (const row of rows) {
+            if (!subtreeIds.has(row.id)) {
+              subtreeIds.add(row.id);
+              changed = true;
+            }
+          }
+        }
+
+        await prisma.passwordEntry.deleteMany({
+          where: { id: { in: [...subtreeIds] } },
+        });
+      } else if (targetVaultId) {
         await prisma.passwordEntry.deleteMany({
           where: {
             vaultId: targetVaultId,

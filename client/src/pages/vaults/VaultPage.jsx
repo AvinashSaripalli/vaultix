@@ -643,8 +643,12 @@ function VaultPage() {
     const item = confirmPurge.item;
     const result = await dispatch(purgePassword({ passwordId: item.id, vaultId: selectedVault.id }));
     if (purgePassword.fulfilled.match(result)) {
-      dispatch(fetchVaultTrash(selectedVault.id));
-      showToast(`Permanently deleted "${item.name}"`);
+      if (result.payload?.approvalRequired) {
+        showToast(result.payload.message || 'Permanent purge request submitted for Owner approval', 'info');
+      } else {
+        dispatch(fetchVaultTrash(selectedVault.id));
+        showToast(`Permanently deleted "${item.name}"`);
+      }
     } else {
       showToast(result.payload || 'Failed to permanently delete item', 'error');
     }
