@@ -1,6 +1,6 @@
 const prisma = require('../config/prisma');
 
-const { getVaultAccess } = require('../utils/permissions');
+const { getVaultAccess, getFolderAccess } = require('../utils/permissions');
 
 const getAllActivityLogs = async (req, res) => {
   try {
@@ -51,27 +51,68 @@ const getAllActivityLogs = async (req, res) => {
 const getVaultActivityLogs = async (req, res) => {
   try {
     const vaultId = req.params.vaultId;
+    const folderId = req.query.folderId;
 
+    const isAdmin = ['SUPER_ADMIN', 'ADMIN'].includes(req.user.role);
     const access = await getVaultAccess(vaultId, req.user.id);
 
-    if (!access) {
+    let authorized = isAdmin || !!access;
+    let allowedFolderIds = [];
+
+    if (!authorized) {
+      if (folderId) {
+        const folderAccess = await getFolderAccess(folderId, req.user.id);
+        if (folderAccess && folderAccess !== 'FORBIDDEN') {
+          authorized = true;
+          allowedFolderIds = [folderId];
+        }
+      } else {
+        const userFolders = await prisma.folder.findMany({
+          where: { vaultId, deletedAt: null },
+          select: { id: true },
+        });
+        for (const f of userFolders) {
+          const fAccess = await getFolderAccess(f.id, req.user.id);
+          if (fAccess && fAccess !== 'FORBIDDEN') {
+            allowedFolderIds.push(f.id);
+          }
+        }
+        if (allowedFolderIds.length > 0) {
+          authorized = true;
+        }
+      }
+    }
+
+    if (!authorized) {
       return res.status(403).json({ message: 'Access denied' });
     }
 
-    const logs = await prisma.activityLog.findMany({
-      where: {
+    let whereCondition;
+    if (folderId) {
+      whereCondition = {
         OR: [
-          {
-            metadata: {
-              path: ['vaultId'],
-              equals: vaultId,
-            },
-          },
-          {
-            targetId: vaultId,
-          },
+          { metadata: { path: ['folderId'], equals: folderId } },
+          { targetId: folderId },
         ],
-      },
+      };
+    } else if (allowedFolderIds.length > 0 && !isAdmin && !access) {
+      whereCondition = {
+        OR: [
+          { metadata: { path: ['folderId'], in: allowedFolderIds } },
+          { targetId: { in: allowedFolderIds } },
+        ],
+      };
+    } else {
+      whereCondition = {
+        OR: [
+          { metadata: { path: ['vaultId'], equals: vaultId } },
+          { targetId: vaultId },
+        ],
+      };
+    }
+
+    const logs = await prisma.activityLog.findMany({
+      where: whereCondition,
       orderBy: { createdAt: 'desc' },
       include: {
         user: {
@@ -94,21 +135,69 @@ const getVaultActivityLogs = async (req, res) => {
 const exportVaultAudit = async (req, res) => {
   try {
     const vaultId = req.params.vaultId;
+    const folderId = req.query.folderId;
     const format = req.query.format === 'csv' ? 'csv' : 'json';
 
-    const access = await getVaultAccess(vaultId, req.user.id);
     const isAdmin = ['SUPER_ADMIN', 'ADMIN'].includes(req.user.role);
-    if (!isAdmin && (!access || !['ADMINISTRATOR', 'FULL_ACCESS'].includes(access))) {
+    const access = await getVaultAccess(vaultId, req.user.id);
+
+    let authorized = isAdmin || (access && ['ADMINISTRATOR', 'FULL_ACCESS'].includes(access));
+    let allowedFolderIds = [];
+
+    if (!authorized) {
+      if (folderId) {
+        const folderAccess = await getFolderAccess(folderId, req.user.id);
+        if (folderAccess && ['ADMINISTRATOR', 'FULL_ACCESS'].includes(folderAccess)) {
+          authorized = true;
+          allowedFolderIds = [folderId];
+        }
+      } else {
+        const userFolders = await prisma.folder.findMany({
+          where: { vaultId, deletedAt: null },
+          select: { id: true },
+        });
+        for (const f of userFolders) {
+          const fAccess = await getFolderAccess(f.id, req.user.id);
+          if (fAccess && ['ADMINISTRATOR', 'FULL_ACCESS'].includes(fAccess)) {
+            allowedFolderIds.push(f.id);
+          }
+        }
+        if (allowedFolderIds.length > 0) {
+          authorized = true;
+        }
+      }
+    }
+
+    if (!authorized) {
       return res.status(403).json({ message: 'Access denied. Administrator or Full Access required.' });
     }
 
-    const logs = await prisma.activityLog.findMany({
-      where: {
+    let whereCondition;
+    if (folderId) {
+      whereCondition = {
+        OR: [
+          { metadata: { path: ['folderId'], equals: folderId } },
+          { targetId: folderId },
+        ],
+      };
+    } else if (allowedFolderIds.length > 0 && !isAdmin && (!access || !['ADMINISTRATOR', 'FULL_ACCESS'].includes(access))) {
+      whereCondition = {
+        OR: [
+          { metadata: { path: ['folderId'], in: allowedFolderIds } },
+          { targetId: { in: allowedFolderIds } },
+        ],
+      };
+    } else {
+      whereCondition = {
         OR: [
           { metadata: { path: ['vaultId'], equals: vaultId } },
           { targetId: vaultId },
         ],
-      },
+      };
+    }
+
+    const logs = await prisma.activityLog.findMany({
+      where: whereCondition,
       orderBy: { createdAt: 'desc' },
       include: {
         user: {
@@ -117,11 +206,10 @@ const exportVaultAudit = async (req, res) => {
       },
     });
 
-    // Non-admins: exclude other users' personal-vault noise and only
-    // surface activity that pertains to this vault.
-    const filtered = ['SUPER_ADMIN', 'ADMIN'].includes(req.user.role) || access === 'ADMINISTRATOR'
+    // Non-admins without vault-level admin: exclude other users' personal-vault noise
+    const filtered = isAdmin || access === 'ADMINISTRATOR'
       ? logs
-      : logs.filter((log) => log.userId === req.user.id || log.metadata?.vaultId === vaultId);
+      : logs.filter((log) => log.userId === req.user.id || log.metadata?.vaultId === vaultId || log.metadata?.folderId);
 
     const rows = filtered.map((log) => ({
       id: log.id,
@@ -133,6 +221,8 @@ const exportVaultAudit = async (req, res) => {
       targetId: log.targetId || '',
       metadata: log.metadata ? JSON.stringify(log.metadata) : '',
     }));
+
+    const filenamePrefix = folderId ? `folder-audit-${folderId}` : `vault-audit-${vaultId}`;
 
     if (format === 'csv') {
       const header = 'id,timestamp,user,userName,action,targetType,targetId,metadata\n';
@@ -150,7 +240,7 @@ const exportVaultAudit = async (req, res) => {
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader(
         'Content-Disposition',
-        `attachment; filename="vault-audit-${vaultId}.csv"`
+        `attachment; filename="${filenamePrefix}.csv"`
       );
       return res.send(csv);
     }
@@ -158,7 +248,7 @@ const exportVaultAudit = async (req, res) => {
     res.setHeader('Content-Type', 'application/json');
     res.setHeader(
       'Content-Disposition',
-      `attachment; filename="vault-audit-${vaultId}.json"`
+      `attachment; filename="${filenamePrefix}.json"`
     );
     res.json(rows);
   } catch (error) {

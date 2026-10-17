@@ -805,14 +805,18 @@ function VaultPage() {
     }
 
     try {
-      const res = await api.get(`/activity/vault/${selectedVault.id}/export?format=${format}`, {
+      const folderParam = selectedFolder?.id ? `&folderId=${selectedFolder.id}` : '';
+      const res = await api.get(`/activity/vault/${selectedVault.id}/export?format=${format}${folderParam}`, {
         responseType: 'blob',
         headers: { Authorization: `Bearer ${token}` },
       });
       const url = URL.createObjectURL(new Blob([res.data]));
       const a = document.createElement('a');
       a.href = url;
-      a.download = `vault-audit-${selectedVault.id}.${format}`;
+      const cleanName = selectedFolder?.name
+        ? `${selectedFolder.name.replace(/[^a-zA-Z0-9_-]/g, '_')}-audit.${format}`
+        : `vault-audit-${selectedVault.id}.${format}`;
+      a.download = cleanName;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -820,7 +824,19 @@ function VaultPage() {
       setAuditExportOpen(false);
       showToast(`Audit exported as ${format.toUpperCase()}`);
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to export audit', 'error');
+      let errorMsg = 'Failed to export audit';
+      if (err.response?.data instanceof Blob) {
+        try {
+          const text = await err.response.data.text();
+          const parsed = JSON.parse(text);
+          if (parsed.message) errorMsg = parsed.message;
+        } catch {
+          /* ignore */
+        }
+      } else if (err.response?.data?.message) {
+        errorMsg = err.response.data.message;
+      }
+      showToast(errorMsg, 'error');
     }
   };
 
