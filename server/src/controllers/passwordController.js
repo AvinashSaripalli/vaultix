@@ -365,8 +365,8 @@ const importPasswordsFromExcel = async (req, res) => {
     }
 
     const access = await getFolderAccess(folderId, req.user.id);
-    if (!access || !['ADMINISTRATOR', 'READ_WRITE', 'FULL_ACCESS'].includes(access)) {
-      return res.status(403).json({ message: 'Access denied' });
+    if (!access || !['ADMINISTRATOR', 'FULL_ACCESS'].includes(access)) {
+      return res.status(403).json({ message: 'Access denied. Full access or administrator permission is required to bulk import.' });
     }
 
     const importFolder = await prisma.folder.findUnique({

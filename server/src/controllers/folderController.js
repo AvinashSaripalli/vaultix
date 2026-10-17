@@ -463,8 +463,8 @@ const getFolderActivityLogs = async (req, res) => {
     const folderId = req.params.id;
 
     const access = await getFolderAccess(folderId, req.user.id);
-    if (!access) {
-      return res.status(403).json({ message: 'Access denied' });
+    if (!access || !['ADMINISTRATOR', 'FULL_ACCESS'].includes(access)) {
+      return res.status(403).json({ message: 'Access denied. Full access or administrator permission is required to view activity logs.' });
     }
 
     const filteredLogs = await prisma.activityLog.findMany({

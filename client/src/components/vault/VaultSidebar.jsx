@@ -167,9 +167,11 @@ function VaultSidebar() {
           {!foldersLoading &&
             folders.map((folder) => {
               const directPerm = folder.permissions?.find((p) => p.userId === user?.id || p.user?.id === user?.id)?.accessLevel;
+              const deptPerm = folder.departmentMembers?.find((dm) => dm.userId === user?.id || dm.user?.id === user?.id)?.accessLevel;
               const isForbidden = !['SUPER_ADMIN', 'ADMIN'].includes(user?.role) && (
                 directPerm === 'FORBIDDEN' ||
-                (Array.isArray(folder.blockedUserIds) && folder.blockedUserIds.includes(user?.id))
+                (deptPerm === 'FORBIDDEN' && !directPerm) ||
+                (Array.isArray(folder.blockedUserIds) && folder.blockedUserIds.includes(user?.id) && !directPerm)
               );
 
               return (

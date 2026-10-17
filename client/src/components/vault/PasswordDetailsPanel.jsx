@@ -88,27 +88,31 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
   })();
 
   const isCreator = selectedPassword?.createdById === user?.id;
+  const isForbidden = selectedFolderAccess === 'FORBIDDEN';
 
   const canView =
-    ['SUPER_ADMIN', 'ADMIN'].includes(user?.role) ||
-    isCreator ||
-    ['ADMINISTRATOR', 'READ_WRITE', 'READ_ONLY', 'FULL_ACCESS'].includes(
-      selectedFolderAccess
-    );
+    !isForbidden &&
+    (['SUPER_ADMIN', 'ADMIN'].includes(user?.role) ||
+      ['ADMINISTRATOR', 'READ_WRITE', 'READ_ONLY', 'FULL_ACCESS'].includes(
+        selectedFolderAccess
+      ) ||
+      (!selectedFolderAccess && isCreator));
 
   const canEdit =
-    ['SUPER_ADMIN', 'ADMIN'].includes(user?.role) ||
-    ['ADMINISTRATOR', 'READ_WRITE', 'FULL_ACCESS'].includes(
-      selectedFolderAccess
-    );
-
-  const canDelete =
-    ['SUPER_ADMIN', 'ADMIN'].includes(user?.role) ||
-    (isCreator &&
+    !isForbidden &&
+    (['SUPER_ADMIN', 'ADMIN'].includes(user?.role) ||
       ['ADMINISTRATOR', 'READ_WRITE', 'FULL_ACCESS'].includes(
         selectedFolderAccess
-      )) ||
-    ['ADMINISTRATOR', 'FULL_ACCESS'].includes(selectedFolderAccess);
+      ));
+
+  const canDelete =
+    !isForbidden &&
+    (['SUPER_ADMIN', 'ADMIN'].includes(user?.role) ||
+      (isCreator &&
+        ['ADMINISTRATOR', 'READ_WRITE', 'FULL_ACCESS'].includes(
+          selectedFolderAccess
+        )) ||
+      ['ADMINISTRATOR', 'FULL_ACCESS'].includes(selectedFolderAccess));
 
   const [visiblePasswords, setVisiblePasswords] = useState({});
   const [revealedFields, setRevealedFields] = useState({});
@@ -412,8 +416,12 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
 
   const isLoginGroup = !selectedPassword.type || selectedPassword.type === 'LOGIN';
   const canAddLogin =
+    !isForbidden &&
     isLoginGroup &&
-    (['SUPER_ADMIN', 'ADMIN'].includes(user?.role) || ['ADMINISTRATOR', 'READ_WRITE'].includes(selectedFolderAccess));
+    (['SUPER_ADMIN', 'ADMIN'].includes(user?.role) ||
+      ['ADMINISTRATOR', 'FULL_ACCESS', 'READ_WRITE'].includes(
+        selectedFolderAccess
+      ));
 
   return (
     <div className="p-3.5 sm:p-6 lg:p-8 min-w-0">
