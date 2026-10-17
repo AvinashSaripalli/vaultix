@@ -118,7 +118,12 @@ function Sidebar() {
         ...(isSuperAdmin(user)
           ? [{ name: 'Security Policies', path: '/admin/policies', icon: ShieldCheck }]
           : []),
-        { name: 'Admin Approvals', path: '/admin/approvals', icon: UserCheck, badge: pendingApprovalsCount },
+        {
+          name: isSuperAdmin(user) ? 'Admin Approvals' : 'My Requests',
+          path: isSuperAdmin(user) ? '/admin/approvals' : '/admin/approvals?tab=my-requests',
+          icon: UserCheck,
+          badge: isSuperAdmin(user) ? pendingApprovalsCount : undefined,
+        },
       ]
     : [];
 
@@ -156,7 +161,7 @@ function Sidebar() {
           <div className="my-1.5 border-t border-[var(--border-secondary)] mx-1" />
           {items.map((item) => {
             const Icon = item.icon;
-            const active = location.pathname === item.path;
+            const active = location.pathname === (item.path ? item.path.split('?')[0] : '');
             return (
               <Link
                 key={item.name}
@@ -190,7 +195,7 @@ function Sidebar() {
         <div className="space-y-0.5">
           {items.map((item) => {
             const Icon = item.icon;
-            const active = location.pathname === item.path;
+            const active = location.pathname === (item.path ? item.path.split('?')[0] : '');
             return (
               <Link
                 key={item.name}

@@ -88,13 +88,9 @@ function AdminApprovalsPage() {
   };
 
   useEffect(() => {
-    if (!isAdmin(user)) return;
+    if (!user) return;
     fetchRequests();
   }, [user, token, activeTab]);
-
-  if (!isAdmin(user)) {
-    return <Navigate to="/dashboard" replace />;
-  }
 
   const handleOpenAction = (type, request) => {
     setActionModal({
@@ -193,10 +189,12 @@ function AdminApprovalsPage() {
               </div>
               <div>
                 <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">
-                  Dual-Admin Approvals
+                  {isSuperAdmin(user) ? 'Dual-Admin Approvals' : 'My Requests & Approvals'}
                 </h1>
                 <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-                  Enforcing the Four-Eyes Principle: high-stakes administrative operations require consensus from two administrators.
+                  {isSuperAdmin(user)
+                    ? 'Enforcing the Four-Eyes Principle: high-stakes administrative operations require consensus from two administrators.'
+                    : 'Track and manage authorization requests submitted for Super Admin review.'}
                 </p>
               </div>
             </div>
