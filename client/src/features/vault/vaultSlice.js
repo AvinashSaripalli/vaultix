@@ -191,10 +191,16 @@ export const restorePassword = createAsyncThunk(
   async ({ passwordId, vaultId }, thunkAPI) => {
     try {
       const token = thunkAPI.getState().auth.token;
-      await api.post(`/passwords/${passwordId}/restore`, {}, {
+      const res = await api.post(`/passwords/${passwordId}/restore`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      return { passwordId, vaultId };
+      return {
+        passwordId,
+        vaultId,
+        folderRestored: res.data?.folderRestored,
+        folderId: res.data?.folderId,
+        folderName: res.data?.folderName,
+      };
     } catch (error) {
       return thunkAPI.rejectWithValue(
         error.response?.data?.message || 'Failed to restore password'
@@ -631,6 +637,14 @@ const vaultSlice = createSlice({
           state.trashByVault[action.payload.vaultId] = list.filter(
             (item) => item.id !== action.payload.passwordId
           );
+        }
+        if (action.payload.folderRestored && action.payload.folderId) {
+          const folderList = state.folderTrashByVault[action.payload.vaultId];
+          if (folderList) {
+            state.folderTrashByVault[action.payload.vaultId] = folderList.filter(
+              (f) => f.id !== action.payload.folderId
+            );
+          }
         }
       })
 

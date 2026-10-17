@@ -134,8 +134,13 @@ export const restoreMyVaultPassword = createAsyncThunk(
   'myVault/restoreMyVaultPassword',
   async (passwordId, { rejectWithValue }) => {
     try {
-      await api.post(`/my-vault/passwords/${passwordId}/restore`);
-      return passwordId;
+      const res = await api.post(`/my-vault/passwords/${passwordId}/restore`);
+      return {
+        passwordId,
+        folderRestored: res.data?.folderRestored,
+        folderId: res.data?.folderId,
+        folderName: res.data?.folderName,
+      };
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 'Failed to restore password'
@@ -389,7 +394,10 @@ const myVaultSlice = createSlice({
       })
 
       .addCase(restoreMyVaultPassword.fulfilled, (state, action) => {
-        state.trash = state.trash.filter((item) => item.id !== action.payload);
+        state.trash = state.trash.filter((item) => item.id !== action.payload.passwordId);
+        if (action.payload.folderRestored && action.payload.folderId) {
+          state.folderTrash = state.folderTrash.filter((f) => f.id !== action.payload.folderId);
+        }
       })
 
       .addCase(purgeMyVaultPassword.fulfilled, (state, action) => {

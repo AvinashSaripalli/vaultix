@@ -13,6 +13,7 @@ import {
   clearSelectedFolder,
   deleteFolder,
   clearVaultError,
+  fetchFoldersByVault,
   fetchVaultTrash,
   fetchVaultFolderTrash,
   fetchPasswordsByVault,
@@ -77,6 +78,7 @@ function VaultSidebar() {
     } else {
       showToast(`Folder "${folderName}" and its passwords moved to Trash`, 'info');
       if (vaultId) {
+        dispatch(fetchFoldersByVault(vaultId));
         dispatch(fetchVaultTrash(vaultId));
         dispatch(fetchVaultFolderTrash(vaultId));
         dispatch(fetchPasswordsByVault(vaultId));

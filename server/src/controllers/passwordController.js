@@ -1008,15 +1008,22 @@ const restorePassword = async (req, res) => {
       return res.status(403).json({ message: 'Access denied' });
     }
 
-    // If folder was deleted while password was in trash, detach it safely to vault root
     let targetFolderId = password.folderId;
+    let folderWasRestored = false;
+    let folderName = null;
+
     if (targetFolderId) {
-      const folderExists = await prisma.folder.findUnique({
+      const folderRecord = await prisma.folder.findUnique({
         where: { id: targetFolderId },
-        select: { id: true },
+        select: { id: true, name: true, deletedAt: true },
       });
-      if (!folderExists) {
+      if (!folderRecord) {
         targetFolderId = null;
+      } else if (folderRecord.deletedAt) {
+        folderWasRestored = true;
+        folderName = folderRecord.name;
+      } else {
+        folderName = folderRecord.name;
       }
     }
 
@@ -1024,6 +1031,30 @@ const restorePassword = async (req, res) => {
     const vaultType = await getVaultType(password.vaultId);
 
     await prisma.$transaction(async (tx) => {
+      // 1. If parent folder was in trash, restore it so the password is not orphaned
+      if (folderWasRestored && targetFolderId) {
+        await tx.folder.update({
+          where: { id: targetFolderId },
+          data: { deletedAt: null },
+        });
+
+        await tx.activityLog.create({
+          data: {
+            id: await generateId('activityLog'),
+            userId: req.user.id,
+            action: 'UPDATE_FOLDER',
+            targetType: 'Folder',
+            targetId: targetFolderId,
+            metadata: {
+              name: folderName,
+              vaultId: password.vaultId,
+              folderId: targetFolderId,
+              restoredViaChildPassword: true,
+            },
+          },
+        });
+      }
+
       await tx.passwordEntry.updateMany({
         where: { id: { in: subtreeIds } },
         data: {
@@ -1050,7 +1081,12 @@ const restorePassword = async (req, res) => {
       });
     });
 
-    res.json({ message: 'Password restored successfully' });
+    res.json({
+      message: 'Password restored successfully',
+      folderRestored: folderWasRestored,
+      folderId: targetFolderId,
+      folderName,
+    });
   } catch (error) {
     console.error('Restore password error:', error);
     res.status(500).json({ message: 'Server error' });

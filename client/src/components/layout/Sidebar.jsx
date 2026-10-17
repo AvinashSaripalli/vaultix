@@ -34,7 +34,7 @@ function Sidebar() {
   const { sidebarCollapsed, toggleSidebarCollapse, mobileSidebarOpen, closeMobileSidebar } = useLayout();
 
   const { user, isMasterVerified } = useSelector((state) => state.auth);
-  const { vaults, vaultsLoading, folders, foldersLoading, selectedFolderId, trashByVault, error } =
+  const { vaults, vaultsLoading, folders, foldersLoading, selectedFolderId, trashByVault, folderTrashByVault, error } =
     useSelector((state) => state.vault);
 
   const activeVault = vaults.find((v) => v.slug === currentVaultSlug);
@@ -54,6 +54,7 @@ function Sidebar() {
     if (currentVaultId) {
       dispatch(fetchFoldersByVault(currentVaultId));
       dispatch(fetchVaultTrash(currentVaultId));
+      dispatch(fetchVaultFolderTrash(currentVaultId));
     }
   }, [dispatch, currentVaultId]);
 
@@ -134,6 +135,7 @@ function Sidebar() {
     } else {
       showToast(`Folder "${folderName}" and its passwords moved to Trash`, 'info');
       if (currentVaultId) {
+        dispatch(fetchFoldersByVault(currentVaultId));
         dispatch(fetchVaultTrash(currentVaultId));
         dispatch(fetchVaultFolderTrash(currentVaultId));
         dispatch(fetchPasswordsByVault(currentVaultId));
@@ -426,7 +428,9 @@ function Sidebar() {
                         {/* Dedicated Vault Trash Navigation */}
                         {(() => {
                           const isTrashActive = vaultActive && location.search.includes('tab=trash');
-                          const trashCount = trashByVault[vault.id]?.length || 0;
+                          const pwTrash = trashByVault[vault.id]?.length || 0;
+                          const folderTrash = folderTrashByVault?.[vault.id]?.length || 0;
+                          const trashCount = pwTrash + folderTrash;
                           return (
                             <div className="pt-2 mt-1.5 border-t border-[var(--border-secondary)]">
                               <Link

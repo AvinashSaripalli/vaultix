@@ -144,6 +144,22 @@ const getMyVaultFolders = async (req, res) => {
       return res.json([]);
     }
 
+    // Self-healing: If any personal folder was in trash but contains active passwords, restore it
+    await prisma.folder.updateMany({
+      where: {
+        vaultId: vault.id,
+        deletedAt: { not: null },
+        passwords: {
+          some: {
+            deletedAt: null,
+          },
+        },
+      },
+      data: {
+        deletedAt: null,
+      },
+    });
+
     const folders = await prisma.folder.findMany({
       where: {
         vaultId: vault.id,
@@ -980,29 +996,66 @@ const restoreMyVaultPassword = async (req, res) => {
 
     const subtreeIds = await collectMyVaultSubtreeIds(passwordId, vault.id);
 
-    let folderUpdate = {};
-    if (password.folderId) {
-      const folderExists = await prisma.folder.findFirst({
-        where: { id: password.folderId, vaultId: vault.id },
+    let targetFolderId = password.folderId;
+    let folderWasRestored = false;
+    let folderName = null;
+
+    if (targetFolderId) {
+      const folderRecord = await prisma.folder.findFirst({
+        where: { id: targetFolderId, vaultId: vault.id },
+        select: { id: true, name: true, deletedAt: true },
       });
-      if (!folderExists) {
-        const fallbackFolder = await prisma.folder.findFirst({
-          where: { vaultId: vault.id },
-          orderBy: { createdAt: 'asc' },
-        });
-        folderUpdate = { folderId: fallbackFolder ? fallbackFolder.id : null };
+      if (!folderRecord) {
+        targetFolderId = null;
+      } else if (folderRecord.deletedAt) {
+        folderWasRestored = true;
+        folderName = folderRecord.name;
+      } else {
+        folderName = folderRecord.name;
       }
     }
 
-    await prisma.passwordEntry.updateMany({
-      where: { id: { in: subtreeIds } },
-      data: {
-        deletedAt: null,
-        ...folderUpdate,
-      },
+    await prisma.$transaction(async (tx) => {
+      // 1. If folder was in trash, restore it so the password is not orphaned
+      if (folderWasRestored && targetFolderId) {
+        await tx.folder.update({
+          where: { id: targetFolderId },
+          data: { deletedAt: null },
+        });
+
+        await tx.activityLog.create({
+          data: {
+            id: await generateId('activityLog'),
+            userId: req.user.id,
+            action: 'UPDATE_FOLDER',
+            targetType: 'Folder',
+            targetId: targetFolderId,
+            metadata: {
+              name: folderName,
+              vaultId: vault.id,
+              folderId: targetFolderId,
+              personalVault: true,
+              restoredViaChildPassword: true,
+            },
+          },
+        });
+      }
+
+      await tx.passwordEntry.updateMany({
+        where: { id: { in: subtreeIds } },
+        data: {
+          deletedAt: null,
+          ...(targetFolderId !== password.folderId ? { folderId: targetFolderId } : {}),
+        },
+      });
     });
 
-    res.json({ message: 'Password restored successfully' });
+    res.json({
+      message: 'Password restored successfully',
+      folderRestored: folderWasRestored,
+      folderId: targetFolderId,
+      folderName,
+    });
   } catch (error) {
     console.error('Restore my vault password error:', error);
     res.status(500).json({ message: 'Server error' });

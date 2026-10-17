@@ -87,6 +87,21 @@ const createVault = async (req, res) => {
 
 const getVaults = async (req, res) => {
   try {
+    // Self-healing: restore any folders that contain active passwords
+    await prisma.folder.updateMany({
+      where: {
+        deletedAt: { not: null },
+        passwords: {
+          some: {
+            deletedAt: null,
+          },
+        },
+      },
+      data: {
+        deletedAt: null,
+      },
+    });
+
     let vaults;
 
     if (['SUPER_ADMIN', 'ADMIN'].includes(req.user.role)) {
@@ -226,6 +241,27 @@ const getVaults = async (req, res) => {
 
 const getVaultBySlug = async (req, res) => {
   try {
+    const targetVault = await prisma.vault.findUnique({
+      where: { slug: req.params.slug },
+      select: { id: true },
+    });
+    if (targetVault) {
+      await prisma.folder.updateMany({
+        where: {
+          vaultId: targetVault.id,
+          deletedAt: { not: null },
+          passwords: {
+            some: {
+              deletedAt: null,
+            },
+          },
+        },
+        data: {
+          deletedAt: null,
+        },
+      });
+    }
+
     let vault;
 
     if (['SUPER_ADMIN', 'ADMIN'].includes(req.user.role)) {

@@ -290,7 +290,13 @@ function MyVaultPage() {
     if (restoreMyVaultPassword.fulfilled.match(result)) {
       dispatch(fetchMyVault());
       dispatch(fetchMyVaultTrash());
-      showToast(`"${item.name}" restored to your vault`, 'success');
+      dispatch(fetchMyVaultFolderTrash());
+      showToast(
+        result.payload?.folderRestored
+          ? `Restored "${item.name}" and folder "${result.payload.folderName}"`
+          : `"${item.name}" restored to your vault`,
+        'success'
+      );
     } else {
       showToast(result.payload || 'Failed to restore item', 'error');
     }

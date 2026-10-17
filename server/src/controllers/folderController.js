@@ -245,6 +245,25 @@ const updateFolder = async (req, res) => {
 
 const getFoldersByVault = async (req, res) => {
   try {
+    const vaultId = req.params.vaultId;
+
+    // Self-healing: If any folder was in trash but contains active passwords (deletedAt === null),
+    // automatically restore the folder so it is not hidden from the sidebar and views.
+    await prisma.folder.updateMany({
+      where: {
+        vaultId,
+        deletedAt: { not: null },
+        passwords: {
+          some: {
+            deletedAt: null,
+          },
+        },
+      },
+      data: {
+        deletedAt: null,
+      },
+    });
+
     const admin = await isAdminUser(req.user.id);
 
     let folders;

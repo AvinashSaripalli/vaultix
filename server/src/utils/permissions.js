@@ -430,11 +430,25 @@ const getPasswordItemAccess = async (password, userId) => {
   return null;
 };
 
+const getVaultType = async (vaultId) => {
+  try {
+    if (!vaultId) return null;
+    const vault = await prisma.vault.findUnique({
+      where: { id: vaultId },
+      select: { type: true },
+    });
+    return vault?.type || null;
+  } catch {
+    return null;
+  }
+};
+
 module.exports = {
   isAdminUser,
   getUserDepartmentIds,
   getDepartmentIdsWithAncestors,
   getVaultAccess,
+  getVaultType,
   getFolderAccess,
   getPasswordItemAccess,
   getFolderAuthorizedUserIds,

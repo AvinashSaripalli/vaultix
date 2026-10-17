@@ -199,7 +199,7 @@ function VaultPage() {
       dispatch(fetchVaultTrash(selectedVault.id));
       dispatch(fetchVaultFolderTrash(selectedVault.id));
     }
-  }, [dispatch, selectedVault?.id]);
+  }, [dispatch, selectedVault?.id, trashOpen]);
 
   const healedItemIdsRef = useRef(new Set());
   const isHealingRef = useRef(false);
@@ -645,15 +645,22 @@ function VaultPage() {
   const handleRestoreTrashItem = async (item) => {
     const result = await dispatch(restorePassword({ passwordId: item.id, vaultId: selectedVault.id }));
     if (restorePassword.fulfilled.match(result)) {
+      dispatch(fetchFoldersByVault(selectedVault.id));
       dispatch(fetchPasswordsByVault(selectedVault.id));
       dispatch(fetchVaultTrash(selectedVault.id));
+      dispatch(fetchVaultFolderTrash(selectedVault.id));
 
-      const targetFolder = folders.find((f) => f.id === item.folderId);
-      const folderName = item.folder?.name || targetFolder?.name;
+      const restoredFolderId = result.payload?.folderId || item.folderId;
+      const targetFolder = folders.find((f) => f.id === restoredFolderId);
+      const folderName = result.payload?.folderName || item.folder?.name || targetFolder?.name;
 
-      if (item.folderId && targetFolder) {
-        dispatch(selectFolder(item.folderId));
-        showToast(`Restored "${item.name}" to folder "${folderName}"`);
+      if (restoredFolderId) {
+        dispatch(selectFolder(restoredFolderId));
+        showToast(
+          result.payload?.folderRestored
+            ? `Restored "${item.name}" and folder "${folderName}"`
+            : `Restored "${item.name}" to folder "${folderName}"`
+        );
       } else {
         dispatch(clearSelectedFolder());
         showToast(`Restored "${item.name}" to vault`);
@@ -1433,6 +1440,7 @@ function VaultPage() {
           } else {
             showToast(`Folder "${folderName}" and its passwords moved to Trash`, 'info');
             if (vaultId) {
+              dispatch(fetchFoldersByVault(vaultId));
               dispatch(fetchVaultTrash(vaultId));
               dispatch(fetchVaultFolderTrash(vaultId));
               dispatch(fetchPasswordsByVault(vaultId));
