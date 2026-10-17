@@ -283,9 +283,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         }
 
         let originUrl = msg.url || tabUrl;
+        let sourcePath = '';
         try {
           const parsedUrl = new URL(originUrl);
           originUrl = `${parsedUrl.protocol}//${parsedUrl.hostname}`;
+          sourcePath = parsedUrl.pathname || '';
         } catch {
           originUrl = `https://${hostname}`;
         }
@@ -302,7 +304,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           username,
           password,
           url: originUrl,
+          sourceUrl: msg.sourceUrl || tabUrl || msg.url || '',
+          sourcePath,
           hostname,
+          hasPrompted: false,
           ts: Date.now(),
         };
 
@@ -324,6 +329,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
         if (!pending || Date.now() - pending.ts > PENDING_TTL_MS) {
           if (pending) await chrome.storage.session.remove('pendingLogin');
+          sendResponse({ ok: true, pending: null });
+          return;
+        }
+
+        // ONE-TIME ONLY: If this pending login was already prompted to the user on a web page,
+        // do not prompt again (unless opened explicitly from the extension popup)
+        if (!msg.fromPopup && pending.hasPrompted) {
           sendResponse({ ok: true, pending: null });
           return;
         }
@@ -401,6 +413,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           }
         }
 
+        if (!msg.fromPopup) {
+          pending.hasPrompted = true;
+          await chrome.storage.session.set({ pendingLogin: pending });
+        }
+
         sendResponse({
           ok: true,
           pending,
@@ -412,6 +429,23 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         });
       } catch {
         sendResponse({ ok: true, pending: null });
+      }
+    })();
+    return true;
+  }
+
+  // 3b. Reset prompted status (e.g. if page is waiting on 2FA or in-flight login)
+  if (msg.type === 'VAULTIX_RESET_PROMPTED') {
+    (async () => {
+      try {
+        const sess = await chrome.storage.session.get('pendingLogin');
+        if (sess.pendingLogin) {
+          sess.pendingLogin.hasPrompted = false;
+          await chrome.storage.session.set({ pendingLogin: sess.pendingLogin });
+        }
+        sendResponse({ ok: true });
+      } catch {
+        sendResponse({ ok: false });
       }
     })();
     return true;

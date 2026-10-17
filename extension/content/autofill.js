@@ -33,7 +33,7 @@
   });
 
   if (window === window.top) {
-    setTimeout(checkPendingLoginBanner, 450);
+    setTimeout(checkPendingLoginBanner, 600);
   }
 
   // ─── Credential source (host-filtered, from the background worker) ────────
@@ -274,6 +274,7 @@
         {
           type: 'VAULTIX_CAPTURE_LOGIN',
           url: location.origin,
+          sourceUrl: location.href,
           hostname: location.hostname.replace(/^www\./, ''),
           title: cleanSiteName(),
           username,
@@ -283,19 +284,43 @@
         (resp) => {
           void chrome.runtime.lastError;
           if (resp && resp.ok && (resp.status === 'NEW' || resp.status === 'UPDATE')) {
-            // For SPA logins that do not trigger a full page reload, check and show the banner
-            setTimeout(() => {
-              if (window === window.top) checkPendingLoginBanner();
-            }, 1100);
-            setTimeout(() => {
-              if (window === window.top) checkPendingLoginBanner();
-            }, 2400);
+            // Watch for successful login on SPA or modal transitions without showing banner on the login form
+            watchForSpaLoginSuccess();
           }
         }
       );
     } catch {
       /* ignore */
     }
+  }
+
+  let spaLoginWatcher = null;
+  function watchForSpaLoginSuccess() {
+    if (spaLoginWatcher) clearInterval(spaLoginWatcher);
+    const initialUrl = location.href;
+    let checks = 0;
+    spaLoginWatcher = setInterval(() => {
+      checks++;
+      const urlChanged = location.href !== initialUrl;
+      const pwField = findPasswordInput(document);
+
+      // Successful login condition for SPA:
+      // Either user navigated to another URL (e.g. /dashboard) OR the password field was removed from the DOM
+      if (urlChanged || !pwField) {
+        clearInterval(spaLoginWatcher);
+        spaLoginWatcher = null;
+        setTimeout(() => {
+          if (window === window.top) checkPendingLoginBanner();
+        }, 500);
+        return;
+      }
+
+      // Max wait ~12 seconds (35 checks * 350ms = 12.2s). If user is still sitting on the login form, do not prompt.
+      if (checks >= 35) {
+        clearInterval(spaLoginWatcher);
+        spaLoginWatcher = null;
+      }
+    }, 350);
   }
 
   function removeBadge() {
@@ -487,6 +512,67 @@
   }
 
   // ─── Top-Right Save / Update Login Banner (Shadow DOM) ───────────────────
+  function isTwoFactorPage() {
+    const path = (location.pathname || '').toLowerCase();
+    const search = (location.search || '').toLowerCase();
+    const title = (document.title || '').toLowerCase();
+    const combined = path + ' ' + search + ' ' + title;
+
+    const tfaPattern = /(2fa|two[-_]?factor|mfa|otp|verify|verification|challenge|security[-_]?check|checkpoint|authenticator)/i;
+    if (tfaPattern.test(combined)) return true;
+
+    // Check for OTP/2FA inputs
+    const otpInput = document.querySelector(
+      'input[autocomplete="one-time-code"], input[name*="otp" i], input[name*="code" i], input[name*="token" i], input[name*="2fa" i], input[id*="otp" i], input[id*="2fa" i], input[id*="code" i]'
+    );
+    if (otpInput && isVisible(otpInput)) return true;
+
+    return false;
+  }
+
+  function isLikelyLoginPage(pending) {
+    const path = (location.pathname || '').toLowerCase();
+    const search = (location.search || '').toLowerCase();
+    const combined = path + ' ' + search;
+
+    const loginPatterns = /(login|sign[-_]?in|log[-_]?in|auth|authenticate|session|oauth|sso)/i;
+
+    let isSameSource = false;
+    if (pending?.sourcePath && pending.sourcePath.length > 1) {
+      isSameSource = path === pending.sourcePath.toLowerCase();
+    }
+
+    const hasVisiblePw = !!findPasswordInput(document);
+
+    // If there is an active/visible password input and it's a login URL or the same source login URL,
+    // the user is still on the login form (login hasn't completed or failed).
+    return hasVisiblePw && (loginPatterns.test(combined) || isSameSource);
+  }
+
+  let twoFactorWatcher = null;
+  function watchForTwoFactorSuccess() {
+    if (twoFactorWatcher) clearInterval(twoFactorWatcher);
+    const initialUrl = location.href;
+    let checks = 0;
+    twoFactorWatcher = setInterval(() => {
+      checks++;
+      const urlChanged = location.href !== initialUrl;
+      const still2fa = isTwoFactorPage();
+      if (urlChanged || !still2fa) {
+        clearInterval(twoFactorWatcher);
+        twoFactorWatcher = null;
+        setTimeout(() => {
+          if (window === window.top) checkPendingLoginBanner();
+        }, 600);
+        return;
+      }
+      if (checks >= 60) {
+        clearInterval(twoFactorWatcher);
+        twoFactorWatcher = null;
+      }
+    }, 500);
+  }
+
   function checkPendingLoginBanner() {
     if (window !== window.top) return;
     try {
@@ -496,6 +582,30 @@
           if (chrome.runtime.lastError || !resp || !resp.ok || !resp.pending) {
             return;
           }
+
+          // 1. If user is currently on a 2FA/MFA challenge, wait until 2FA completes
+          if (isTwoFactorPage()) {
+            try {
+              chrome.runtime.sendMessage({ type: 'VAULTIX_RESET_PROMPTED' });
+            } catch {
+              /* ignore */
+            }
+            watchForTwoFactorSuccess();
+            return;
+          }
+
+          // 2. If user is still on the login form with visible password input,
+          // login has not succeeded yet (or failed with an error on the login page).
+          if (isLikelyLoginPage(resp.pending)) {
+            try {
+              chrome.runtime.sendMessage({ type: 'VAULTIX_RESET_PROMPTED' });
+            } catch {
+              /* ignore */
+            }
+            return;
+          }
+
+          // 3. User has successfully logged in (redirected or login modal dismissed)!
           renderSaveBanner(resp);
         }
       );
