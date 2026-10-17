@@ -41,8 +41,6 @@ import {
   Folder,
   Lock,
   ShieldAlert,
-  Ban,
-  UserCheck,
   FolderOpen,
 } from 'lucide-react';
 
@@ -1477,71 +1475,19 @@ function VaultPage() {
 
         {!vaultsLoading && !passwordsLoading && !error && !isTrashView && (
           isFolderForbidden ? (
-            <div className="min-h-[580px] flex items-center justify-center p-6 sm:p-12">
-              <div className="max-w-lg w-full bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/80 dark:border-slate-700 p-8 sm:p-10 shadow-xl shadow-slate-900/5 text-center flex flex-col items-center">
-                <div className="w-20 h-20 rounded-3xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200/80 dark:border-rose-900 flex items-center justify-center text-rose-600 dark:text-rose-400 mb-6 shadow-sm">
-                  <ShieldAlert size={40} className="stroke-[2.2]" />
+            <div className="min-h-[520px] flex items-center justify-center p-6 sm:p-12">
+              <div className="max-w-md w-full bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/80 dark:border-slate-700 p-8 sm:p-10 shadow-xl shadow-slate-900/5 text-center flex flex-col items-center">
+                <div className="w-16 h-16 rounded-2xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200/80 dark:border-rose-900 flex items-center justify-center text-rose-600 dark:text-rose-400 mb-4 shadow-sm">
+                  <ShieldAlert size={34} className="stroke-[2.2]" />
                 </div>
 
-                <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300 mb-3">
-                  Permission Denied
-                </span>
-
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
-                  Folder Access Restricted
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+                  Access Restricted
                 </h2>
 
-                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                  You do not have permission to view or manage credentials in{' '}
-                  <strong className="font-semibold text-slate-900 dark:text-white">
-                    "{selectedFolder?.name || 'this folder'}"
-                  </strong>.
+                <p className="mt-2.5 text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-w-sm">
+                  You do not have permission to view or access credentials in this folder.
                 </p>
-
-                <div className="mt-5 w-full bg-slate-50 dark:bg-slate-850/80 rounded-2xl p-4 border border-slate-200/70 dark:border-slate-700/70 text-left text-xs space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-500 dark:text-slate-400 font-medium">Folder</span>
-                    <span className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[200px]">
-                      {selectedFolder?.name}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-500 dark:text-slate-400 font-medium">Your Permission</span>
-                    <span className="font-semibold text-rose-600 dark:text-rose-400 flex items-center gap-1.5 bg-rose-50 dark:bg-rose-950/60 px-2 py-0.5 rounded-md border border-rose-200/60 dark:border-rose-900/60">
-                      <Ban size={12} /> Forbidden
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-500 dark:text-slate-400 font-medium">Account</span>
-                    <span className="text-slate-700 dark:text-slate-300 truncate max-w-[200px]">
-                      {user?.fullName || user?.email}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="mt-4 p-3.5 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/70 dark:border-amber-900/50 text-left">
-                  <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
-                    <strong>Need access?</strong> If your work requires credentials stored in this folder, please reach out to your Super Admin or Vault Administrator to request access permissions.
-                  </p>
-                </div>
-
-                <div className="mt-7 flex flex-col sm:flex-row items-center gap-3 w-full">
-                  <button
-                    type="button"
-                    onClick={() => dispatch(clearSelectedFolder())}
-                    className="w-full sm:flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm transition shadow-sm"
-                  >
-                    <FolderOpen size={16} />
-                    <span>Return to All Passwords</span>
-                  </button>
-                  <Link
-                    to="/admin/approvals?tab=my-requests"
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700 font-semibold text-sm transition"
-                  >
-                    <UserCheck size={16} />
-                    <span>My Requests</span>
-                  </Link>
-                </div>
               </div>
             </div>
           ) : (
