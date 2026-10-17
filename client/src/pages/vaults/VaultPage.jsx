@@ -181,6 +181,41 @@ function VaultPage() {
     return getRank(direct) >= getRank(dept) ? direct : dept;
   })();
 
+  const canAddPassword =
+    isAdminUser ||
+    ['ADMINISTRATOR', 'READ_WRITE', 'FULL_ACCESS'].includes(selectedFolderAccess);
+
+  const canShareFolder =
+    !!selectedFolder &&
+    (isAdminUser || selectedFolderAccess === 'ADMINISTRATOR');
+
+  const canDeleteFolder =
+    !!selectedFolder &&
+    (isAdminUser || selectedFolderAccess === 'ADMINISTRATOR');
+
+  const canManageFolderMembers =
+    !!selectedFolder &&
+    (isAdminUser || selectedFolderAccess === 'ADMINISTRATOR');
+
+  const canExport =
+    isAdminUser ||
+    ['ADMINISTRATOR', 'FULL_ACCESS'].includes(selectedFolderAccess);
+
+  const canViewTrash =
+    isAdminUser ||
+    (selectedFolder
+      ? ['ADMINISTRATOR', 'FULL_ACCESS'].includes(selectedFolderAccess)
+      : folders.some((f) => {
+          const direct = f.permissions?.find((p) => p.userId === user?.id || p.user?.id === user?.id)?.accessLevel;
+          const dept = f.departmentMembers?.find((dm) => dm.user?.id === user?.id)?.accessLevel;
+          return (
+            ['ADMINISTRATOR', 'FULL_ACCESS'].includes(direct) ||
+            ['ADMINISTRATOR', 'FULL_ACCESS'].includes(dept)
+          );
+        }));
+
+  const isTrashView = trashOpen && canViewTrash;
+
   useEffect(() => {
     if (slug) {
       dispatch(fetchVaultBySlug(slug));
@@ -195,11 +230,11 @@ function VaultPage() {
   }, [dispatch, selectedVault?.id]);
 
   useEffect(() => {
-    if (selectedVault?.id) {
+    if (selectedVault?.id && canViewTrash) {
       dispatch(fetchVaultTrash(selectedVault.id));
       dispatch(fetchVaultFolderTrash(selectedVault.id));
     }
-  }, [dispatch, selectedVault?.id, trashOpen]);
+  }, [dispatch, selectedVault?.id, trashOpen, canViewTrash]);
 
   const healedItemIdsRef = useRef(new Set());
   const isHealingRef = useRef(false);
@@ -332,19 +367,12 @@ function VaultPage() {
     return passwords.filter((item) => item.folderId === selectedFolder.id);
   }, [passwords, selectedFolder?.id]);
 
-  const canAddPassword =
-    isAdminUser ||
-    ['ADMINISTRATOR', 'READ_WRITE', 'FULL_ACCESS'].includes(selectedFolderAccess);
-
-  const canShareFolder =
-    !!selectedFolder &&
-    (isAdminUser || selectedFolderAccess === 'ADMINISTRATOR');
-
-  const canDeleteFolder =
-    !!selectedFolder &&
-    (isAdminUser || selectedFolderAccess === 'ADMINISTRATOR');
-
   const handleExport = (format) => {
+    if (!canExport) {
+      showToast('You do not have permission to export passwords from this folder', 'error');
+      return;
+    }
+
     if (!selectedVault?.id) {
       showToast('Vault not loaded', 'error');
       return;
@@ -730,6 +758,11 @@ function VaultPage() {
   };
 
   const handleAuditExport = async (format) => {
+    if (!canExport) {
+      showToast('You do not have permission to export audit logs', 'error');
+      return;
+    }
+
     try {
       const res = await api.get(`/activity/vault/${selectedVault.id}/export?format=${format}`, {
         responseType: 'blob',
@@ -756,7 +789,7 @@ function VaultPage() {
     <AppLayout>
       <div className="bg-white rounded-2xl border border-slate-200 dark:bg-slate-800 dark:border-slate-700 shadow-sm min-w-0">
         <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5 border-b border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800 rounded-t-2xl">
-          {trashOpen ? (
+          {isTrashView ? (
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
@@ -813,7 +846,7 @@ function VaultPage() {
                   {selectedFolder?.name || `${selectedVault?.name || 'Company Vault'} — All Passwords`}
                 </h1>
 
-                <FolderMembersSummary onClick={() => setUsersOpen(true)} />
+                <FolderMembersSummary onClick={canManageFolderMembers ? () => setUsersOpen(true) : undefined} />
               </div>
 
               <div className="relative flex items-center flex-wrap gap-2 sm:gap-2.5 shrink-0" ref={menuRef}>
@@ -839,20 +872,22 @@ function VaultPage() {
                   </button>
                 )}
 
-                <button
-                  type="button"
-                  onClick={() => setTrashOpen(true)}
-                  className="h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-1.5 relative transition shadow-sm"
-                  title="View deleted passwords in Trash"
-                >
-                  <Trash2 size={16} className="text-slate-500 dark:text-slate-400 shrink-0" />
-                  <span>Trash</span>
-                  {totalTrashCount > 0 && (
-                    <span className="ml-0.5 h-5 min-w-5 px-1.5 rounded-full bg-rose-500 text-white text-[10px] font-bold inline-flex items-center justify-center">
-                      {totalTrashCount}
-                    </span>
-                  )}
-                </button>
+                {canViewTrash && (
+                  <button
+                    type="button"
+                    onClick={() => setTrashOpen(true)}
+                    className="h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-1.5 relative transition shadow-sm"
+                    title="View deleted passwords in Trash"
+                  >
+                    <Trash2 size={16} className="text-slate-500 dark:text-slate-400 shrink-0" />
+                    <span>Trash</span>
+                    {totalTrashCount > 0 && (
+                      <span className="ml-0.5 h-5 min-w-5 px-1.5 rounded-full bg-rose-500 text-white text-[10px] font-bold inline-flex items-center justify-center">
+                        {totalTrashCount}
+                      </span>
+                    )}
+                  </button>
+                )}
 
               <div className="sm:relative">
                 <button
@@ -876,120 +911,129 @@ function VaultPage() {
                       History
                     </button>
 
-                    <button
-                      onClick={() => {
-                        setUsersOpen(true);
-                        setMenuOpen(false);
-                      }}
-                      className="flex items-center gap-3 w-full px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700"
-                    >
-                      <Users size={16} className="text-slate-500 dark:text-slate-400" />
-                      Manage Members
-                    </button>
+                    {canManageFolderMembers && (
+                      <button
+                        onClick={() => {
+                          setUsersOpen(true);
+                          setMenuOpen(false);
+                        }}
+                        className="flex items-center gap-3 w-full px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700"
+                      >
+                        <Users size={16} className="text-slate-500 dark:text-slate-400" />
+                        Manage Members
+                      </button>
+                    )}
 
-                    <button
-                      onClick={() => {
-                        setPolicyOpen(true);
-                        setMenuOpen(false);
-                      }}
-                      disabled={!canManagePolicy}
-                      className="flex items-center gap-3 w-full px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Shield size={16} className="text-slate-500 dark:text-slate-400" />
-                      Vault Policy
-                    </button>
+                    {isAdminUser && (
+                      <button
+                        onClick={() => {
+                          setPolicyOpen(true);
+                          setMenuOpen(false);
+                        }}
+                        disabled={!canManagePolicy}
+                        className="flex items-center gap-3 w-full px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Shield size={16} className="text-slate-500 dark:text-slate-400" />
+                        Vault Policy
+                      </button>
+                    )}
 
                     {selectedFolder && (
                       <>
-                        <button
-                          onClick={() => {
-                            setExportMenuOpen((prev) => !prev);
-                          }}
-                          className="flex items-center gap-3 w-full px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700"
-                        >
-                          <Download size={16} className="text-slate-500 dark:text-slate-400" />
-                          Export
-                          <ChevronDown size={14} className="ml-auto text-slate-400" />
-                        </button>
+                        {canExport && (
+                          <>
+                            <button
+                              onClick={() => {
+                                setExportMenuOpen((prev) => !prev);
+                              }}
+                              className="flex items-center gap-3 w-full px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700"
+                            >
+                              <Download size={16} className="text-slate-500 dark:text-slate-400" />
+                              Export
+                              <ChevronDown size={14} className="ml-auto text-slate-400" />
+                            </button>
 
-                        {exportMenuOpen && (
-                          <div className="py-1 border-t border-slate-100 dark:border-slate-700">
+                            {exportMenuOpen && (
+                              <div className="py-1 border-t border-slate-100 dark:border-slate-700">
+                                <button
+                                  onClick={() => { setMenuOpen(false); handleExport('csv'); }}
+                                  className="flex items-center gap-3 w-full px-6 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700"
+                                >
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                  CSV (.csv)
+                                </button>
+                                <button
+                                  onClick={() => { setMenuOpen(false); handleExport('excel'); }}
+                                  className="flex items-center gap-3 w-full px-6 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700"
+                                >
+                                  <span className="w-1.5 h-1.5 rounded-full bg-green-600" />
+                                  Excel (.xlsx)
+                                </button>
+                                <button
+                                  onClick={() => { setMenuOpen(false); handleExport('bitwarden'); }}
+                                  className="flex items-center gap-3 w-full px-6 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700"
+                                >
+                                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                                  Bitwarden (.json)
+                                </button>
+                                <button
+                                  onClick={() => { setMenuOpen(false); handleExport('json'); }}
+                                  className="flex items-center gap-3 w-full px-6 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700"
+                                >
+                                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                                  JSON (.json)
+                                </button>
+                              </div>
+                            )}
+
                             <button
-                              onClick={() => { setMenuOpen(false); handleExport('csv'); }}
-                              className="flex items-center gap-3 w-full px-6 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700"
+                              onClick={() => {
+                                setAuditExportOpen((prev) => !prev);
+                              }}
+                              className="flex items-center gap-3 w-full px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700"
                             >
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                              CSV (.csv)
+                              <History size={16} className="text-slate-500 dark:text-slate-400" />
+                              Export audit
+                              <ChevronDown size={14} className="ml-auto text-slate-400" />
                             </button>
-                            <button
-                              onClick={() => { setMenuOpen(false); handleExport('excel'); }}
-                              className="flex items-center gap-3 w-full px-6 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700"
-                            >
-                              <span className="w-1.5 h-1.5 rounded-full bg-green-600" />
-                              Excel (.xlsx)
-                            </button>
-                            <button
-                              onClick={() => { setMenuOpen(false); handleExport('bitwarden'); }}
-                              className="flex items-center gap-3 w-full px-6 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700"
-                            >
-                              <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                              Bitwarden (.json)
-                            </button>
-                            <button
-                              onClick={() => { setMenuOpen(false); handleExport('json'); }}
-                              className="flex items-center gap-3 w-full px-6 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700"
-                            >
-                              <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                              JSON (.json)
-                            </button>
-                          </div>
+
+                            {auditExportOpen && (
+                              <div className="py-1 border-t border-slate-100 dark:border-slate-700">
+                                <button
+                                  onClick={() => { setMenuOpen(false); handleAuditExport('csv'); }}
+                                  className="flex items-center gap-3 w-full px-6 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700"
+                                >
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                  Audit CSV (.csv)
+                                </button>
+                                <button
+                                  onClick={() => { setMenuOpen(false); handleAuditExport('json'); }}
+                                  className="flex items-center gap-3 w-full px-6 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700"
+                                >
+                                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                                  Audit JSON (.json)
+                                </button>
+                              </div>
+                            )}
+                          </>
                         )}
 
-                        <button
-                          onClick={() => {
-                            setAuditExportOpen((prev) => !prev);
-                          }}
-                          className="flex items-center gap-3 w-full px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700"
-                        >
-                          <History size={16} className="text-slate-500 dark:text-slate-400" />
-                          Export audit
-                          <ChevronDown size={14} className="ml-auto text-slate-400" />
-                        </button>
-
-                        {auditExportOpen && (
-                          <div className="py-1 border-t border-slate-100 dark:border-slate-700">
-                            <button
-                              onClick={() => { setMenuOpen(false); handleAuditExport('csv'); }}
-                              className="flex items-center gap-3 w-full px-6 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700"
-                            >
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                              Audit CSV (.csv)
-                            </button>
-                            <button
-                              onClick={() => { setMenuOpen(false); handleAuditExport('json'); }}
-                              className="flex items-center gap-3 w-full px-6 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700"
-                            >
-                              <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                              Audit JSON (.json)
-                            </button>
-                          </div>
+                        {canAddPassword && (
+                          <label className="flex items-center gap-3 w-full px-4 py-2 text-sm hover:bg-slate-50 cursor-pointer dark:hover:bg-slate-700">
+                            <Upload size={16} className="text-slate-500 dark:text-slate-400" />
+                            Import (CSV / Excel / JSON)
+                            <input
+                              type="file"
+                              accept=".csv,.xlsx,.xls,.json,.kdbx,.kdb"
+                              onChange={(e) => {
+                                handleImportFile(e);
+                              }}
+                              className="hidden"
+                            />
+                          </label>
                         )}
-
-                        <label className="flex items-center gap-3 w-full px-4 py-2 text-sm hover:bg-slate-50 cursor-pointer dark:hover:bg-slate-700">
-                          <Upload size={16} className="text-slate-500 dark:text-slate-400" />
-                          Import (CSV / Excel / JSON)
-                          <input
-                            type="file"
-                            accept=".csv,.xlsx,.xls,.json,.kdbx,.kdb"
-                            onChange={(e) => {
-                              handleImportFile(e);
-                            }}
-                            className="hidden"
-                          />
-                        </label>
-                        </>
-                      )}
-
+                      </>
+                    )}
 
                     {canDeleteFolder && (
                       <button
@@ -1047,7 +1091,7 @@ function VaultPage() {
           </div>
         )}
 
-        {!vaultsLoading && !passwordsLoading && !error && trashOpen && (
+        {!vaultsLoading && !passwordsLoading && !error && isTrashView && (
           <div className="min-h-[500px] flex flex-col p-4 sm:p-6 lg:p-8">
             {/* Trash Tabs */}
             <div className="flex items-center gap-2 mb-5 border-b border-slate-200 dark:border-slate-700 pb-3">
@@ -1373,7 +1417,7 @@ function VaultPage() {
           </div>
         )}
 
-        {!vaultsLoading && !passwordsLoading && !error && !trashOpen && (
+        {!vaultsLoading && !passwordsLoading && !error && !isTrashView && (
           <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] lg:grid-cols-[320px_1fr] xl:grid-cols-[360px_1fr] min-h-[640px] divide-y md:divide-y-0 md:divide-x divide-slate-200 dark:divide-slate-700 min-w-0">
             <div className={`${selectedPasswordId ? 'hidden md:block' : 'block'} min-w-0`}>
               <PasswordListPanel />

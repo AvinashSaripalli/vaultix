@@ -949,7 +949,10 @@ const deletePassword = async (req, res) => {
     }
 
     const access = await getPasswordItemAccess(password, req.user.id);
-    if (!access || !['ADMINISTRATOR', 'FULL_ACCESS'].includes(access)) {
+    const isCreator = password.createdById === req.user.id && ['ADMINISTRATOR', 'FULL_ACCESS', 'READ_WRITE'].includes(access);
+    const hasPermission = access && ['ADMINISTRATOR', 'FULL_ACCESS'].includes(access);
+
+    if (!hasPermission && !isCreator) {
       return res.status(403).json({ message: 'Access denied' });
     }
 
@@ -1300,10 +1303,6 @@ const getTrash = async (req, res) => {
           accessibleFolderIds.push(f.id);
         }
       }
-    }
-
-    if (!hasAnyFolderAccess && !vaultAccess) {
-      return res.status(403).json({ message: 'Access denied' });
     }
 
     if (!accessibleFolderIds.length) {

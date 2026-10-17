@@ -49,8 +49,10 @@ function FolderMembersSummary({ onClick }) {
 
   return (
     <button
+      type="button"
       onClick={onClick}
-      className="flex items-center gap-2 sm:gap-3 mt-2 sm:mt-3 text-left flex-wrap min-w-0"
+      disabled={!onClick}
+      className={`flex items-center gap-2 sm:gap-3 mt-2 sm:mt-3 text-left flex-wrap min-w-0 ${!onClick ? 'cursor-default' : 'cursor-pointer hover:opacity-90'}`}
     >
       <div className="flex items-center">
         {visibleMembers.map((item, index) => (

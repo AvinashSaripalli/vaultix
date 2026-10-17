@@ -97,8 +97,9 @@ const exportVaultAudit = async (req, res) => {
     const format = req.query.format === 'csv' ? 'csv' : 'json';
 
     const access = await getVaultAccess(vaultId, req.user.id);
-    if (!access) {
-      return res.status(403).json({ message: 'Access denied' });
+    const isAdmin = ['SUPER_ADMIN', 'ADMIN'].includes(req.user.role);
+    if (!isAdmin && (!access || !['ADMINISTRATOR', 'FULL_ACCESS'].includes(access))) {
+      return res.status(403).json({ message: 'Access denied. Administrator or Full Access required.' });
     }
 
     const logs = await prisma.activityLog.findMany({

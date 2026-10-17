@@ -427,6 +427,15 @@ function Sidebar() {
 
                         {/* Dedicated Vault Trash Navigation */}
                         {(() => {
+                          const canViewVaultTrash = isAdmin(user) || folders.some((f) => {
+                            const fPerm = f?.permissions?.find((p) => p.userId === user?.id || p.user?.id === user?.id);
+                            const dMember = f?.departmentMembers?.find((dm) => dm.user?.id === user?.id);
+                            const direct = fPerm?.accessLevel;
+                            const dept = dMember?.accessLevel;
+                            return ['ADMINISTRATOR', 'FULL_ACCESS'].includes(direct) || ['ADMINISTRATOR', 'FULL_ACCESS'].includes(dept);
+                          });
+                          if (!canViewVaultTrash) return null;
+
                           const isTrashActive = vaultActive && location.search.includes('tab=trash');
                           const pwTrash = trashByVault[vault.id]?.length || 0;
                           const folderTrash = folderTrashByVault?.[vault.id]?.length || 0;

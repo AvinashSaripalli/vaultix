@@ -91,14 +91,16 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
 
   const canEdit =
     ['SUPER_ADMIN', 'ADMIN'].includes(user?.role) ||
-    isCreator ||
     ['ADMINISTRATOR', 'READ_WRITE', 'FULL_ACCESS'].includes(
       selectedFolderAccess
     );
 
   const canDelete =
     ['SUPER_ADMIN', 'ADMIN'].includes(user?.role) ||
-    isCreator ||
+    (isCreator &&
+      ['ADMINISTRATOR', 'READ_WRITE', 'FULL_ACCESS'].includes(
+        selectedFolderAccess
+      )) ||
     ['ADMINISTRATOR', 'FULL_ACCESS'].includes(selectedFolderAccess);
 
   const [visiblePasswords, setVisiblePasswords] = useState({});
