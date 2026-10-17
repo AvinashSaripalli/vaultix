@@ -5,6 +5,7 @@ import {
   Plus,
   X,
   Trash2,
+  ShieldAlert,
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -45,13 +46,20 @@ function VaultSidebar() {
   );
   const selectedFolderAccess = (() => {
     if (['SUPER_ADMIN', 'ADMIN'].includes(user?.role)) return 'ADMINISTRATOR';
-    const RANK = { READ_ONLY: 0, READ_WRITE: 1, FULL_ACCESS: 2, ADMINISTRATOR: 3 };
-    const getRank = (lvl) => RANK[lvl] ?? -1;
     const direct = selectedFolderPermission?.accessLevel || null;
     const dept = selectedFolderDeptMember?.accessLevel || null;
+
+    if (direct === 'FORBIDDEN') return 'FORBIDDEN';
+    const isBlocked = Array.isArray(selectedFolder?.blockedUserIds) && selectedFolder.blockedUserIds.includes(user?.id);
+    if (isBlocked && !direct) return 'FORBIDDEN';
+    if (dept === 'FORBIDDEN' && !direct) return 'FORBIDDEN';
+
     if (!direct && !dept) return null;
     if (!direct) return dept;
     if (!dept) return direct;
+
+    const RANK = { READ_ONLY: 0, READ_WRITE: 1, FULL_ACCESS: 2, ADMINISTRATOR: 3 };
+    const getRank = (lvl) => RANK[lvl] ?? -1;
     return getRank(direct) >= getRank(dept) ? direct : dept;
   })();
 
@@ -157,23 +165,40 @@ function VaultSidebar() {
           )}
 
           {!foldersLoading &&
-            folders.map((folder) => (
-              <button
-                key={folder.id}
-                onClick={() => {
-                  dispatch(clearVaultError());
-                  dispatch(selectFolder(folder.id));
-                }}
-                className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left transition ${
-                  selectedFolderId === folder.id
-                    ? 'bg-indigo-50 text-indigo-700 border border-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-400 dark:border-indigo-800'
-                    : 'bg-white text-slate-700 border border-transparent hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
-                }`}
-              >
-                <Folder size={15} className="shrink-0" />
-                <span className="text-sm font-medium truncate flex-1 min-w-0">{folder.name}</span>
-              </button>
-            ))}
+            folders.map((folder) => {
+              const directPerm = folder.permissions?.find((p) => p.userId === user?.id || p.user?.id === user?.id)?.accessLevel;
+              const isForbidden = !['SUPER_ADMIN', 'ADMIN'].includes(user?.role) && (
+                directPerm === 'FORBIDDEN' ||
+                (Array.isArray(folder.blockedUserIds) && folder.blockedUserIds.includes(user?.id))
+              );
+
+              return (
+                <button
+                  key={folder.id}
+                  onClick={() => {
+                    dispatch(clearVaultError());
+                    dispatch(selectFolder(folder.id));
+                  }}
+                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left transition ${
+                    selectedFolderId === folder.id
+                      ? 'bg-indigo-50 text-indigo-700 border border-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-400 dark:border-indigo-800'
+                      : 'bg-white text-slate-700 border border-transparent hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  {isForbidden ? (
+                    <ShieldAlert size={15} className="shrink-0 text-rose-500 dark:text-rose-400" />
+                  ) : (
+                    <Folder size={15} className="shrink-0" />
+                  )}
+                  <span className="text-sm font-medium truncate flex-1 min-w-0">{folder.name}</span>
+                  {isForbidden && (
+                    <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-rose-50 text-rose-600 border border-rose-200/60 dark:bg-rose-950/60 dark:text-rose-400 dark:border-rose-900 shrink-0">
+                      Forbidden
+                    </span>
+                  )}
+                </button>
+              );
+            })}
 
           {!foldersLoading && !folders.length && (
             <p className="text-sm text-slate-400 py-2 dark:text-slate-500">No folders found.</p>

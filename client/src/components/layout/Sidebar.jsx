@@ -4,7 +4,7 @@ import {
   Shield, Users, Activity, Folder, FolderOpen,
   LogOut, Plus, ChevronDown, LockKeyhole, Share2, User, Sparkles, Building2,
   Smartphone, Clock, HeartPulse, MonitorCheck, Clipboard,
-  PanelLeftClose, PanelLeftOpen, X, Trash2, ShieldCheck, UserCheck, Layers,
+  PanelLeftClose, PanelLeftOpen, X, Trash2, ShieldCheck, UserCheck, Layers, ShieldAlert,
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { logoutUser } from '../../features/auth/authSlice';
@@ -375,19 +375,24 @@ function Sidebar() {
                           const deptMember = folder?.departmentMembers?.find(
                             (dm) => dm.user?.id === user?.id
                           );
-                          const getRank = (lvl) => ({ READ_ONLY: 0, READ_WRITE: 1, FULL_ACCESS: 2, ADMINISTRATOR: 3 }[lvl] ?? -1);
                           const deptAccess = deptMember?.accessLevel || null;
                           const directAccess = folderPermission?.accessLevel || null;
+                          const isDirectForbidden = directAccess === 'FORBIDDEN';
+                          const isBlocked = Array.isArray(folder?.blockedUserIds) && folder.blockedUserIds.includes(user?.id);
+                          const isForbidden = !isAdmin(user) && (isDirectForbidden || (isBlocked && !directAccess) || (deptAccess === 'FORBIDDEN' && !directAccess));
+
                           const bestAccess = (() => {
+                            if (isForbidden) return 'FORBIDDEN';
                             if (!directAccess && !deptAccess) return null;
                             if (!directAccess) return deptAccess;
                             if (!deptAccess) return directAccess;
+                            const getRank = (lvl) => ({ READ_ONLY: 0, READ_WRITE: 1, FULL_ACCESS: 2, ADMINISTRATOR: 3 }[lvl] ?? -1);
                             return getRank(directAccess) >= getRank(deptAccess) ? directAccess : deptAccess;
                           })();
                           const folderAccess = isAdmin(user)
                             ? 'ADMINISTRATOR'
                             : bestAccess;
-                          const canManageFolder = isAdmin(user) || folderAccess === 'ADMINISTRATOR';
+                          const canManageFolder = !isForbidden && (isAdmin(user) || folderAccess === 'ADMINISTRATOR');
 
                           return (
                             <div
@@ -406,17 +411,29 @@ function Sidebar() {
                                   onNavigate();
                                 }}
                                 className="flex items-center gap-2.5 pl-2.5 pr-1.5 py-2 text-left text-sm flex-1 min-w-0 focus:outline-none"
-                                title={folder.name}
+                                title={isForbidden ? `${folder.name} (Access Forbidden)` : folder.name}
                               >
-                                <Folder
-                                  size={16}
-                                  className={`shrink-0 ${
-                                    selected ? 'text-blue-500 dark:text-blue-400' : 'text-[var(--text-muted)]'
-                                  }`}
-                                />
+                                {isForbidden ? (
+                                  <ShieldAlert
+                                    size={16}
+                                    className="shrink-0 text-rose-500 dark:text-rose-400"
+                                  />
+                                ) : (
+                                  <Folder
+                                    size={16}
+                                    className={`shrink-0 ${
+                                      selected ? 'text-blue-500 dark:text-blue-400' : 'text-[var(--text-muted)]'
+                                    }`}
+                                  />
+                                )}
                                 <span className="truncate flex-1 min-w-0 text-sm">
                                   {folder.name}
                                 </span>
+                                {isForbidden && (
+                                  <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-rose-50 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400 border border-rose-200/50 dark:border-rose-900/50 shrink-0">
+                                    Forbidden
+                                  </span>
+                                )}
                               </button>
                               <FolderActionsMenu
                                 folder={folder}

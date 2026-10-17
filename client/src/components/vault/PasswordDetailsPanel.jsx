@@ -70,13 +70,20 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
   );
   const selectedFolderAccess = (() => {
     if (['SUPER_ADMIN', 'ADMIN'].includes(user?.role)) return 'ADMINISTRATOR';
-    const RANK = { READ_ONLY: 0, READ_WRITE: 1, FULL_ACCESS: 2, ADMINISTRATOR: 3 };
-    const getRank = (lvl) => RANK[lvl] ?? -1;
     const direct = selectedFolderPermission?.accessLevel || null;
     const dept = selectedFolderDeptMember?.accessLevel || null;
+
+    if (direct === 'FORBIDDEN') return 'FORBIDDEN';
+    const isBlocked = Array.isArray(effectiveFolder?.blockedUserIds) && effectiveFolder.blockedUserIds.includes(user?.id);
+    if (isBlocked && !direct) return 'FORBIDDEN';
+    if (dept === 'FORBIDDEN' && !direct) return 'FORBIDDEN';
+
     if (!direct && !dept) return null;
     if (!direct) return dept;
     if (!dept) return direct;
+
+    const RANK = { READ_ONLY: 0, READ_WRITE: 1, FULL_ACCESS: 2, ADMINISTRATOR: 3 };
+    const getRank = (lvl) => RANK[lvl] ?? -1;
     return getRank(direct) >= getRank(dept) ? direct : dept;
   })();
 
