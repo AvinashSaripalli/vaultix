@@ -779,17 +779,37 @@ const purgeFolder = async (req, res) => {
       return res.status(403).json({ message: 'Access denied' });
     }
 
-    const vaultType = await getVaultType(folder.vaultId);
-    const policy = await getEffectiveOrganizationPolicy();
+    // Strict Super Admin Policy for Folder Purging in Company/Shared Vaults:
+    // Only a SUPER_ADMIN can purge folders immediately.
+    // Any other role (ADMIN or Member) requires Super Admin authorization.
+    if (vaultType !== 'PERSONAL' && req.user.role !== 'SUPER_ADMIN') {
+      // Check if an approval request is already pending for this folder
+      const pendingRequests = await prisma.adminApprovalRequest.findMany({
+        where: {
+          actionType: 'PURGE_TRASH',
+          status: 'PENDING',
+          expiresAt: { gt: new Date() },
+        },
+      });
+      const existingPending = pendingRequests.find((r) => r.payload?.folderId === folder.id);
 
-    if (vaultType !== 'PERSONAL' && req.user.role === 'ADMIN' && policy?.requireDualAdminApproval) {
+      if (existingPending) {
+        return res.status(202).json({
+          approvalRequired: true,
+          message: `A permanent purge request (#${existingPending.id}) for folder "${folder.name}" is already pending Super Admin review.`,
+          approvalRequest: existingPending,
+        });
+      }
+
       const approvalId = await generateId('req');
+      const requesterRoleLabel = req.user.role === 'ADMIN' ? 'Administrator' : 'Member';
+
       const approvalRequest = await prisma.adminApprovalRequest.create({
         data: {
           id: approvalId,
           actionType: 'PURGE_TRASH',
           title: `Purge Folder: ${folder.name}`,
-          description: `Administrator ${req.user.fullName || req.user.email} requested permanent purge of folder "${folder.name}" and its credentials from Trash. Requires Super Admin approval.`,
+          description: `${requesterRoleLabel} ${req.user.fullName || req.user.email} requested permanent purge of folder "${folder.name}" and its credentials from Trash. Requires Super Admin approval.`,
           payload: {
             folderId: folder.id,
             folderName: folder.name,
@@ -798,7 +818,7 @@ const purgeFolder = async (req, res) => {
           },
           requesterId: req.user.id,
           status: 'PENDING',
-          expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000),
+          expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000), // 48h
         },
       });
 
@@ -820,7 +840,7 @@ const purgeFolder = async (req, res) => {
 
       return res.status(202).json({
         approvalRequired: true,
-        message: `Super Admin Approval Required: Permanently purging folder requires authorization from a Super Admin. Pending request #${approvalId} submitted.`,
+        message: `Super Admin Approval Required: Permanently purging folder requires authorization from a Super Admin. Pending request #${approvalId} submitted for Super Admin review.`,
         approvalRequest,
       });
     }

@@ -1270,10 +1270,10 @@ function VaultPage() {
                               type="button"
                               onClick={() => handlePurgeTrashItem(item)}
                               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-900/50 transition border border-rose-200/70 dark:border-rose-800"
-                              title="Permanently erase from database"
+                              title={user?.role === 'SUPER_ADMIN' ? 'Permanently erase from database' : 'Request permanent deletion from Super Admin'}
                             >
                               <Trash2 size={13} />
-                              Delete permanently
+                              {user?.role === 'SUPER_ADMIN' ? 'Delete permanently' : 'Request deletion'}
                             </button>
                           </div>
                         </div>
@@ -1401,10 +1401,10 @@ function VaultPage() {
                               type="button"
                               onClick={() => handlePurgeTrashFolder(folder)}
                               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-900/50 transition border border-rose-200/70 dark:border-rose-800"
-                              title="Permanently erase folder and all its passwords"
+                              title={user?.role === 'SUPER_ADMIN' ? 'Permanently erase folder and all its passwords' : 'Request permanent deletion from Super Admin'}
                             >
                               <Trash2 size={13} />
-                              Delete permanently
+                              {user?.role === 'SUPER_ADMIN' ? 'Delete permanently' : 'Request deletion'}
                             </button>
                           </div>
                         </div>
@@ -1497,13 +1497,25 @@ function VaultPage() {
 
       <ConfirmModal
         open={confirmPurge.open}
-        title={confirmPurge.type === 'folder' ? 'Permanently Delete Folder' : 'Permanently Delete Password'}
-        message={
-          confirmPurge.type === 'folder'
-            ? `Are you sure you want to permanently delete folder "${confirmPurge.item?.name}" and all passwords inside it? This cannot be undone.`
-            : `Are you sure you want to permanently delete "${confirmPurge.item?.name}"? This cannot be undone.`
+        title={
+          user?.role === 'SUPER_ADMIN'
+            ? confirmPurge.type === 'folder'
+              ? 'Permanently Delete Folder'
+              : 'Permanently Delete Password'
+            : confirmPurge.type === 'folder'
+              ? 'Request Folder Purge'
+              : 'Request Password Purge'
         }
-        confirmLabel="Delete permanently"
+        message={
+          user?.role === 'SUPER_ADMIN'
+            ? confirmPurge.type === 'folder'
+              ? `Are you sure you want to permanently delete folder "${confirmPurge.item?.name}" and all passwords inside it? This cannot be undone and will be permanently erased from the database.`
+              : `Are you sure you want to permanently delete "${confirmPurge.item?.name}"? This cannot be undone and will be permanently erased from the database.`
+            : confirmPurge.type === 'folder'
+              ? `Permanently deleting folders from a Company Vault requires Super Admin authorization. Confirming this will submit an approval request to the Super Admin. The folder will remain safely in Trash until approved.`
+              : `Permanently deleting passwords from a Company Vault requires Super Admin authorization. Confirming this will submit an approval request to the Super Admin. The password will remain safely in Trash until approved.`
+        }
+        confirmLabel={user?.role === 'SUPER_ADMIN' ? 'Delete permanently' : 'Submit Purge Request'}
         onConfirm={executePurgeTrash}
         onCancel={() => setConfirmPurge({ open: false, item: null, type: null })}
       />

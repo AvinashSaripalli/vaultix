@@ -1119,22 +1119,42 @@ const purgePassword = async (req, res) => {
     const vaultType = await getVaultType(password.vaultId);
 
     // Strict Super Admin Policy for Password Purging in Company/Shared Vaults:
-    // If an ADMIN attempts to permanently purge a credential from trash, require Super Admin authorization
-    const policy = await getEffectiveOrganizationPolicy();
-    if (vaultType !== 'PERSONAL' && req.user.role === 'ADMIN' && policy?.requireDualAdminApproval) {
-      const approvalId = await generateId('req');
+    // Only a SUPER_ADMIN can purge credentials immediately.
+    // Any other role (ADMIN or Member) requires Super Admin authorization.
+    if (vaultType !== 'PERSONAL' && req.user.role !== 'SUPER_ADMIN') {
       const targetVault = await prisma.vault.findUnique({
         where: { id: password.vaultId },
         select: { name: true },
       });
       const vaultName = targetVault?.name || 'Company Vault';
 
+      // Check if an approval request is already pending for this password
+      const pendingRequests = await prisma.adminApprovalRequest.findMany({
+        where: {
+          actionType: 'PURGE_TRASH',
+          status: 'PENDING',
+          expiresAt: { gt: new Date() },
+        },
+      });
+      const existingPending = pendingRequests.find((r) => r.payload?.passwordId === password.id);
+
+      if (existingPending) {
+        return res.status(202).json({
+          approvalRequired: true,
+          message: `A permanent purge request (#${existingPending.id}) for "${password.name}" is already pending Super Admin review.`,
+          approvalRequest: existingPending,
+        });
+      }
+
+      const approvalId = await generateId('req');
+      const requesterRoleLabel = req.user.role === 'ADMIN' ? 'Administrator' : 'Member';
+
       const approvalRequest = await prisma.adminApprovalRequest.create({
         data: {
           id: approvalId,
           actionType: 'PURGE_TRASH',
           title: `Purge Password: ${password.name}`,
-          description: `Administrator ${req.user.fullName || req.user.email} requested permanent purge of "${password.name}" from Trash in "${vaultName}". Requires Super Admin approval.`,
+          description: `${requesterRoleLabel} ${req.user.fullName || req.user.email} requested permanent purge of "${password.name}" from Trash in "${vaultName}". Requires Super Admin approval.`,
           payload: {
             passwordId: password.id,
             passwordName: password.name,
@@ -1165,7 +1185,7 @@ const purgePassword = async (req, res) => {
 
       return res.status(202).json({
         approvalRequired: true,
-        message: `Super Admin Approval Required: Permanently purging passwords from Trash requires authorization from a Super Admin. A pending approval request (#${approvalId}) has been submitted for Super Admin review.`,
+        message: `Super Admin Approval Required: Permanently purging passwords from a Company Vault requires authorization from a Super Admin. A pending approval request (#${approvalId}) has been submitted for Super Admin review.`,
         approvalRequest,
       });
     }

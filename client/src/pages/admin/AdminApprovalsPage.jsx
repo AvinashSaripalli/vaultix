@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import {
   UserCheck,
   Clock,
@@ -48,11 +48,20 @@ const ACTION_LABELS = {
 
 function AdminApprovalsPage() {
   const { user, token } = useSelector((state) => state.auth);
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const [activeTab, setActiveTab] = useState('actionable'); // 'actionable' | 'my-requests' | 'history'
+  const initialTab = searchParams.get('tab') || (!isSuperAdmin(user) ? 'my-requests' : 'actionable');
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && ['actionable', 'my-requests', 'history'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
 
   // Action dialogs
   const [actionModal, setActionModal] = useState({
@@ -203,16 +212,18 @@ function AdminApprovalsPage() {
 
           {/* Navigation Filter Tabs */}
           <div className="flex items-center gap-2 mt-6 pt-5 border-t border-slate-100 dark:border-slate-700 overflow-x-auto">
-            <button
-              onClick={() => setActiveTab('actionable')}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition whitespace-nowrap ${
-                activeTab === 'actionable'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
-              }`}
-            >
-              Awaiting My Review
-            </button>
+            {isSuperAdmin(user) && (
+              <button
+                onClick={() => setActiveTab('actionable')}
+                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition whitespace-nowrap ${
+                  activeTab === 'actionable'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                }`}
+              >
+                Awaiting My Review
+              </button>
+            )}
             <button
               onClick={() => setActiveTab('my-requests')}
               className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition whitespace-nowrap ${
@@ -223,16 +234,18 @@ function AdminApprovalsPage() {
             >
               My Initiated Requests
             </button>
-            <button
-              onClick={() => setActiveTab('history')}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition whitespace-nowrap ${
-                activeTab === 'history'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
-              }`}
-            >
-              All Approval History
-            </button>
+            {isAdmin(user) && (
+              <button
+                onClick={() => setActiveTab('history')}
+                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition whitespace-nowrap ${
+                  activeTab === 'history'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                }`}
+              >
+                All Approval History
+              </button>
+            )}
           </div>
         </div>
 

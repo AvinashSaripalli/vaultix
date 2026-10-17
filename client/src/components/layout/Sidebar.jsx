@@ -95,7 +95,10 @@ function Sidebar() {
     { name: 'Shared With Me', path: '/shared-with-me', icon: Share2 },
   ];
   const deptMenu = !isAdmin(user)
-    ? [{ name: 'My Departments', path: '/my-departments', icon: Building2 }]
+    ? [
+        { name: 'My Departments', path: '/my-departments', icon: Building2 },
+        { name: 'My Requests', path: '/admin/approvals?tab=my-requests', icon: UserCheck },
+      ]
     : [];
   const securityMenu = [
     { name: 'Activity Log', path: '/activity-log', icon: Activity, badge: unreadCount },

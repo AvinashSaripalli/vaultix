@@ -36,14 +36,12 @@ const expireStaleRequests = async () => {
  */
 const getPendingCount = async (req, res) => {
   try {
-    if (requireAdmin(req, res)) return;
-
-    await expireStaleRequests();
-
-    // Strict Super Admin Policy: Only Super Admins have authority to approve requests
+    // Non-super-admins cannot approve requests, so return count 0 without throwing 403
     if (!isSuperAdminRole(req.user.role)) {
       return res.json({ count: 0 });
     }
+
+    await expireStaleRequests();
 
     const count = await prisma.adminApprovalRequest.count({
       where: {
@@ -66,11 +64,13 @@ const getPendingCount = async (req, res) => {
  */
 const getApprovalRequests = async (req, res) => {
   try {
-    if (requireAdmin(req, res)) return;
+    const { tab = 'actionable' } = req.query;
+
+    // Any authenticated user can check requests they personally initiated
+    if (tab !== 'my-requests' && requireAdmin(req, res)) return;
 
     await expireStaleRequests();
 
-    const { tab = 'actionable' } = req.query;
     let where = {};
 
     if (tab === 'actionable') {
@@ -454,8 +454,6 @@ const rejectRequest = async (req, res) => {
  */
 const cancelRequest = async (req, res) => {
   try {
-    if (requireAdmin(req, res)) return;
-
     const { id } = req.params;
 
     const request = await prisma.adminApprovalRequest.findUnique({
