@@ -137,17 +137,25 @@ function cleanSiteTitle(hostname) {
 
 function canUserWriteCompanyFolder(folder, user) {
   if (!user) return false;
-  if (user.role === 'ADMIN') return true;
-  const WRITABLE = new Set(['READ_WRITE', 'FULL_ACCESS', 'ADMINISTRATOR']);
+  if (['ADMIN', 'SUPER_ADMIN'].includes(user.role)) return true;
+
+  // Explicit block or forbidden takes precedence
+  const blocked = Array.isArray(folder?.blockedUserIds) ? folder.blockedUserIds : [];
+  if (blocked.includes(user.id)) return false;
+
   const direct = Array.isArray(folder?.permissions)
     ? folder.permissions.find((p) => (p.userId || p.user?.id) === user.id)
     : null;
+  if (direct?.accessLevel === 'FORBIDDEN') return false;
+
+  const WRITABLE = new Set(['READ_WRITE', 'FULL_ACCESS', 'ADMINISTRATOR']);
   if (direct && WRITABLE.has(direct.accessLevel)) return true;
 
   const dept = Array.isArray(folder?.departmentMembers)
     ? folder.departmentMembers.find((dm) => (dm.userId || dm.user?.id) === user.id)
     : null;
   if (dept && WRITABLE.has(dept.accessLevel)) return true;
+
   return false;
 }
 
@@ -162,25 +170,38 @@ function evaluateAgainstCache(creds, hostname, username, password) {
 
   const normUser = (username || '').trim().toLowerCase();
 
+  // Find if site matches any existing company vault item (for smart folder pre-selection)
+  const companyMatch = siteMatches.find(
+    (c) => c.shared || (c.vaultName && c.vaultName !== 'Personal' && c.vaultName !== 'My Vault')
+  );
+  const suggestion = {
+    suggestedVaultType: companyMatch ? 'COMPANY' : 'PERSONAL',
+    suggestedVaultId: companyMatch?.vaultId || '',
+    suggestedVaultName: companyMatch?.vaultName || '',
+    suggestedFolderId: companyMatch?.folderId || '',
+    suggestedFolderName: companyMatch?.folderName || '',
+  };
+
   // 1. Check if an exact match (same username + same password) already exists
   const exactMatch = siteMatches.find((c) => {
     const cUser = (c.login || '').trim().toLowerCase();
     return cUser === normUser && c.password === password;
   });
   if (exactMatch) {
-    return { status: 'EXISTS', item: exactMatch };
+    return { status: 'EXISTS', item: exactMatch, ...suggestion };
   }
 
   // 2. Check if the same username exists in Personal or Company Vault with a different password
   const userMatch = siteMatches.find((c) => {
     const cUser = (c.login || '').trim().toLowerCase();
-    return !c.shared && normUser && cUser === normUser && c.password !== password;
+    return normUser && cUser === normUser && c.password !== password;
   });
   if (userMatch) {
     const isPersonal =
-      !userMatch.vaultName ||
-      userMatch.vaultName === 'Personal' ||
-      userMatch.vaultName === 'My Vault';
+      !userMatch.shared &&
+      (!userMatch.vaultName ||
+        userMatch.vaultName === 'Personal' ||
+        userMatch.vaultName === 'My Vault');
     return {
       status: 'UPDATE',
       existingId: userMatch.id,
@@ -190,15 +211,17 @@ function evaluateAgainstCache(creds, hostname, username, password) {
       existingVaultName: userMatch.vaultName || '',
       existingFolderId: userMatch.folderId || '',
       existingFolderName: userMatch.folderName || '',
+      ...suggestion,
     };
   }
 
-  return { status: 'NEW' };
+  return { status: 'NEW', ...suggestion };
 }
 
 async function fetchAvailableVaultFolders(user) {
   let personalFolders = [];
   let companyVaults = [];
+  const isAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(user?.role);
 
   try {
     const mine = await bgGet('/my-vault');
@@ -219,11 +242,11 @@ async function fetchAvailableVaultFolders(user) {
         .filter((f) => canUserWriteCompanyFolder(f, user))
         .map((f) => ({ id: f.id, name: f.name, vaultId: v.id, vaultName: v.name }));
 
-      if (writableFolders.length > 0 || user?.role === 'ADMIN') {
+      if (writableFolders.length > 0 || isAdmin) {
         companyVaults.push({
           id: v.id,
           name: v.name || 'Company Vault',
-          canCreateFolder: user?.role === 'ADMIN',
+          canCreateFolder: isAdmin,
           folders: writableFolders,
         });
       }
@@ -327,6 +350,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           existingVaultName: evalResult.existingVaultName || '',
           existingFolderId: evalResult.existingFolderId || '',
           existingFolderName: evalResult.existingFolderName || '',
+          suggestedVaultType: evalResult.suggestedVaultType || (evalResult.existingVaultType || 'PERSONAL'),
+          suggestedVaultId: evalResult.suggestedVaultId || evalResult.existingVaultId || '',
+          suggestedVaultName: evalResult.suggestedVaultName || evalResult.existingVaultName || '',
+          suggestedFolderId: evalResult.suggestedFolderId || evalResult.existingFolderId || '',
+          suggestedFolderName: evalResult.suggestedFolderName || evalResult.existingFolderName || '',
           name: evalResult.existingName || msg.title || cleanSiteTitle(hostname),
           username,
           password,
@@ -418,6 +446,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             pending.existingFolderId = evalResult.existingFolderId || '';
             pending.existingFolderName = evalResult.existingFolderName || '';
             if (evalResult.existingName) pending.name = evalResult.existingName;
+            await chrome.storage.session.set({ pendingLogin: pending });
+          } else if (evalResult.status === 'NEW' && evalResult.suggestedVaultType) {
+            pending.suggestedVaultType = evalResult.suggestedVaultType;
+            pending.suggestedVaultId = evalResult.suggestedVaultId || '';
+            pending.suggestedVaultName = evalResult.suggestedVaultName || '';
+            pending.suggestedFolderId = evalResult.suggestedFolderId || '';
+            pending.suggestedFolderName = evalResult.suggestedFolderName || '';
             await chrome.storage.session.set({ pendingLogin: pending });
           }
         }
@@ -748,7 +783,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             folderName: targetFolderName,
             password: plainPassword,
             totpSecret: null,
-            shared: false,
+            shared: true,
           };
 
           const idx = currentCreds.findIndex((c) => c.id === savedEntry.id);
