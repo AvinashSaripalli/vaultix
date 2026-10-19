@@ -28,16 +28,23 @@ const notifyCollaboratorsOnPasswordChange = async ({
         where: { id: actorId },
         select: { fullName: true, email: true },
       }),
-      prisma.folder.findUnique({
-        where: { id: folderId },
-        select: {
-          name: true,
-          permissions: {
-            where: { accessLevel: { in: ['ADMINISTRATOR', 'FULL_ACCESS'] } },
-            select: { userId: true },
-          },
-        },
-      }),
+      folderId
+        ? prisma.folder.findUnique({
+            where: { id: folderId },
+            select: {
+              name: true,
+              blockedUserIds: true,
+              permissions: {
+                where: { accessLevel: { in: ['ADMINISTRATOR', 'FULL_ACCESS', 'READ_WRITE'] } },
+                select: { userId: true },
+              },
+              departmentPermissions: {
+                where: { accessLevel: { in: ['ADMINISTRATOR', 'FULL_ACCESS', 'READ_WRITE'] } },
+                select: { departmentId: true },
+              },
+            },
+          })
+        : null,
       prisma.vault.findUnique({
         where: { id: vaultId },
         select: { name: true, type: true, ownerId: true },
@@ -58,8 +65,27 @@ const notifyCollaboratorsOnPasswordChange = async ({
     for (const perm of folder?.permissions || []) {
       if (perm.userId) recipientIds.add(perm.userId);
     }
+
+    // Resolve department members who have folder access
+    if (folder?.departmentPermissions?.length) {
+      const deptIds = folder.departmentPermissions.map((dp) => dp.departmentId);
+      const deptMembers = await prisma.departmentMember.findMany({
+        where: { departmentId: { in: deptIds } },
+        select: { userId: true },
+      });
+      for (const dm of deptMembers) {
+        if (dm.userId) recipientIds.add(dm.userId);
+      }
+    }
+
     if (actionType === 'UPDATE' && previousCreatedById) {
       recipientIds.add(previousCreatedById);
+    }
+
+    // Exclude users blocked from this folder
+    const blocked = Array.isArray(folder?.blockedUserIds) ? folder.blockedUserIds : [];
+    for (const uid of blocked) {
+      recipientIds.delete(uid);
     }
 
     recipientIds.delete(actorId);
@@ -69,12 +95,27 @@ const notifyCollaboratorsOnPasswordChange = async ({
     const folderLabel = folder?.name ? ` in "${folder.name}"` : '';
     const loginSuffix = entry.login ? ` (${entry.login})` : '';
 
-    const title =
-      actionType === 'CREATE' ? 'New Password Added' : 'Password Updated';
-    const message =
-      actionType === 'CREATE'
-        ? `${actorName} added a login to "${entry.name}"${loginSuffix}${folderLabel}`
-        : `${actorName} updated "${entry.name}"${loginSuffix}${folderLabel}`;
+    let title;
+    let message;
+    let activityAction;
+
+    if (actionType === 'CREATE') {
+      title = 'New Password Added';
+      message = `${actorName} added a login to "${entry.name}"${loginSuffix}${folderLabel}`;
+      activityAction = 'CREATE_PASSWORD';
+    } else if (actionType === 'DELETE') {
+      title = 'Password Moved to Trash';
+      message = `${actorName} moved "${entry.name}"${loginSuffix}${folderLabel} to trash`;
+      activityAction = 'DELETE_PASSWORD';
+    } else if (actionType === 'RESTORE') {
+      title = 'Password Restored';
+      message = `${actorName} restored "${entry.name}"${loginSuffix}${folderLabel} from trash`;
+      activityAction = 'UPDATE_PASSWORD';
+    } else {
+      title = 'Password Updated';
+      message = `${actorName} updated "${entry.name}"${loginSuffix}${folderLabel}`;
+      activityAction = 'UPDATE_PASSWORD';
+    }
 
     await Promise.all(
       [...recipientIds].map((userId) =>
@@ -87,7 +128,7 @@ const notifyCollaboratorsOnPasswordChange = async ({
             passwordId: entry.id,
             vaultId,
             folderId,
-            action: actionType === 'CREATE' ? 'CREATE_PASSWORD' : 'UPDATE_PASSWORD',
+            action: activityAction,
           },
         })
       )
@@ -985,6 +1026,16 @@ const deletePassword = async (req, res) => {
       });
     });
 
+    if (vaultType && vaultType !== 'PERSONAL') {
+      notifyCollaboratorsOnPasswordChange({
+        folderId: password.folderId,
+        vaultId: password.vaultId,
+        entry: password,
+        actorId: req.user.id,
+        actionType: 'DELETE',
+      });
+    }
+
     res.json({ message: 'Password moved to trash' });
   } catch (error) {
     console.error('Delete password error:', error);
@@ -1083,6 +1134,16 @@ const restorePassword = async (req, res) => {
         },
       });
     });
+
+    if (vaultType && vaultType !== 'PERSONAL') {
+      notifyCollaboratorsOnPasswordChange({
+        folderId: targetFolderId,
+        vaultId: password.vaultId,
+        entry: password,
+        actorId: req.user.id,
+        actionType: 'RESTORE',
+      });
+    }
 
     res.json({
       message: 'Password restored successfully',
@@ -1379,6 +1440,8 @@ const logCopyPassword = async (req, res) => {
 
     const vaultType = await getVaultType(password.vaultId);
 
+    const mode = req.body?.mode === 'autofill' ? 'autofill' : 'copy';
+
     await prisma.activityLog.create({
       data: {
         id: await generateId('activityLog'),
@@ -1391,6 +1454,7 @@ const logCopyPassword = async (req, res) => {
           folderId: password.folderId,
           vaultId: password.vaultId,
           vaultType,
+          mode,
         },
       },
     });

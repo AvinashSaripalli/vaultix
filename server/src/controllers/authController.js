@@ -477,6 +477,21 @@ sendMail({
       status: 'SUCCESS',
     });
 
+    await prisma.activityLog.create({
+      data: {
+        id: await generateId('activityLog'),
+        userId: user.id,
+        action: 'REGISTER',
+        targetType: 'User',
+        targetId: user.id,
+        metadata: {
+          fullName: user.fullName,
+          email: user.email,
+          role: user.role,
+        },
+      },
+    });
+
     res.status(201).json({
       message: emailVerified
         ? 'User registered successfully'

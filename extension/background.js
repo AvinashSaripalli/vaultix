@@ -982,13 +982,21 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         return;
       }
 
-      const res = await fetch(
-        `${baseUrl}/api/v1/passwords/${msg.passwordId}/copy-log`,
-        {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${local.token}` },
-        }
-      );
+      const action = msg.action || 'copy';
+      const endpoint = action === 'view'
+        ? `${baseUrl}/api/v1/passwords/${msg.passwordId}/view-log`
+        : `${baseUrl}/api/v1/passwords/${msg.passwordId}/copy-log`;
+
+      const body = action === 'view' ? undefined : JSON.stringify({ mode: action });
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${local.token}`,
+          ...(body ? { 'Content-Type': 'application/json' } : {}),
+        },
+        ...(body ? { body } : {}),
+      });
       sendResponse({ ok: res.ok });
     } catch {
       sendResponse({ ok: false });

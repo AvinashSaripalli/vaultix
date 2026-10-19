@@ -122,25 +122,27 @@ const getRecentActivity = async (req, res) => {
 
     const items = [
       ...activityLogs.map((log) => {
-        const isRead = sinceDate ? new Date(log.createdAt) <= sinceDate : false;
+        const isRead = sinceDate ? new Date(log.createdAt) <= sinceDate : true;
 
         return {
           id: `activity-${log.id}`,
           sourceId: log.id,
           type: 'ACTIVITY',
-          title: formatActivityTitle(log.action),
+          title: log.action === 'COPY_PASSWORD' && log.metadata?.mode === 'autofill'
+            ? 'Password autofilled'
+            : formatActivityTitle(log.action),
           message: log.metadata?.name
             ? log.metadata.name
             : log.targetId || '',
           isRead,
           createdAt: log.createdAt,
-          meta: { action: log.action },
+          meta: { action: log.action, ...(log.metadata || {}) },
         };
       }),
       ...loginActivities.map((item) => {
         const isRead = sinceDate
           ? new Date(item.createdAt) <= sinceDate
-          : false;
+          : true;
 
         const userName = item.user?.fullName || item.user?.email || 'Unknown';
 
@@ -180,15 +182,15 @@ const getRecentActivity = async (req, res) => {
 
     const unreadActivityCount = sinceDate
       ? activityLogs.filter((l) => new Date(l.createdAt) > sinceDate).length
-      : activityLogs.length;
+      : 0;
 
     const loginCount = sinceDate
       ? loginActivities.filter((l) => new Date(l.createdAt) > sinceDate).length
-      : loginActivities.length;
+      : 0;
 
-    const unreadCount = unreadNotifCount + unreadActivityCount + loginCount;
+    const unreadCount = unreadNotifCount;
 
-    res.json({ items: recent, unreadCount });
+    res.json({ items: recent, unreadCount, unreadNotifCount, unreadActivityCount, loginCount });
   } catch (error) {
     console.error('Recent activity error:', error);
     res.status(500).json({ message: 'Server error' });
