@@ -245,13 +245,30 @@ function Sidebar() {
         {/* Navigation list */}
         <div className="flex-1 overflow-y-auto space-y-4 pr-0.5 min-h-0">
           {renderNavSection('Overview', overviewMenu, isCollapsed, onNavigate)}
-          {renderNavSection('Vaults', vaultMenu, isCollapsed, onNavigate)}
-          {renderNavSection('Departments', deptMenu, isCollapsed, onNavigate)}
 
-          {/* Company Vault */}
+          {/* Vaults Section (Personal Vault, Shared With Me, and Company Vaults) */}
           {isCollapsed ? (
             <div className="space-y-1">
               <div className="my-1.5 border-t border-[var(--border-secondary)] mx-1" />
+              {vaultMenu.map((item) => {
+                const Icon = item.icon;
+                const active = location.pathname === (item.path ? item.path.split('?')[0] : '');
+                return (
+                  <Link
+                    key={item.name}
+                    to={item.path}
+                    onClick={onNavigate}
+                    title={item.name}
+                    className={`relative flex items-center justify-center h-10 w-10 mx-auto rounded-xl transition-all duration-150 ${
+                      active
+                        ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                        : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]'
+                    }`}
+                  >
+                    <Icon size={18} className={active ? 'text-blue-600 dark:text-blue-400' : 'text-[var(--text-muted)]'} />
+                  </Link>
+                );
+              })}
               {!vaultsLoading && vaults.map((vault) => {
                 const vaultActive = location.pathname === `/vaults/${vault.slug}`;
                 return (
@@ -277,56 +294,82 @@ function Sidebar() {
           ) : (
             <div>
               <p className="px-3 text-[10px] font-semibold tracking-[0.15em] uppercase mb-1.5 text-[var(--text-muted)]">
-                Company Vault
+                Vaults
               </p>
+              <div className="space-y-0.5">
+                {/* Personal Vault & Shared With Me */}
+                {vaultMenu.map((item) => {
+                  const Icon = item.icon;
+                  const active = location.pathname === (item.path ? item.path.split('?')[0] : '');
+                  return (
+                    <Link
+                      key={item.name}
+                      to={item.path}
+                      onClick={onNavigate}
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
+                        active
+                          ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                          : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]'
+                      }`}
+                    >
+                      <Icon size={16} className={active ? 'text-blue-600 dark:text-blue-400' : 'text-[var(--text-muted)]'} />
+                      <span className="flex-1 truncate">{item.name}</span>
+                    </Link>
+                  );
+                })}
 
-              {vaultsLoading && (
-                <p className="text-xs text-[var(--text-muted)] px-3 py-2">Loading vaults...</p>
-              )}
+                {/* Company Vaults & Folders */}
+                {vaultsLoading && (
+                  <p className="text-xs text-[var(--text-muted)] px-3 py-2">Loading vaults...</p>
+                )}
 
-              {!vaultsLoading && vaults.map((vault) => {
-                const vaultActive = location.pathname === `/vaults/${vault.slug}`;
-                return (
-                  <div key={vault.id} className="mb-1">
-                    <div className={`flex items-center justify-between px-2 py-2 rounded-xl transition-all duration-150 ${
-                      vaultActive
-                        ? 'bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800'
-                        : 'border border-transparent hover:bg-[var(--bg-hover)]'
-                    }`}>
-                      <Link
-                        to={`/vaults/${vault.slug}`}
-                        onClick={() => {
-                          dispatch(clearSelectedFolder());
-                          onNavigate();
-                        }}
-                        className="flex items-center gap-2.5 flex-1 min-w-0"
-                        title={vault.name}
-                      >
-                        <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${
-                          vaultActive ? 'bg-blue-100 dark:bg-blue-800/50 text-blue-600 dark:text-blue-400' : 'bg-[var(--bg-hover)] text-[var(--text-muted)]'
-                        }`}>
-                          <FolderOpen size={16} />
+                {!vaultsLoading && vaults.map((vault) => {
+                  const vaultActive = location.pathname === `/vaults/${vault.slug}`;
+                  return (
+                    <div key={vault.id} className="mt-0.5 mb-1">
+                      <div className={`flex items-center justify-between px-3 py-2 rounded-xl transition-all duration-150 ${
+                        vaultActive
+                          ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-semibold'
+                          : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] font-medium'
+                      }`}>
+                        <Link
+                          to={`/vaults/${vault.slug}`}
+                          onClick={() => {
+                            dispatch(clearSelectedFolder());
+                            onNavigate();
+                          }}
+                          className="flex items-center gap-3 flex-1 min-w-0"
+                          title={vault.name}
+                        >
+                          <FolderOpen
+                            size={16}
+                            className={`shrink-0 ${
+                              vaultActive ? 'text-blue-600 dark:text-blue-400' : 'text-[var(--text-muted)]'
+                            }`}
+                          />
+                          <span className="flex-1 truncate text-sm">
+                            {vault.name}
+                          </span>
+                        </Link>
+
+                        <div className="flex items-center gap-1 ml-1 shrink-0">
+                          {vaultActive && isAdmin(user) && (
+                            <button
+                              onClick={() => dispatch(openAddFolderModal())}
+                              className="w-6 h-6 rounded-lg bg-[var(--bg-card)] border border-blue-200 dark:border-blue-700 flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+                              title="Add folder"
+                            >
+                              <Plus size={13} />
+                            </button>
+                          )}
+                          {vaultActive && (
+                            <ChevronDown
+                              size={14}
+                              className={vaultActive ? 'text-blue-600 dark:text-blue-400' : 'text-[var(--text-muted)]'}
+                            />
+                          )}
                         </div>
-                        <span className={`text-sm truncate ${
-                          vaultActive ? 'text-blue-700 dark:text-blue-400 font-semibold' : 'text-[var(--text-secondary)] font-medium'
-                        }`}>
-                          {vault.name}
-                        </span>
-                      </Link>
-
-                      <div className="flex items-center gap-1 ml-1 shrink-0">
-                        {vaultActive && isAdmin(user) && (
-                          <button
-                            onClick={() => dispatch(openAddFolderModal())}
-                            className="w-7 h-7 rounded-lg bg-[var(--bg-card)] border border-blue-200 dark:border-blue-700 flex items-center justify-center text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
-                            title="Add folder"
-                          >
-                            <Plus size={13} />
-                          </button>
-                        )}
-                        {vaultActive && <ChevronDown size={14} className="text-[var(--text-muted)]" />}
                       </div>
-                    </div>
 
                     {/* Folders */}
                     {vaultActive && (
@@ -502,8 +545,10 @@ function Sidebar() {
                 );
               })}
             </div>
-          )}
+          </div>
+        )}
 
+          {renderNavSection('Departments', deptMenu, isCollapsed, onNavigate)}
           {renderNavSection('Security & Monitoring', securityMenu, isCollapsed, onNavigate)}
           {renderNavSection('Settings', settingsMenu, isCollapsed, onNavigate)}
 
