@@ -11,7 +11,7 @@ import {
 import { apiLogin, apiGet, apiPost, apiRefresh } from '../lib/api.js';
 
 const DEFAULT_URL = 'https://vaultix.knadvisors.pro';
-const DEFAULT_LOCK_MS = 15 * 60 * 1000;
+const DEFAULT_LOCK_MS = 8 * 60 * 60 * 1000; // 8 hours (workday default)
 
 const $ = (id) => document.getElementById(id);
 
@@ -23,9 +23,38 @@ let creds = [];
 let tab = null;
 let tabHost = '';
 let lockMs = DEFAULT_LOCK_MS;
+let timeoutMode = 'duration';
 let lockAt = 0;
 let lockTimerId = null;
 let showAllSites = false;
+
+async function getVaultTimeoutConfig() {
+  try {
+    const local = await chrome.storage.local.get(['vaultTimeout', 'user']);
+    const sync = await chrome.storage.sync.get('vaultTimeout').catch(() => ({}));
+    const setting = local.vaultTimeout || sync.vaultTimeout;
+
+    if (setting) {
+      if (setting === 'restart' || setting === 'never') {
+        return { mode: setting, ms: Infinity };
+      }
+      const mins = Number(setting);
+      if (!isNaN(mins) && mins > 0) {
+        return { mode: 'duration', ms: mins * 60 * 1000, minutes: mins };
+      }
+    }
+
+    return { mode: 'duration', ms: DEFAULT_LOCK_MS, minutes: 480 };
+  } catch {
+    return { mode: 'duration', ms: DEFAULT_LOCK_MS, minutes: 480 };
+  }
+}
+
+async function updateLockTimeout() {
+  const config = await getVaultTimeoutConfig();
+  lockMs = config.ms;
+  timeoutMode = config.mode;
+}
 
 init();
 
@@ -61,13 +90,19 @@ async function init() {
   token = local.token || '';
   refreshToken = local.refreshToken || '';
   user = local.user || null;
-  lockMs = (Number(user?.vaultTimeoutMinutes) || 15) * 60 * 1000;
+  await updateLockTimeout();
 
   [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   tabHost = hostOf(tab?.url || '');
 
   $('loginServer').textContent = baseUrl;
   $('lnkSettings').addEventListener('click', () => chrome.runtime.openOptionsPage());
+  if ($('btnSettings')) {
+    $('btnSettings').addEventListener('click', () => chrome.runtime.openOptionsPage());
+  }
+  if ($('lnkSettingsUnlock')) {
+    $('lnkSettingsUnlock').addEventListener('click', () => chrome.runtime.openOptionsPage());
+  }
   $('lnkOpenVault').addEventListener('click', () => chrome.tabs.create({ url: baseUrl }));
   if ($('lnkOpenVaultLogin')) {
     $('lnkOpenVaultLogin').addEventListener('click', (e) => {
@@ -86,11 +121,15 @@ async function init() {
 
   const sess = await chrome.storage.session.get(['master', 'cache']);
   const cacheValid =
-    sess.master && sess.cache && Date.now() - sess.cache.ts < lockMs;
+    sess.master && sess.cache && (lockMs === Infinity || Date.now() - sess.cache.ts < lockMs);
 
   if (token && user && cacheValid) {
+    // Slide activity window timestamp when popup is actively used
+    sess.cache.ts = Date.now();
+    chrome.storage.session.set({ cache: sess.cache }).catch(() => {});
+
     creds = sess.cache.creds;
-    lockAt = sess.cache.ts + lockMs;
+    lockAt = lockMs === Infinity ? Infinity : sess.cache.ts + lockMs;
     showList();
     startLockTimer();
     const needsFolderUpgrade = creds.length > 0 && !creds.some((c) => 'folderName' in c);
@@ -126,7 +165,7 @@ async function tryRefresh() {
       token = ref.token;
       refreshToken = ref.refreshToken;
       if (ref.user) user = ref.user;
-      lockMs = (Number(user?.vaultTimeoutMinutes) || 15) * 60 * 1000;
+      await updateLockTimeout();
       await chrome.storage.local.set({ token, refreshToken, user });
       return true;
     }
@@ -173,7 +212,7 @@ async function onLogin() {
     token = data.token;
     refreshToken = data.refreshToken || '';
     user = data.user;
-    lockMs = (Number(user?.vaultTimeoutMinutes) || 15) * 60 * 1000;
+    await updateLockTimeout();
     await chrome.storage.local.set({ token, refreshToken, user });
 
     // Validate the master password against the server first, so a stale or
@@ -223,6 +262,7 @@ async function onUnlock() {
       return;
     }
 
+    await updateLockTimeout();
     await chrome.storage.session.set({ master });
     await chrome.storage.session.remove(['privKey', 'cache']);
     await loadCreds(false);
@@ -300,10 +340,13 @@ async function loadCreds(force) {
       cached.cache &&
       cached.cache.creds.length > 0 &&
       cached.cache.creds.some((c) => 'folderName' in c) &&
-      Date.now() - cached.cache.ts < lockMs
+      (lockMs === Infinity || Date.now() - cached.cache.ts < lockMs)
     ) {
+      // Slide activity timestamp on active access
+      cached.cache.ts = Date.now();
+      chrome.storage.session.set({ cache: cached.cache }).catch(() => {});
       creds = cached.cache.creds;
-      lockAt = cached.cache.ts + lockMs;
+      lockAt = lockMs === Infinity ? Infinity : cached.cache.ts + lockMs;
       showList();
       startLockTimer();
       return;
@@ -650,7 +693,7 @@ async function loadCreds(force) {
 
     creds = decrypted;
     const now = Date.now();
-    lockAt = now + lockMs;
+    lockAt = lockMs === Infinity ? Infinity : now + lockMs;
     await chrome.storage.session.set({
       cache: { ts: now, creds, folders: personalFolders },
     });
@@ -732,17 +775,42 @@ function startLockTimer() {
   const el = $('lockTimer');
   if (!el) return;
   clearInterval(lockTimerId);
+
+  el.title = 'Vault Timeout: click to change in Settings';
+  el.style.cursor = 'pointer';
+  if (!el.dataset.clickBound) {
+    el.dataset.clickBound = 'true';
+    el.addEventListener('click', () => chrome.runtime.openOptionsPage());
+  }
+
   const tick = () => {
+    if (lockMs === Infinity) {
+      if (timeoutMode === 'restart') {
+        el.textContent = 'Locks on browser restart';
+      } else {
+        el.textContent = 'Never auto-locks';
+      }
+      return;
+    }
+
     const left = Math.max(0, lockAt - Date.now());
     if (left <= 0) {
       el.textContent = 'Auto-lock active';
       clearInterval(lockTimerId);
+      lockVault();
       return;
     }
-    const secs = Math.floor(left / 1000);
-    el.textContent = `Auto-lock ${String(Math.floor(secs / 60)).padStart(2, '0')}:${String(
-      secs % 60
-    ).padStart(2, '0')}`;
+
+    const totalSecs = Math.floor(left / 1000);
+    const hours = Math.floor(totalSecs / 3600);
+    const mins = Math.floor((totalSecs % 3600) / 60);
+    const secs = totalSecs % 60;
+
+    if (hours > 0) {
+      el.textContent = `Auto-lock in ${hours}h ${mins}m`;
+    } else {
+      el.textContent = `Auto-lock in ${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
   };
   tick();
   lockTimerId = setInterval(tick, 1000);

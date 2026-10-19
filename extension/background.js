@@ -9,15 +9,36 @@ import {
 import { apiGet, apiPost, apiPut, apiRefresh } from './lib/api.js';
 
 const DEFAULT_URL = 'https://vaultix.knadvisors.pro';
-const DEFAULT_LOCK_MS = 15 * 60 * 1000;
+const DEFAULT_LOCK_MS = 8 * 60 * 60 * 1000; // 8 hours (workday default)
 const DEFAULT_BROWSER_FOLDER = 'Saved from Browser';
 const PENDING_TTL_MS = 3 * 60 * 1000;
 
+async function getVaultTimeoutConfig() {
+  try {
+    const local = await chrome.storage.local.get(['vaultTimeout', 'user']);
+    const sync = await chrome.storage.sync.get('vaultTimeout').catch(() => ({}));
+    const setting = local.vaultTimeout || sync.vaultTimeout;
+
+    if (setting) {
+      if (setting === 'restart' || setting === 'never') {
+        return { mode: setting, ms: Infinity };
+      }
+      const mins = Number(setting);
+      if (!isNaN(mins) && mins > 0) {
+        return { mode: 'duration', ms: mins * 60 * 1000, minutes: mins };
+      }
+    }
+
+    return { mode: 'duration', ms: DEFAULT_LOCK_MS, minutes: 480 };
+  } catch {
+    return { mode: 'duration', ms: DEFAULT_LOCK_MS, minutes: 480 };
+  }
+}
+
 async function lockMs() {
   try {
-    const { user } = await chrome.storage.local.get('user');
-    const minutes = Number(user?.vaultTimeoutMinutes) || 15;
-    return minutes * 60 * 1000;
+    const config = await getVaultTimeoutConfig();
+    return config.ms;
   } catch {
     return DEFAULT_LOCK_MS;
   }
@@ -223,11 +244,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       try {
         const data = await chrome.storage.session.get('cache');
         const cache = data.cache;
+        const maxAge = await lockMs();
 
-        if (!cache || Date.now() - cache.ts >= (await lockMs())) {
+        if (!cache || (maxAge !== Infinity && Date.now() - cache.ts >= maxAge)) {
           sendResponse({ ok: true, creds: [] });
           return;
         }
+
+        // Slide activity window on successful autofill request
+        cache.ts = Date.now();
+        chrome.storage.session.set({ cache }).catch(() => {});
 
         const tabHost = hostOf(sender.tab?.url || '');
         const creds = (cache.creds || []).filter(
@@ -271,8 +297,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         }
 
         const sess = await chrome.storage.session.get(['cache', 'master']);
+        const maxAge = await lockMs();
         const cacheValid =
-          sess.master && sess.cache && Date.now() - sess.cache.ts < (await lockMs());
+          sess.master && sess.cache && (maxAge === Infinity || Date.now() - sess.cache.ts < maxAge);
         const creds = cacheValid ? sess.cache.creds || [] : [];
 
         const evalResult = evaluateAgainstCache(creds, hostname, username, password);
@@ -364,9 +391,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           return;
         }
 
+        const maxAge = await lockMs();
         const unlocked =
           !!sess.master &&
-          (!sess.cache || Date.now() - sess.cache.ts < (await lockMs()));
+          (!sess.cache || maxAge === Infinity || Date.now() - sess.cache.ts < maxAge);
 
         // Re-check against decrypted cache if available
         if (unlocked && sess.cache?.creds) {

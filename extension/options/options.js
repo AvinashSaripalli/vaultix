@@ -1,4 +1,5 @@
 const input = document.getElementById('baseUrl');
+const vaultTimeoutSelect = document.getElementById('vaultTimeout');
 const status = document.getElementById('status');
 const testBtn = document.getElementById('testBtn');
 
@@ -6,12 +7,25 @@ chrome.storage.sync.get('baseUrl', ({ baseUrl }) => {
   input.value = (baseUrl && baseUrl !== 'http://localhost:4000') ? baseUrl : 'https://vaultix.knadvisors.pro';
 });
 
+chrome.storage.local.get('vaultTimeout', ({ vaultTimeout }) => {
+  if (vaultTimeout) {
+    vaultTimeoutSelect.value = vaultTimeout;
+  } else {
+    chrome.storage.sync.get('vaultTimeout', (sync) => {
+      vaultTimeoutSelect.value = sync?.vaultTimeout || '480';
+    });
+  }
+});
+
 document.getElementById('form').addEventListener('submit', (e) => {
   e.preventDefault();
   const url = (input.value.trim() || 'https://vaultix.knadvisors.pro').replace(/\/+$/, '');
-  chrome.storage.sync.set({ baseUrl: url }, () => {
-    status.textContent = 'Saved';
-    setTimeout(() => (status.textContent = ''), 1500);
+  const timeoutVal = vaultTimeoutSelect.value;
+  chrome.storage.sync.set({ baseUrl: url, vaultTimeout: timeoutVal }, () => {
+    chrome.storage.local.set({ vaultTimeout: timeoutVal }, () => {
+      status.textContent = 'Settings saved';
+      setTimeout(() => (status.textContent = ''), 2000);
+    });
   });
 });
 

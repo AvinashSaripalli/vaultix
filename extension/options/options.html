@@ -5,54 +5,111 @@
     <title>Vaultix Settings</title>
     <style>
       body {
-        font-family: system-ui, sans-serif;
-        max-width: 420px;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        max-width: 440px;
         margin: 40px auto;
         padding: 0 16px;
         color: #1e293b;
+        background: #f8fafc;
       }
+      .card {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+      }
+      h1 { font-size: 20px; margin: 0 0 4px; color: #0f172a; }
+      p.subtitle { color: #64748b; font-size: 13px; margin: 0 0 20px; }
       label {
         display: block;
         font-weight: 600;
+        font-size: 13px;
         margin-bottom: 6px;
+        color: #334155;
       }
-      input {
+      input, select {
         width: 100%;
-        padding: 9px 10px;
+        padding: 9px 12px;
         border: 1px solid #cbd5e1;
         border-radius: 8px;
-        font-size: 14px;
+        font-size: 13px;
         box-sizing: border-box;
+        background: #ffffff;
+        color: #0f172a;
+        outline: none;
       }
+      input:focus, select:focus {
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+      }
+      .field { margin-bottom: 16px; }
+      .desc { font-size: 12px; color: #64748b; margin-top: 5px; line-height: 1.4; }
+      .btn-row { display: flex; align-items: center; gap: 10px; margin-top: 22px; flex-wrap: wrap; }
       button {
-        margin-top: 12px;
         padding: 9px 18px;
         background: #4f46e5;
         color: white;
         border: none;
         border-radius: 8px;
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 600;
         cursor: pointer;
+        transition: background 0.15s;
       }
+      button:hover { background: #4338ca; }
+      button.secondary {
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #cbd5e1;
+      }
+      button.secondary:hover { background: #e2e8f0; }
       .status {
-        margin-left: 10px;
         color: #16a34a;
         font-size: 13px;
+        font-weight: 500;
+      }
+      footer {
+        margin-top: 20px;
+        text-align: center;
+        font-size: 12px;
+        color: #94a3b8;
       }
     </style>
   </head>
   <body>
-    <h1>Vaultix Extension</h1>
-    <p>Set the address of your Vaultix server.</p>
-    <form id="form">
-      <label for="baseUrl">Vaultix URL</label>
-      <input id="baseUrl" type="url" placeholder="https://vaultix.knadvisors.pro" required />
-      <button type="submit">Save</button>
-      <button type="button" id="testBtn">Test connection</button>
-      <span class="status" id="status"></span>
-    </form>
-    <p>Extension version <span id="version"></span></p>
+    <div class="card">
+      <h1>Vaultix Settings</h1>
+      <p class="subtitle">Configure connection and auto-lock security.</p>
+      
+      <form id="form">
+        <div class="field">
+          <label for="baseUrl">Vaultix Server URL</label>
+          <input id="baseUrl" type="url" placeholder="https://vaultix.knadvisors.pro" required />
+          <div class="desc">The web address of your Vaultix installation.</div>
+        </div>
+
+        <div class="field">
+          <label for="vaultTimeout">Vault Timeout (Auto-lock)</label>
+          <select id="vaultTimeout">
+            <option value="480">8 Hours (Full Workday) — Recommended</option>
+            <option value="restart">On Browser Restart</option>
+            <option value="240">4 Hours</option>
+            <option value="60">1 Hour</option>
+            <option value="15">15 Minutes</option>
+            <option value="never">Never</option>
+          </select>
+          <div class="desc">Controls how long Vaultix stays unlocked before asking for your master password again. Closing Chrome always locks the vault for safety.</div>
+        </div>
+
+        <div class="btn-row">
+          <button type="submit">Save Settings</button>
+          <button type="button" class="secondary" id="testBtn">Test connection</button>
+          <span class="status" id="status"></span>
+        </div>
+      </form>
+    </div>
+    <footer>Vaultix Extension v<span id="version"></span></footer>
     <script src="options.js"></script>
   </body>
 </html>
