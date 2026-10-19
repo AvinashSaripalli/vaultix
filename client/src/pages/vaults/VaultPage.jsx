@@ -42,10 +42,6 @@ import {
   Lock,
   ShieldAlert,
   FolderOpen,
-  Crown,
-  ShieldCheck,
-  PencilLine,
-  Eye,
 } from 'lucide-react';
 
 import {
@@ -907,30 +903,6 @@ function VaultPage() {
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 border border-rose-200/80 dark:border-rose-900/80 shadow-xs">
                       <ShieldAlert size={13} className="text-rose-500" />
                       Access Forbidden
-                    </span>
-                  )}
-                  {selectedFolder && !isFolderForbidden && selectedFolderAccess && (
-                    <span
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border shadow-xs ${
-                        selectedFolderAccess === 'ADMINISTRATOR'
-                          ? 'bg-amber-50 text-amber-800 border-amber-200/90 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800/90'
-                          : selectedFolderAccess === 'FULL_ACCESS'
-                          ? 'bg-indigo-50 text-indigo-700 border-indigo-200/90 dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800/90'
-                          : selectedFolderAccess === 'READ_WRITE'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200/90 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/90'
-                          : 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
-                      }`}
-                    >
-                      {selectedFolderAccess === 'ADMINISTRATOR' && <Crown size={12} className="text-amber-600 dark:text-amber-400" />}
-                      {selectedFolderAccess === 'FULL_ACCESS' && <ShieldCheck size={12} className="text-indigo-600 dark:text-indigo-400" />}
-                      {selectedFolderAccess === 'READ_WRITE' && <PencilLine size={12} className="text-emerald-600 dark:text-emerald-400" />}
-                      {selectedFolderAccess === 'READ_ONLY' && <Eye size={12} className="text-slate-500 dark:text-slate-400" />}
-                      <span>
-                        {selectedFolderAccess === 'ADMINISTRATOR' && 'Administrator'}
-                        {selectedFolderAccess === 'FULL_ACCESS' && 'Full Access'}
-                        {selectedFolderAccess === 'READ_WRITE' && 'Read and Edit'}
-                        {selectedFolderAccess === 'READ_ONLY' && 'Read Only'}
-                      </span>
                     </span>
                   )}
                 </div>
