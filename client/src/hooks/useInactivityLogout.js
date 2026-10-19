@@ -1,11 +1,13 @@
 import { useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  logoutUser,
+  lockVault as lockVaultAction,
   showSessionWarning,
   updateSessionWarningSeconds,
   dismissSessionWarning,
 } from '../features/auth/authSlice';
+import { showToast } from '../utils/toast';
 
 const DEFAULT_TIMEOUT_MINUTES = 15;
 const WARNING_MS = 2 * 60 * 1000;
@@ -33,6 +35,8 @@ export const touchActivity = () => {
 
 export default function useInactivityLogout() {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const location = useLocation();
   const { isAuthenticated, isMasterVerified, sessionWarningOpen, user } = useSelector(
     (state) => state.auth
   );
@@ -52,7 +56,13 @@ export default function useInactivityLogout() {
       const remaining = TIMEOUT_MS - elapsed;
 
       if (remaining <= 0) {
-        dispatch(logoutUser());
+        warningShownRef.current = false;
+        dispatch(dismissSessionWarning());
+        dispatch(lockVaultAction());
+        showToast('Vault locked due to inactivity', 'info');
+        if (location.pathname !== '/enter-master-password') {
+          navigate('/enter-master-password');
+        }
         return;
       }
 
@@ -102,5 +112,5 @@ export default function useInactivityLogout() {
       document.removeEventListener('visibilitychange', handleVisibility);
       clearInterval(interval);
     };
-  }, [isAuthenticated, isMasterVerified, sessionWarningOpen, dispatch, user?.vaultTimeoutMinutes]);
+  }, [isAuthenticated, isMasterVerified, sessionWarningOpen, dispatch, navigate, location.pathname, user?.vaultTimeoutMinutes]);
 }

@@ -64,10 +64,12 @@ async function getAuthContext() {
   };
 }
 
-async function tryRefreshSession(baseUrl, refreshToken) {
-  if (!refreshToken) return null;
+async function tryRefreshSession(baseUrl, explicitRefreshToken) {
+  const local = await chrome.storage.local.get('refreshToken');
+  const tokenToUse = local.refreshToken || explicitRefreshToken;
+  if (!tokenToUse) return null;
   try {
-    const ref = await apiRefresh(baseUrl, refreshToken);
+    const ref = await apiRefresh(baseUrl, tokenToUse);
     if (ref.token && ref.refreshToken) {
       const updates = { token: ref.token, refreshToken: ref.refreshToken };
       if (ref.user) updates.user = ref.user;

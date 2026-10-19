@@ -191,17 +191,21 @@ const refresh = async (req, res) => {
       return res.status(401).json({ message: 'Invalid refresh token' });
     }
 
-    // Rotation reuse detection: the same token presented twice means it was
-    // stolen or used from a second device — revoke the whole session.
-    // Allow a 10-second grace window for concurrent requests (e.g. React StrictMode
-    // double-mount or simultaneous tabs) that raced with the rotation.
+    // Rotation reuse detection: Allow a 60-second grace window for concurrent requests
+    // (e.g. extension background sync, React StrictMode double-mount, or simultaneous tabs)
+    // that raced with the rotation.
     if (stored.revokedAt) {
       const revokedAgoMs = Date.now() - new Date(stored.revokedAt).getTime();
-      if (revokedAgoMs < 10000 && stored.replacedById) {
+      if (revokedAgoMs < 60000 && stored.replacedById) {
         const user = await prisma.user.findUnique({ where: { id: stored.userId } });
         if (user && user.isActive !== false) {
+          // Issue a fresh rotation pair so concurrent clients/extensions do not hold
+          // a stale or revoked token.
+          const { token: freshRefreshToken } = await createRefreshSession(user.id, req);
+          setRefreshTokenCookie(res, freshRefreshToken);
           return res.json({
             token: signToken(user),
+            refreshToken: freshRefreshToken,
             user: {
               id: user.id,
               fullName: user.fullName,
@@ -218,7 +222,14 @@ const refresh = async (req, res) => {
           });
         }
       }
-      await revokeAllRefreshTokens(stored.userId);
+      // If reused outside the grace window, revoke only the replaced token chain
+      // rather than nuking all sessions across all devices for this user.
+      if (stored.replacedById) {
+        await prisma.refreshToken.updateMany({
+          where: { id: stored.replacedById, revokedAt: null },
+          data: { revokedAt: new Date() },
+        });
+      }
       clearRefreshTokenCookie(res);
       return res.status(401).json({ message: 'Session revoked; please sign in again' });
     }

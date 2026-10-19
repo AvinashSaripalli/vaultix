@@ -158,9 +158,11 @@ function show(view) {
 // user signed in past the short-lived access token; both tokens are only ever
 // used from trusted contexts (never content scripts).
 async function tryRefresh() {
-  if (!refreshToken) return false;
+  const local = await chrome.storage.local.get(['token', 'refreshToken', 'user']);
+  const tokenToUse = local.refreshToken || refreshToken;
+  if (!tokenToUse) return false;
   try {
-    const ref = await apiRefresh(baseUrl, refreshToken);
+    const ref = await apiRefresh(baseUrl, tokenToUse);
     if (ref.token && ref.refreshToken) {
       token = ref.token;
       refreshToken = ref.refreshToken;
