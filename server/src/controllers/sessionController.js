@@ -1,5 +1,6 @@
 const prisma = require('../config/prisma');
 const crypto = require('crypto');
+const generateId = require('../utils/generateId');
 
 const REFRESH_COOKIE_NAME = 'vaultix_refresh';
 
@@ -119,6 +120,22 @@ const revokeSession = async (req, res) => {
     await prisma.refreshToken.update({
       where: { id: sessionId },
       data: { revokedAt: new Date() },
+    });
+
+    await prisma.activityLog.create({
+      data: {
+        id: await generateId('activityLog'),
+        userId: req.user.id,
+        action: 'REVOKE_SESSION',
+        targetType: 'Session',
+        targetId: sessionId,
+        metadata: {
+          targetUserId: session.userId,
+          revokedSessionId: sessionId,
+          ipAddress: session.ipAddress,
+          userAgent: session.userAgent,
+        },
+      },
     });
 
     res.json({ message: 'Session revoked successfully' });

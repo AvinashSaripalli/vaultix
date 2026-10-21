@@ -230,6 +230,8 @@ const updateFolder = async (req, res) => {
         targetId: updatedFolder.id,
         metadata: {
           name: updatedFolder.name,
+          oldName: existingFolder.name,
+          newName: updatedFolder.name,
           folderId: updatedFolder.id,
           vaultId: updatedFolder.vaultId,
         },
@@ -467,11 +469,18 @@ const getFolderActivityLogs = async (req, res) => {
       return res.status(403).json({ message: 'Access denied. Full access or administrator permission is required to view activity logs.' });
     }
 
+    // Find any child folders recursively if subfolders exist
+    const childFolders = await prisma.folder.findMany({
+      where: { parentId: folderId },
+      select: { id: true },
+    });
+    const allFolderIds = [folderId, ...childFolders.map((c) => c.id)];
+
     const filteredLogs = await prisma.activityLog.findMany({
       where: {
         OR: [
-          { targetId: folderId },
-          { metadata: { path: ['folderId'], equals: folderId } },
+          { targetId: { in: allFolderIds } },
+          { metadata: { path: ['folderId'], in: allFolderIds } },
         ],
       },
       include: {
@@ -511,7 +520,13 @@ const updateFolderPermission = async (req, res) => {
 
     const existing = await prisma.folderPermission.findUnique({
       where: { id },
-      select: { folderId: true },
+      select: {
+        folderId: true,
+        accessLevel: true,
+        userId: true,
+        user: { select: { id: true, fullName: true, email: true } },
+        folder: { select: { id: true, name: true, vaultId: true } },
+      },
     });
 
     if (!existing) {
@@ -526,6 +541,26 @@ const updateFolderPermission = async (req, res) => {
     const permission = await prisma.folderPermission.update({
       where: { id },
       data: { accessLevel },
+    });
+
+    await prisma.activityLog.create({
+      data: {
+        id: await generateId('activityLog'),
+        userId: req.user.id,
+        action: 'UPDATE_FOLDER_PERMISSION',
+        targetType: 'Folder',
+        targetId: existing.folderId,
+        metadata: {
+          folderId: existing.folderId,
+          name: existing.folder?.name,
+          vaultId: existing.folder?.vaultId,
+          targetUserId: existing.userId,
+          targetUserEmail: existing.user?.email,
+          targetUserName: existing.user?.fullName,
+          oldAccessLevel: existing.accessLevel,
+          newAccessLevel: accessLevel,
+        },
+      },
     });
 
     res.json(permission);
@@ -543,7 +578,13 @@ const deleteFolderPermission = async (req, res) => {
 
     const existing = await prisma.folderPermission.findUnique({
       where: { id },
-      select: { folderId: true },
+      select: {
+        folderId: true,
+        accessLevel: true,
+        userId: true,
+        user: { select: { id: true, fullName: true, email: true } },
+        folder: { select: { id: true, name: true, vaultId: true } },
+      },
     });
 
     if (!existing) {
@@ -557,6 +598,25 @@ const deleteFolderPermission = async (req, res) => {
 
     await prisma.folderPermission.delete({
       where: { id },
+    });
+
+    await prisma.activityLog.create({
+      data: {
+        id: await generateId('activityLog'),
+        userId: req.user.id,
+        action: 'REVOKE_FOLDER_ACCESS',
+        targetType: 'Folder',
+        targetId: existing.folderId,
+        metadata: {
+          folderId: existing.folderId,
+          name: existing.folder?.name,
+          vaultId: existing.folder?.vaultId,
+          targetUserId: existing.userId,
+          targetUserEmail: existing.user?.email,
+          targetUserName: existing.user?.fullName,
+          revokedAccessLevel: existing.accessLevel,
+        },
+      },
     });
 
     res.json({ message: 'User removed from folder' });
@@ -737,7 +797,7 @@ const restoreFolder = async (req, res) => {
         data: {
           id: await generateId('activityLog'),
           userId: req.user.id,
-          action: 'UPDATE_FOLDER',
+          action: 'RESTORE_FOLDER',
           targetType: 'Folder',
           targetId: folderId,
           metadata: {

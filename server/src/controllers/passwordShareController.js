@@ -235,6 +235,25 @@ const removePasswordShare = async (req, res) => {
       where: { id: shareId },
     });
 
+    await prisma.activityLog.create({
+      data: {
+        id: await generateId('activityLog'),
+        userId: req.user.id,
+        action: 'REVOKE_PASSWORD_SHARE',
+        targetType: 'PasswordEntry',
+        targetId: share.passwordId,
+        metadata: {
+          passwordId: share.passwordId,
+          name: share.password?.name,
+          revokedFromUserId: share.sharedWithId,
+          revokedFromUserEmail: share.sharedWith?.email,
+          revokedFromUserName: share.sharedWith?.fullName,
+          vaultId: share.password?.vaultId,
+          folderId: share.password?.folderId,
+        },
+      },
+    });
+
     await createNotification({
       userId: share.sharedWithId,
       title: 'Password Access Removed',

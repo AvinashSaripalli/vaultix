@@ -145,6 +145,21 @@ const createUserByAdmin = async (req, res) => {
       },
     });
 
+    await prisma.activityLog.create({
+      data: {
+        id: await generateId('activityLog'),
+        userId: req.user.id,
+        action: 'CREATE_USER',
+        targetType: 'User',
+        targetId: user.id,
+        metadata: {
+          name: user.fullName,
+          email: user.email,
+          role: user.role,
+        },
+      },
+    });
+
     res.status(201).json(user);
   } catch (error) {
     console.error('Create user by admin error:', error);
@@ -252,6 +267,23 @@ const updateUser = async (req, res) => {
         data: { revokedAt: new Date() },
       });
     }
+
+    await prisma.activityLog.create({
+      data: {
+        id: await generateId('activityLog'),
+        userId: req.user.id,
+        action: 'UPDATE_USER',
+        targetType: 'User',
+        targetId: updatedUser.id,
+        metadata: {
+          name: updatedUser.fullName,
+          email: updatedUser.email,
+          oldRole: targetUser.role,
+          newRole: updatedUser.role,
+          isActive: updatedUser.isActive,
+        },
+      },
+    });
 
     res.json(updatedUser);
   } catch (error) {
@@ -454,6 +486,21 @@ const deleteUser = async (req, res) => {
 
       await tx.user.delete({
         where: { id: userId },
+      });
+
+      await tx.activityLog.create({
+        data: {
+          id: await generateId('activityLog'),
+          userId: req.user.id,
+          action: 'DELETE_USER',
+          targetType: 'User',
+          targetId: userId,
+          metadata: {
+            name: targetUser.fullName,
+            email: targetUser.email,
+            role: targetUser.role,
+          },
+        },
       });
     });
 

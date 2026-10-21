@@ -30,10 +30,11 @@ const ACTION_FILTERS = [
   { label: 'All Actions', value: 'ALL' },
   { label: 'Create', value: 'CREATE' },
   { label: 'Update', value: 'UPDATE' },
-  { label: 'Delete', value: 'DELETE' },
+  { label: 'Delete / Revoke', value: 'DELETE' },
+  { label: 'Restore', value: 'RESTORE' },
   { label: 'View', value: 'VIEW' },
   { label: 'Copy', value: 'COPY' },
-  { label: 'Share', value: 'SHARE' },
+  { label: 'Share / Grant', value: 'SHARE' },
 ];
 
 const TYPE_FILTERS = [
@@ -41,6 +42,10 @@ const TYPE_FILTERS = [
   { label: 'Password', value: 'PASSWORD' },
   { label: 'Folder', value: 'FOLDER' },
   { label: 'Vault', value: 'VAULT' },
+  { label: 'Department', value: 'DEPARTMENT' },
+  { label: 'User / Admin', value: 'USER' },
+  { label: 'Security & 2FA', value: 'SECURITY' },
+  { label: 'Approval', value: 'APPROVAL' },
 ];
 
 const LOGIN_STATUS_FILTERS = [
@@ -68,29 +73,68 @@ function formatAction(action) {
     case 'CREATE_FOLDER': return 'Create Folder';
     case 'UPDATE_FOLDER': return 'Update Folder';
     case 'DELETE_FOLDER': return 'Delete Folder';
+    case 'RESTORE_FOLDER': return 'Restore Folder';
+    case 'SHARE_FOLDER': return 'Share Folder';
+    case 'UPDATE_FOLDER_PERMISSION': return 'Update Folder Permission';
+    case 'REVOKE_FOLDER_ACCESS': return 'Revoke Folder Access';
     case 'CREATE_PASSWORD': return 'Create Password';
     case 'UPDATE_PASSWORD': return 'Update Password';
     case 'DELETE_PASSWORD': return 'Delete Password';
+    case 'RESTORE_PASSWORD': return 'Restore Password';
     case 'VIEW_PASSWORD': return 'View Password';
     case 'COPY_PASSWORD': return 'Copy Password';
     case 'SHARE_PASSWORD': return 'Share Password';
-    case 'SHARE_FOLDER': return 'Share Folder';
+    case 'REVOKE_PASSWORD_SHARE': return 'Revoke Password Share';
     case 'CREATE_VAULT': return 'Create Vault';
     case 'UPDATE_VAULT': return 'Update Vault';
     case 'DELETE_VAULT': return 'Delete Vault';
+    case 'UNSHARE_VAULT': return 'Unshare Vault';
     case 'IMPORT_PASSWORDS': return 'Import Passwords';
     case 'SHARE_VAULT': return 'Share Vault';
+    case 'CREATE_USER': return 'Create User';
+    case 'UPDATE_USER': return 'Update User';
+    case 'DELETE_USER': return 'Delete User';
+    case 'CREATE_DEPARTMENT': return 'Create Department';
+    case 'UPDATE_DEPARTMENT': return 'Update Department';
+    case 'DELETE_DEPARTMENT': return 'Delete Department';
+    case 'ADD_DEPARTMENT_MEMBER': return 'Add Dept Member';
+    case 'REMOVE_DEPARTMENT_MEMBER': return 'Remove Dept Member';
+    case 'UPDATE_DEPARTMENT_MEMBER': return 'Update Dept Member';
+    case 'GRANT_DEPARTMENT_ACCESS': return 'Grant Dept Access';
+    case 'REVOKE_DEPARTMENT_ACCESS': return 'Revoke Dept Access';
+    case 'ENABLE_2FA': return 'Enable 2FA';
+    case 'DISABLE_2FA': return 'Disable 2FA';
+    case 'VERIFY_EMAIL': return 'Verify Email';
+    case 'REVOKE_SESSION': return 'Revoke Session';
+    case 'UPDATE_ORGANIZATION_POLICY': return 'Update Org Policy';
+    case 'CREATE_APPROVAL_REQUEST': return 'Create Approval Request';
+    case 'APPROVE_REQUEST': return 'Approve Request';
+    case 'REJECT_REQUEST': return 'Reject Request';
+    case 'CANCEL_APPROVAL_REQUEST': return 'Cancel Approval Request';
     default: return action?.replaceAll('_', ' ') || '-';
   }
 }
 
 function getActionBadge(action) {
-  if (action?.startsWith('CREATE')) return 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400';
-  if (action?.startsWith('UPDATE')) return 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400';
-  if (action?.startsWith('DELETE')) return 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400';
+  if (action?.startsWith('CREATE') || action?.startsWith('RESTORE') || action === 'ENABLE_2FA' || action === 'APPROVE_REQUEST') {
+    return 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400';
+  }
+  if (action?.startsWith('UPDATE') || action === 'UPDATE_ORGANIZATION_POLICY') {
+    return 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400';
+  }
+  if (
+    action?.startsWith('DELETE') ||
+    action?.startsWith('REVOKE') ||
+    action?.startsWith('UNSHARE') ||
+    action?.startsWith('REMOVE') ||
+    action === 'DISABLE_2FA' ||
+    action === 'REJECT_REQUEST'
+  ) {
+    return 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400';
+  }
   if (action?.startsWith('VIEW')) return 'bg-blue-50 text-blue-700';
   if (action?.startsWith('COPY')) return 'bg-sky-50 text-sky-700 dark:bg-sky-900/20';
-  if (action?.startsWith('SHARE')) return 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400';
+  if (action?.startsWith('SHARE') || action?.startsWith('GRANT')) return 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400';
   if (action?.startsWith('IMPORT')) return 'bg-violet-50 text-violet-700 dark:bg-violet-900/20';
   return 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300';
 }
@@ -99,6 +143,8 @@ function getActionIcon(action) {
   if (action?.includes('PASSWORD')) return <KeyRound size={15} />;
   if (action?.includes('FOLDER')) return <Folder size={15} />;
   if (action?.includes('VAULT')) return <Database size={15} />;
+  if (action?.includes('USER')) return <Share2 size={15} />;
+  if (action?.includes('2FA') || action?.includes('POLICY') || action?.includes('APPROVAL')) return <ShieldAlert size={15} />;
   return <Activity size={15} />;
 }
 
@@ -420,9 +466,28 @@ function ActivityLogPage() {
         log.targetId?.toLowerCase().includes(q) ||
         log.metadata?.name?.toLowerCase?.().includes(q);
       const matchesAction =
-        actionFilter === 'ALL' || log.action?.startsWith(actionFilter);
-      const matchesType =
-        typeFilter === 'ALL' || log.action?.includes(typeFilter);
+        actionFilter === 'ALL' ||
+        log.action?.startsWith(actionFilter) ||
+        (actionFilter === 'DELETE' && (log.action?.startsWith('REVOKE') || log.action?.startsWith('UNSHARE') || log.action?.startsWith('REMOVE'))) ||
+        (actionFilter === 'SHARE' && log.action?.startsWith('GRANT'));
+
+      let matchesType = true;
+      if (typeFilter !== 'ALL') {
+        if (typeFilter === 'SECURITY') {
+          matchesType = ['ENABLE_2FA', 'DISABLE_2FA', 'VERIFY_EMAIL', 'REVOKE_SESSION', 'LOGIN', 'REGISTER', 'POLICY'].some((a) =>
+            log.action?.includes(a)
+          );
+        } else if (typeFilter === 'APPROVAL') {
+          matchesType =
+            log.action?.includes('APPROVAL') ||
+            log.action?.includes('APPROVE') ||
+            log.action?.includes('REJECT');
+        } else {
+          matchesType =
+            log.action?.includes(typeFilter) ||
+            log.targetType?.toUpperCase()?.includes(typeFilter);
+        }
+      }
       return matchesSearch && matchesAction && matchesType;
     });
     if (!sortConfig) return list;

@@ -1096,7 +1096,7 @@ const restorePassword = async (req, res) => {
           data: {
             id: await generateId('activityLog'),
             userId: req.user.id,
-            action: 'UPDATE_FOLDER',
+            action: 'RESTORE_FOLDER',
             targetType: 'Folder',
             targetId: targetFolderId,
             metadata: {
@@ -1121,7 +1121,7 @@ const restorePassword = async (req, res) => {
         data: {
           id: await generateId('activityLog'),
           userId: req.user.id,
-          action: 'UPDATE_PASSWORD',
+          action: 'RESTORE_PASSWORD',
           targetType: 'PasswordEntry',
           targetId: req.params.id,
           metadata: {

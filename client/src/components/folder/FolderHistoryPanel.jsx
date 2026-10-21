@@ -10,6 +10,7 @@ import {
   Trash2,
   Plus,
   ChevronRight,
+  Search,
 } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import api from '../../services/api';
@@ -71,6 +72,42 @@ function getActionConfig(action) {
         icon: Trash2,
         badge: 'bg-red-100 text-red-700',
       };
+    case 'RESTORE_FOLDER':
+      return {
+        label: 'Restored folder',
+        icon: Folder,
+        badge: 'bg-green-100 text-green-700',
+      };
+    case 'RESTORE_PASSWORD':
+      return {
+        label: 'Restored password',
+        icon: Plus,
+        badge: 'bg-green-100 text-green-700',
+      };
+    case 'UPDATE_FOLDER_PERMISSION':
+      return {
+        label: 'Updated member permission',
+        icon: Users,
+        badge: 'bg-amber-100 text-amber-700',
+      };
+    case 'REVOKE_FOLDER_ACCESS':
+      return {
+        label: 'Removed member from folder',
+        icon: Trash2,
+        badge: 'bg-red-100 text-red-700',
+      };
+    case 'SHARE_PASSWORD':
+      return {
+        label: 'Shared password',
+        icon: Users,
+        badge: 'bg-indigo-100 text-indigo-700',
+      };
+    case 'REVOKE_PASSWORD_SHARE':
+      return {
+        label: 'Revoked password share',
+        icon: Trash2,
+        badge: 'bg-red-100 text-red-700',
+      };
     default:
       return {
         label: action,
@@ -81,9 +118,26 @@ function getActionConfig(action) {
 }
 
 function getTargetName(log) {
+  const m = log?.metadata;
+  if (log.action === 'UPDATE_FOLDER' && m?.oldName && m?.newName && m.oldName !== m.newName) {
+    return `Renamed from "${m.oldName}" to "${m.newName}"`;
+  }
+  if (log.action === 'UPDATE_FOLDER_PERMISSION' && m?.targetUserEmail) {
+    const user = m.targetUserName || m.targetUserEmail;
+    return `${user}: ${formatAccess(m.oldAccessLevel)} → ${formatAccess(m.newAccessLevel)}`;
+  }
+  if (log.action === 'REVOKE_FOLDER_ACCESS' && (m?.targetUserEmail || m?.targetUserName)) {
+    return `Removed ${m.targetUserName || m.targetUserEmail} (${formatAccess(m.revokedAccessLevel)})`;
+  }
+  if (log.action === 'REVOKE_PASSWORD_SHARE' && (m?.revokedFromUserEmail || m?.revokedFromUserName)) {
+    return `Revoked share of "${m.name || 'password'}" from ${m.revokedFromUserName || m.revokedFromUserEmail}`;
+  }
+  if (log.action === 'SHARE_PASSWORD' && (m?.sharedWithName || m?.sharedWithId)) {
+    return `Shared "${m.name || 'password'}" with ${m.sharedWithName || 'user'}`;
+  }
   return (
-    log?.metadata?.name ||
-    log?.metadata?.folderName ||
+    m?.name ||
+    m?.folderName ||
     log?.targetType ||
     'Item'
   );
@@ -124,9 +178,21 @@ function FolderHistoryPanel({ open, onClose, folderId }) {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const selectedFolder = folders.find((f) => f.id === folderId);
   const permissions = selectedFolder?.permissions || [];
+
+  const filteredLogs = useMemo(() => {
+    if (!searchQuery.trim()) return logs;
+    const q = searchQuery.toLowerCase();
+    return logs.filter((log) => {
+      const targetName = getTargetName(log).toLowerCase();
+      const actionLabel = getActionConfig(log.action).label.toLowerCase();
+      const user = (log.user?.fullName || log.user?.email || '').toLowerCase();
+      return targetName.includes(q) || actionLabel.includes(q) || user.includes(q);
+    });
+  }, [logs, searchQuery]);
 
   useEffect(() => {
     if (!open || !folderId) return;
@@ -256,10 +322,25 @@ function FolderHistoryPanel({ open, onClose, folderId }) {
               )}
             </div>
 
-            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex items-center gap-2 bg-white dark:bg-slate-800">
-                <History size={18} className="text-slate-600 dark:text-slate-300" />
-                <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">Activity</h3>
+            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden flex flex-col">
+              <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-2 bg-white dark:bg-slate-800">
+                <div className="flex items-center gap-2">
+                  <History size={18} className="text-slate-600 dark:text-slate-300" />
+                  <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">Activity</h3>
+                </div>
+
+                {logs.length > 0 && (
+                  <div className="relative w-full sm:w-48">
+                    <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Search activity..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full h-8 pl-8 pr-2.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                )}
               </div>
 
               {loading && (
@@ -268,9 +349,9 @@ function FolderHistoryPanel({ open, onClose, folderId }) {
                 </div>
               )}
 
-              {!loading && logs.length > 0 && (
+              {!loading && filteredLogs.length > 0 && (
                 <div className="divide-y divide-slate-100 dark:divide-slate-700">
-                  {logs.map((log) => {
+                  {filteredLogs.map((log) => {
                     const config = getActionConfig(log.action);
                     const Icon = config.icon;
 
@@ -316,6 +397,12 @@ function FolderHistoryPanel({ open, onClose, folderId }) {
               {!loading && !logs.length && (
                 <div className="px-4 py-6 text-sm text-slate-500 dark:text-slate-400">
                   No history found.
+                </div>
+              )}
+
+              {!loading && logs.length > 0 && !filteredLogs.length && (
+                <div className="px-4 py-6 text-sm text-slate-500 dark:text-slate-400">
+                  No activity matched &ldquo;{searchQuery}&rdquo;.
                 </div>
               )}
             </div>
