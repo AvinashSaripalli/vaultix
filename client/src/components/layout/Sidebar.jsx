@@ -4,7 +4,7 @@ import {
   Shield, Users, Activity, Folder, FolderOpen,
   LogOut, Plus, ChevronDown, LockKeyhole, Share2, User, Sparkles, Building2,
   Smartphone, Clock, HeartPulse, MonitorCheck, Clipboard,
-  PanelLeftClose, PanelLeftOpen, X, Trash2, ShieldCheck, UserCheck, Layers, ShieldAlert,
+  PanelLeft, X, Trash2, ShieldCheck, UserCheck, Layers, ShieldAlert,
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { logoutUser } from '../../features/auth/authSlice';
@@ -628,7 +628,7 @@ function Sidebar() {
                 title="Expand sidebar"
                 className="flex items-center justify-center h-10 w-10 mx-auto rounded-xl text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-all duration-150"
               >
-                <PanelLeftOpen size={18} />
+                <PanelLeft size={18} />
               </button>
             </>
           ) : (
@@ -655,7 +655,7 @@ function Sidebar() {
                 className="hidden lg:flex w-full items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-all duration-150"
                 title="Collapse sidebar to icon bar"
               >
-                <PanelLeftClose size={16} />
+                <PanelLeft size={16} />
                 <span>Collapse sidebar</span>
               </button>
             </>

@@ -14,8 +14,7 @@ import {
   Sun,
   Moon,
   Menu,
-  PanelLeftClose,
-  PanelLeftOpen,
+  PanelLeft,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -177,11 +176,11 @@ function Topbar() {
         {/* Desktop collapse toggle */}
         <button
           onClick={toggleSidebarCollapse}
-          className="hidden lg:flex h-10 w-10 rounded-xl border border-[var(--border-primary)] bg-[var(--bg-card)] items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors shrink-0"
+          className="hidden lg:flex h-10 w-10 rounded-xl border border-[var(--border-primary)] bg-[var(--bg-card)] items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-all duration-150 shrink-0"
           title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           aria-label="Toggle sidebar"
         >
-          {sidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          <PanelLeft size={18} />
         </button>
 
         <h2 className="text-xs sm:text-sm font-semibold text-[var(--text-secondary)] truncate">
