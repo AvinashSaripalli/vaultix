@@ -38,7 +38,7 @@ function PasswordListPanel() {
   } = useSelector((state) => state.vault);
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(8);
+  const [pageSize, setPageSize] = useState(10);
 
   const filteredPasswords = useMemo(() => {
     const q = searchTerm.toLowerCase();
@@ -148,22 +148,19 @@ function PasswordListPanel() {
             )}
           </div>
 
-          {totalGroups > 6 && (
+          {totalGroups > 5 && (
             <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
               <span className="hidden sm:inline">Per page:</span>
               <select
                 value={pageSize}
                 onChange={(e) => {
-                  setPageSize(e.target.value === 'all' ? 'all' : Number(e.target.value));
+                  setPageSize(Number(e.target.value));
                   setCurrentPage(1);
                 }}
                 className="h-8 rounded-xl border border-slate-200 bg-slate-50 px-2 text-xs font-semibold text-slate-700 outline-none hover:border-slate-300 dark:border-slate-700 dark:bg-slate-700 dark:text-slate-200 cursor-pointer"
               >
-                <option value={6}>6</option>
-                <option value={8}>8</option>
+                <option value={5}>5</option>
                 <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value="all">All</option>
               </select>
             </div>
           )}
