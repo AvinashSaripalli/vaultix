@@ -476,12 +476,16 @@ const getFolderActivityLogs = async (req, res) => {
     });
     const allFolderIds = [folderId, ...childFolders.map((c) => c.id)];
 
+    const orConditions = [
+      { targetId: { in: allFolderIds } },
+      ...allFolderIds.map((id) => ({
+        metadata: { path: ['folderId'], equals: id },
+      })),
+    ];
+
     const filteredLogs = await prisma.activityLog.findMany({
       where: {
-        OR: [
-          { targetId: { in: allFolderIds } },
-          { metadata: { path: ['folderId'], in: allFolderIds } },
-        ],
+        OR: orConditions,
       },
       include: {
         user: {

@@ -98,8 +98,10 @@ const getVaultActivityLogs = async (req, res) => {
     } else if (allowedFolderIds.length > 0 && !isAdmin && !access) {
       whereCondition = {
         OR: [
-          { metadata: { path: ['folderId'], in: allowedFolderIds } },
           { targetId: { in: allowedFolderIds } },
+          ...allowedFolderIds.map((id) => ({
+            metadata: { path: ['folderId'], equals: id },
+          })),
         ],
       };
     } else {
@@ -183,8 +185,10 @@ const exportVaultAudit = async (req, res) => {
     } else if (allowedFolderIds.length > 0 && !isAdmin && (!access || !['ADMINISTRATOR', 'FULL_ACCESS'].includes(access))) {
       whereCondition = {
         OR: [
-          { metadata: { path: ['folderId'], in: allowedFolderIds } },
           { targetId: { in: allowedFolderIds } },
+          ...allowedFolderIds.map((id) => ({
+            metadata: { path: ['folderId'], equals: id },
+          })),
         ],
       };
     } else {
