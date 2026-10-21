@@ -8,6 +8,25 @@ import {
 import ItemTypeBadge from '../myVault/ItemTypeBadge';
 import { getItemTypeMeta } from '../../utils/itemTypes';
 
+function getPaginationItems(current, total) {
+  if (total <= 5) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+
+  // Near the start: show 1, 2, 3, ..., total
+  if (current <= 3) {
+    return [1, 2, 3, 'ellipsis-end', total];
+  }
+
+  // Near the end: show 1, ..., total - 2, total - 1, total
+  if (current >= total - 2) {
+    return [1, 'ellipsis-start', total - 2, total - 1, total];
+  }
+
+  // In the middle: show 1, ..., current - 1, current, current + 1, ..., total
+  return [1, 'ellipsis-start', current - 1, current, current + 1, 'ellipsis-end', total];
+}
+
 function PasswordListPanel() {
   const dispatch = useDispatch();
   const {
@@ -200,41 +219,61 @@ function PasswordListPanel() {
 
       {/* Pagination Bar */}
       {totalPages > 1 && !isAll && (
-        <div className="pt-4 mt-4 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between">
+        <div className="pt-3 mt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-1 select-none">
           <button
+            type="button"
             onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
             disabled={validPage === 1}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 transition"
+            aria-label="Previous page"
+            title="Previous page"
+            className="h-8 px-2 sm:px-2.5 rounded-lg border border-slate-200 dark:border-slate-700/80 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1 transition shrink-0"
           >
             <ChevronLeft size={14} />
-            <span>Prev</span>
+            <span className="hidden sm:inline">Prev</span>
           </button>
 
-          <div className="flex items-center gap-1">
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-              const isActive = page === validPage;
+          <div className="flex items-center gap-1 min-w-0 justify-center overflow-hidden">
+            {getPaginationItems(validPage, totalPages).map((item, idx) => {
+              if (typeof item === 'string') {
+                return (
+                  <span
+                    key={`ellipsis-${idx}`}
+                    className="h-8 w-4 flex items-center justify-center text-xs text-slate-400 dark:text-slate-500 font-medium select-none shrink-0"
+                  >
+                    …
+                  </span>
+                );
+              }
+
+              const isActive = item === validPage;
               return (
                 <button
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  className={`h-8 w-8 rounded-xl text-xs font-semibold transition ${
+                  key={item}
+                  type="button"
+                  onClick={() => setCurrentPage(item)}
+                  aria-label={`Page ${item}`}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`h-8 min-w-[32px] px-1.5 rounded-lg text-xs font-semibold transition shrink-0 flex items-center justify-center ${
                     isActive
-                      ? 'bg-indigo-600 text-white shadow-sm'
-                      : 'border border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700'
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'border border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                   }`}
                 >
-                  {page}
+                  {item}
                 </button>
               );
             })}
           </div>
 
           <button
+            type="button"
             onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
             disabled={validPage === totalPages}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 transition"
+            aria-label="Next page"
+            title="Next page"
+            className="h-8 px-2 sm:px-2.5 rounded-lg border border-slate-200 dark:border-slate-700/80 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1 transition shrink-0"
           >
-            <span>Next</span>
+            <span className="hidden sm:inline">Next</span>
             <ChevronRight size={14} />
           </button>
         </div>
