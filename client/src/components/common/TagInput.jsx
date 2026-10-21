@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
-import { X, Plus, Tag as TagIcon, Check, ChevronDown, Sparkles } from 'lucide-react';
+import { X, Plus, Tag as TagIcon, Check, ChevronDown, Sparkles, Globe } from 'lucide-react';
 import {
   DEPARTMENT_TAG_GROUPS,
   ALL_DEPARTMENT_TAGS,
   getDefaultDepartmentForType,
   getQuickSuggestedTagsForType,
+  getTagsForUrl,
 } from '../../utils/departmentTags';
 
 function TagInput({
@@ -13,6 +14,7 @@ function TagInput({
   setTags,
   onChange,
   itemType,
+  url = '',
   suggestions: externalSuggestions,
 }) {
   const [input, setInput] = useState('');
@@ -24,26 +26,37 @@ function TagInput({
   const inputRef = useRef(null);
   const handleTagsChange = setTags || onChange;
 
-  // Retrieve existing tags already used in the user's vaults for personalization
-  const existingVaultTags = useSelector((state) => {
+  // Retrieve existing passwords from the user's vaults for memory & domain matching
+  const existingVaultItems = useSelector((state) => {
     const v1 = state.vault?.passwords || [];
     const v2 = state.myVault?.passwords || [];
+    return [...v1, ...v2];
+  });
+
+  const existingVaultTags = useMemo(() => {
     const set = new Set();
-    [...v1, ...v2].forEach((item) => {
+    existingVaultItems.forEach((item) => {
       (item.tags || []).forEach((t) => {
         const name = typeof t === 'string' ? t : t?.tag?.name;
         if (name && name.trim()) set.add(name.trim());
       });
     });
     return Array.from(set);
-  });
+  }, [existingVaultItems]);
 
-  // Keep active category aligned when itemType changes
+  // URL-based tag intelligence
+  const urlMatch = useMemo(() => {
+    return getTagsForUrl(url, existingVaultItems);
+  }, [url, existingVaultItems]);
+
+  // Align category tab with URL match or itemType
   useEffect(() => {
-    if (itemType) {
+    if (urlMatch.tags.length > 0) {
+      setActiveTab('url_match');
+    } else if (itemType) {
       setActiveTab(getDefaultDepartmentForType(itemType));
     }
-  }, [itemType]);
+  }, [urlMatch.domain, itemType]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -82,22 +95,28 @@ function TagInput({
     }
   };
 
-  // Top 4-5 smart suggestions for quick 1-click addition directly under the input
+  // Quick suggestions line: prefer URL match tags when available, otherwise itemType smart tags
   const topQuickSuggestions = useMemo(() => {
+    if (urlMatch.tags.length > 0) {
+      return urlMatch.tags
+        .filter((s) => !tags.some((t) => t.toLowerCase() === s.toLowerCase()))
+        .slice(0, 5);
+    }
     const smartList = getQuickSuggestedTagsForType(itemType);
     return smartList
       .filter((s) => !tags.some((t) => t.toLowerCase() === s.toLowerCase()))
       .slice(0, 5);
-  }, [itemType, tags]);
+  }, [urlMatch, itemType, tags]);
 
   // Combined master list of suggestions for search and browsing
   const masterSuggestions = useMemo(() => {
     const combined = [
+      ...urlMatch.tags,
       ...existingVaultTags,
       ...(externalSuggestions || ALL_DEPARTMENT_TAGS),
     ];
     return Array.from(new Set(combined));
-  }, [existingVaultTags, externalSuggestions]);
+  }, [urlMatch.tags, existingVaultTags, externalSuggestions]);
 
   // Filtered list when user is typing in the search box
   const searchResults = useMemo(() => {
@@ -109,6 +128,9 @@ function TagInput({
 
   // Tags for the active tab inside the popover
   const currentTabTags = useMemo(() => {
+    if (activeTab === 'url_match' && urlMatch.tags.length > 0) {
+      return urlMatch.tags;
+    }
     if (activeTab === 'vault') {
       return existingVaultTags.length > 0 ? existingVaultTags : masterSuggestions.slice(0, 15);
     }
@@ -117,7 +139,7 @@ function TagInput({
     }
     const group = DEPARTMENT_TAG_GROUPS.find((g) => g.id === activeTab);
     return group ? group.tags : masterSuggestions;
-  }, [activeTab, existingVaultTags, masterSuggestions]);
+  }, [activeTab, urlMatch, existingVaultTags, masterSuggestions]);
 
   const hasTypedExactMatch = tags.some((t) => t.toLowerCase() === input.trim().toLowerCase());
 
@@ -241,6 +263,20 @@ function TagInput({
               <div>
                 {/* Sleek Tabs Header (No ugly horizontal scrollbar) */}
                 <div className="flex items-center gap-1 p-2 bg-slate-50/80 dark:bg-slate-900/40 border-b border-slate-100 dark:border-slate-700 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                  {urlMatch.tags.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('url_match')}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition flex items-center gap-1 ${
+                        activeTab === 'url_match'
+                          ? 'bg-indigo-600 text-white shadow-xs'
+                          : 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100'
+                      }`}
+                    >
+                      <Globe size={11} />
+                      <span>{urlMatch.domain}</span>
+                    </button>
+                  )}
                   {existingVaultTags.length > 0 && (
                     <button
                       type="button"
@@ -314,23 +350,35 @@ function TagInput({
         )}
       </div>
 
-      {/* Subtle 1-Line Quick Suggestions (Zero Clutter, Zero Scrollbar) */}
+      {/* Subtle 1-Line Quick Suggestions (URL Matched or Item Type Smart Suggestions) */}
       {topQuickSuggestions.length > 0 && !openDropdown && (
         <div className="flex items-center gap-1.5 flex-wrap pt-0.5 text-xs text-slate-500 dark:text-slate-400">
-          <span className="flex items-center gap-1 text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide">
-            <Sparkles size={11} className="text-amber-500" /> Suggested:
-          </span>
+          {urlMatch.tags.length > 0 ? (
+            <span className="flex items-center gap-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide">
+              <Globe size={11} className="text-indigo-500 shrink-0" /> For {urlMatch.domain}:
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide">
+              <Sparkles size={11} className="text-amber-500 shrink-0" /> Suggested:
+            </span>
+          )}
+
           {topQuickSuggestions.map((tag) => (
             <button
               key={tag}
               type="button"
               onClick={() => addTag(tag)}
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950 dark:hover:text-indigo-300 hover:border-indigo-300 dark:hover:border-indigo-700 border border-transparent transition text-xs font-normal"
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md transition text-xs font-normal border ${
+                urlMatch.tags.length > 0
+                  ? 'bg-indigo-50/80 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border-indigo-200/80 dark:border-indigo-800/80 hover:bg-indigo-100 hover:text-indigo-800'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-transparent hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950 dark:hover:text-indigo-300 hover:border-indigo-300'
+              }`}
             >
-              <Plus size={10} className="text-slate-400" />
+              <Plus size={10} className={urlMatch.tags.length > 0 ? 'text-indigo-500' : 'text-slate-400'} />
               <span>{tag}</span>
             </button>
           ))}
+
           <button
             type="button"
             onClick={() => setOpenDropdown(true)}

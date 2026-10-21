@@ -387,6 +387,7 @@ function ItemFormFields({
           setTags={(nextTags) => onChange('tags', nextTags)}
           onChange={(nextTags) => onChange('tags', nextTags)}
           itemType={currentType}
+          url={formData.url || formData.fields?.url || formData.fields?.baseUrl || ''}
           suggestions={suggestedTags}
         />
       </div>

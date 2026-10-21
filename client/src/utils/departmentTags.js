@@ -168,3 +168,144 @@ export const getQuickSuggestedTagsForType = (itemType) => {
       return ['Production', 'Finance', 'Client-Portal', 'Shared', 'Admin'];
   }
 };
+
+// Domain-to-Tag Mapping Rules for Real-World Services & Portals
+export const DOMAIN_TAG_RULES = [
+  // Indian Government, Tax & Compliance
+  { pattern: /gst\.gov\.in/i, tags: ['GST / Tax', 'Compliance', 'Finance'] },
+  { pattern: /incometax\.gov\.in/i, tags: ['GST / Tax', 'Compliance', 'Finance'] },
+  { pattern: /tin-nsdl\.com/i, tags: ['GST / Tax', 'Compliance', 'Finance'] },
+  { pattern: /mca\.gov\.in/i, tags: ['MCA-V3 / ROC', 'Compliance', 'Secretarial'] },
+  { pattern: /rbi\.org\.in/i, tags: ['FEMA / RBI', 'Compliance'] },
+  { pattern: /dgft\.gov\.in/i, tags: ['FEMA / RBI', 'Compliance'] },
+  { pattern: /epfindia\.gov\.in/i, tags: ['Payroll', 'HR', 'Compliance'] },
+  { pattern: /esic\.gov\.in/i, tags: ['Payroll', 'HR', 'Compliance'] },
+
+  // Banking (Corporate & Retail)
+  { pattern: /hdfcbank\.com/i, tags: ['Banking-Corporate', 'Finance'] },
+  { pattern: /icicibank\.com/i, tags: ['Banking-Corporate', 'Finance'] },
+  { pattern: /sbi\.co\.in|onlinesbi\.sbi/i, tags: ['Banking-Corporate', 'Finance'] },
+  { pattern: /axisbank\.com/i, tags: ['Banking-Corporate', 'Finance'] },
+  { pattern: /kotak\.com/i, tags: ['Banking-Corporate', 'Finance'] },
+  { pattern: /indusind\.com/i, tags: ['Banking-Corporate', 'Finance'] },
+
+  // Payment Gateways & Accounting
+  { pattern: /razorpay\.com/i, tags: ['Payment-Gateway', 'Finance', 'Production'] },
+  { pattern: /stripe\.com/i, tags: ['Payment-Gateway', 'Finance', 'Production'] },
+  { pattern: /cashfree\.com/i, tags: ['Payment-Gateway', 'Finance'] },
+  { pattern: /payu\.in/i, tags: ['Payment-Gateway', 'Finance'] },
+  { pattern: /zoho\.com\/books|books\.zoho/i, tags: ['Finance', 'Invoicing'] },
+  { pattern: /quickbooks/i, tags: ['Finance', 'Invoicing'] },
+
+  // Cloud & Infrastructure & Hosting
+  { pattern: /aws\.amazon\.com|amazonaws\.com/i, tags: ['Cloud / AWS / GCP', 'DevOps', 'Production'] },
+  { pattern: /cloud\.google\.com/i, tags: ['Cloud / AWS / GCP', 'DevOps', 'Production'] },
+  { pattern: /portal\.azure\.com|azure\.com/i, tags: ['Cloud / AWS / GCP', 'DevOps', 'Production'] },
+  { pattern: /github\.com/i, tags: ['CI/CD-Pipeline', 'DevOps'] },
+  { pattern: /gitlab\.com/i, tags: ['CI/CD-Pipeline', 'DevOps'] },
+  { pattern: /bitbucket\.org/i, tags: ['CI/CD-Pipeline', 'DevOps'] },
+  { pattern: /cloudflare\.com/i, tags: ['Domain & DNS', 'DevOps'] },
+  { pattern: /godaddy\.com/i, tags: ['Domain & DNS', 'DevOps'] },
+  { pattern: /namecheap\.com/i, tags: ['Domain & DNS', 'DevOps'] },
+  { pattern: /hostinger\.com/i, tags: ['DevOps', 'Production'] },
+  { pattern: /digitalocean\.com/i, tags: ['DevOps', 'Cloud / AWS / GCP'] },
+  { pattern: /vercel\.com|netlify\.com/i, tags: ['DevOps', 'Production'] },
+  { pattern: /heroku\.com/i, tags: ['DevOps', 'Cloud / AWS / GCP'] },
+  { pattern: /atlassian\.net|jira\.com/i, tags: ['DevOps', 'Internal'] },
+
+  // HRMS & Payroll
+  { pattern: /keka\.com/i, tags: ['HRMS', 'Payroll', 'HR'] },
+  { pattern: /darwinbox\.com/i, tags: ['HRMS', 'Payroll', 'HR'] },
+  { pattern: /zoho\.com\/people|people\.zoho/i, tags: ['HRMS', 'HR'] },
+  { pattern: /greytip\.com|greythr\.com/i, tags: ['HRMS', 'Payroll', 'HR'] },
+  { pattern: /linkedin\.com\/talent|linkedin\.com\/recruiter/i, tags: ['Recruitment / ATS', 'HR'] },
+  { pattern: /naukri\.com/i, tags: ['Recruitment / ATS', 'HR'] },
+
+  // CRM & Marketing
+  { pattern: /hubspot\.com/i, tags: ['CRM', 'Marketing'] },
+  { pattern: /salesforce\.com|force\.com/i, tags: ['CRM', 'Marketing'] },
+  { pattern: /zoho\.com\/crm|crm\.zoho/i, tags: ['CRM', 'Marketing'] },
+  { pattern: /ads\.google\.com/i, tags: ['Ad-Accounts', 'Marketing'] },
+  { pattern: /facebook\.com\/ads|meta\.com/i, tags: ['Ad-Accounts', 'Marketing'] },
+  { pattern: /mailchimp\.com|sendgrid\.com|brevo\.com/i, tags: ['Email-Campaigns', 'Marketing'] },
+  { pattern: /semrush\.com|ahrefs\.com/i, tags: ['SEO / Analytics', 'Marketing'] },
+
+  // Support & Comms
+  { pattern: /zendesk\.com/i, tags: ['Helpdesk', 'Support'] },
+  { pattern: /freshdesk\.com/i, tags: ['Helpdesk', 'Support'] },
+  { pattern: /intercom\.com/i, tags: ['Helpdesk', 'Support'] },
+  { pattern: /slack\.com/i, tags: ['Communication / VoIP', 'Shared'] },
+  { pattern: /zoom\.us/i, tags: ['Communication / VoIP'] },
+];
+
+/**
+ * Extracts a clean domain and hostname from any URL string.
+ */
+export const extractHostname = (url) => {
+  if (!url || typeof url !== 'string') return '';
+  const clean = url.trim();
+  if (!clean) return '';
+  try {
+    const withProto = clean.match(/^https?:\/\//i) ? clean : `https://${clean}`;
+    const parsed = new URL(withProto);
+    return parsed.hostname.toLowerCase();
+  } catch {
+    return clean
+      .replace(/^https?:\/\//i, '')
+      .split('/')[0]
+      .split('?')[0]
+      .split(':')[0]
+      .toLowerCase();
+  }
+};
+
+/**
+ * Resolves smart suggested tags for a given URL based on:
+ * 1. Vault historical memory (if another item with this domain has tags)
+ * 2. Service/domain rules (GST, MCA, HDFC, AWS, etc.)
+ * 3. Environment subdomain heuristics (staging.*, dev.*, prod.*)
+ */
+export const getTagsForUrl = (url, existingVaultItems = []) => {
+  const host = extractHostname(url);
+  if (!host || host.length < 3) return { domain: '', tags: [] };
+
+  const detectedTags = new Set();
+
+  // Tier 1: Check Vault Memory (prioritize what the organization already uses for this domain)
+  if (Array.isArray(existingVaultItems) && existingVaultItems.length > 0) {
+    existingVaultItems.forEach((item) => {
+      const itemUrl = item.url || item.fields?.url || item.fields?.baseUrl;
+      if (!itemUrl) return;
+      const itemHost = extractHostname(itemUrl);
+      if (itemHost && (itemHost === host || host.endsWith(`.${itemHost}`) || itemHost.endsWith(`.${host}`))) {
+        (item.tags || []).forEach((t) => {
+          const name = typeof t === 'string' ? t : t?.tag?.name;
+          if (name && name.trim()) detectedTags.add(name.trim());
+        });
+      }
+    });
+  }
+
+  // Tier 2: Check Domain Rules
+  for (const rule of DOMAIN_TAG_RULES) {
+    if (rule.pattern.test(host)) {
+      rule.tags.forEach((tag) => detectedTags.add(tag));
+    }
+  }
+
+  // Tier 3: Subdomain Environment Detection
+  if (/^(staging|qa|test|stage)\./i.test(host)) {
+    detectedTags.add('Staging / QA');
+  } else if (/^(dev|sandbox|local)\./i.test(host)) {
+    detectedTags.add('Development');
+  } else if (/^(prod|production)\./i.test(host)) {
+    detectedTags.add('Production');
+  } else if (/^(admin|portal|client)\./i.test(host)) {
+    detectedTags.add('Client-Portal');
+  }
+
+  return {
+    domain: host,
+    tags: Array.from(detectedTags),
+  };
+};
