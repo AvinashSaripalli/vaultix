@@ -12,26 +12,9 @@ import {
   getTypePlaceholder,
 } from '../../utils/itemTypes';
 
-export const DEFAULT_SUGGESTED_TAGS = [
-  'Production',
-  'Testing',
-  'Development',
-  'Shared',
-  'Private',
-  'Critical',
-  'Client',
-  'Internal',
-  'Cloud',
-  'CRM',
-  'Hosting',
-  'Email',
-  'Database',
-  'Security',
-  'Marketing',
-  'Finance',
-  'Support',
-  'Temporary',
-];
+import { ALL_DEPARTMENT_TAGS } from '../../utils/departmentTags';
+
+export const DEFAULT_SUGGESTED_TAGS = ALL_DEPARTMENT_TAGS;
 
 const DEFAULT_INPUT_CLASS =
   'w-full border border-slate-300 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600';
@@ -403,6 +386,7 @@ function ItemFormFields({
           tags={formData.tags || []}
           setTags={(nextTags) => onChange('tags', nextTags)}
           onChange={(nextTags) => onChange('tags', nextTags)}
+          itemType={currentType}
           suggestions={suggestedTags}
         />
       </div>
