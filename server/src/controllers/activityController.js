@@ -38,7 +38,13 @@ const getAllActivityLogs = async (req, res) => {
     });
 
     const filtered = isAdmin
-      ? logs.filter((log) => !(log.metadata?.personalVault && log.userId !== req.user.id))
+      ? logs.filter(
+          (log) =>
+            !(
+              (log.metadata?.personalVault || log.metadata?.vaultType === 'PERSONAL') &&
+              log.userId !== req.user.id
+            )
+        )
       : logs;
 
     res.json(filtered);

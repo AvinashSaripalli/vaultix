@@ -18,6 +18,7 @@ import ManagePasswordSharesModal from '../../components/myVault/ManagePasswordSh
 import ViewMyVaultPasswordModal from '../../components/myVault/ViewMyVaultPasswordModal';
 import VerifyMasterPasswordModal from '../../components/security/VerifyMasterPasswordModal';
 import ConfirmModal from '../../components/common/ConfirmModal';
+import FolderHistoryPanel from '../../components/folder/FolderHistoryPanel';
 import { showToast } from '../../utils/toast';
 
 import {
@@ -47,6 +48,7 @@ function MyVaultPage() {
   const dispatch = useDispatch();
 
   const {
+    vault,
     folders,
     passwords,
     selectedFolderId,
@@ -56,6 +58,8 @@ function MyVaultPage() {
     folderTrash,
     folderTrashLoading,
   } = useSelector((state) => state.myVault);
+
+  const [historyFolder, setHistoryFolder] = useState(null);
 
   const [trashTab, setTrashTab] = useState('passwords'); // 'passwords' | 'folders'
   const [trashSearch, setTrashSearch] = useState('');
@@ -358,6 +362,7 @@ function MyVaultPage() {
             }}
             onEditFolder={handleEditFolder}
             onDeleteFolder={handleDeleteFolder}
+            onViewHistory={(folder) => setHistoryFolder(folder)}
             trashOpen={trashOpen}
             trashCount={totalTrashCount}
             onToggleTrash={handleToggleTrash}
@@ -833,6 +838,12 @@ function MyVaultPage() {
               setShareModalOpen(true);
             }
           }}
+        />
+        <FolderHistoryPanel
+          open={Boolean(historyFolder)}
+          onClose={() => setHistoryFolder(null)}
+          vaultId={vault?.id}
+          folder={historyFolder}
         />
       </div>
     </AppLayout>

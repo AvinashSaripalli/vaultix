@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Edit2, Folder, FolderOpen, Layers, MoreHorizontal, Trash2 } from 'lucide-react';
+import { Edit2, Folder, FolderOpen, Layers, MoreHorizontal, Trash2, History } from 'lucide-react';
 
 function MyVaultSidebar({
   folders,
@@ -7,6 +7,7 @@ function MyVaultSidebar({
   onSelectFolder,
   onEditFolder,
   onDeleteFolder,
+  onViewHistory,
   trashOpen = false,
   trashCount = 0,
   onToggleTrash,
@@ -112,6 +113,19 @@ function MyVaultSidebar({
                   >
                     <Edit2 size={13} />
                     Rename
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenMenuId(null);
+                      onViewHistory?.(folder);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/60"
+                  >
+                    <History size={13} />
+                    History
                   </button>
 
                   <button

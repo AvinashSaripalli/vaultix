@@ -865,6 +865,17 @@ const updateMyVaultPassword = async (req, res) => {
         },
       });
 
+      const isFolderChanged = password.folderId !== folderId;
+      let fromFolderName = null;
+      let toFolderName = updated.folder?.name || null;
+      if (isFolderChanged && password.folderId) {
+        const fromF = await tx.folder.findUnique({
+          where: { id: password.folderId },
+          select: { name: true },
+        });
+        fromFolderName = fromF?.name || null;
+      }
+
       await tx.activityLog.create({
         data: {
           id: await generateId('activityLog'),
@@ -877,6 +888,16 @@ const updateMyVaultPassword = async (req, res) => {
             vaultId: vault.id,
             folderId,
             personalVault: true,
+            vaultType: 'PERSONAL',
+            ...(isFolderChanged
+              ? {
+                  moved: true,
+                  fromFolderId: password.folderId,
+                  fromFolderName,
+                  toFolderId: folderId,
+                  toFolderName,
+                }
+              : {}),
           },
         },
       });

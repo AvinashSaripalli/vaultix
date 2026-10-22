@@ -50,6 +50,12 @@ const TYPE_FILTERS = [
   { label: 'Approval', value: 'APPROVAL' },
 ];
 
+const VAULT_SCOPE_FILTERS = [
+  { label: 'All Vaults', value: 'ALL' },
+  { label: 'Personal Vault', value: 'PERSONAL' },
+  { label: 'Company Vaults', value: 'COMPANY' },
+];
+
 const LOGIN_STATUS_FILTERS = [
   { label: 'All Status', value: 'ALL' },
   { label: 'Success', value: 'SUCCESS' },
@@ -348,6 +354,7 @@ function ActivityLogPage() {
   const [search, setSearch] = useState('');
   const [actionFilter, setActionFilter] = useState('ALL');
   const [typeFilter, setTypeFilter] = useState('ALL');
+  const [vaultScopeFilter, setVaultScopeFilter] = useState('ALL');
   const [deptFilter, setDeptFilter] = useState('ALL');
   const [departments, setDepartments] = useState([]);
   const [sortConfig, setSortConfig] = useState(null);
@@ -495,7 +502,15 @@ function ActivityLogPage() {
             log.targetType?.toUpperCase()?.includes(typeFilter);
         }
       }
-      return matchesSearch && matchesAction && matchesType;
+
+      let matchesVaultScope = true;
+      if (vaultScopeFilter === 'PERSONAL') {
+        matchesVaultScope = Boolean(log.metadata?.personalVault || log.metadata?.vaultType === 'PERSONAL');
+      } else if (vaultScopeFilter === 'COMPANY') {
+        matchesVaultScope = !log.metadata?.personalVault && log.metadata?.vaultType !== 'PERSONAL';
+      }
+
+      return matchesSearch && matchesAction && matchesType && matchesVaultScope;
     });
     if (!sortConfig) return list;
     const { key, dir } = sortConfig;
@@ -521,7 +536,7 @@ function ActivityLogPage() {
       }
       return String(va).localeCompare(String(vb)) * factor;
     });
-  }, [activityLogs, search, actionFilter, typeFilter, sortConfig]);
+  }, [activityLogs, search, actionFilter, typeFilter, vaultScopeFilter, sortConfig]);
 
   const totalPages = Math.ceil(filteredLogs.length / ACTIVITY_PAGE_SIZE) || 1;
 
@@ -649,6 +664,7 @@ function ActivityLogPage() {
     setSearch('');
     setActionFilter('ALL');
     setTypeFilter('ALL');
+    setVaultScopeFilter('ALL');
     setDeptFilter('ALL');
     setLoginStatusFilter('ALL');
     setUnreadTypeFilter('ALL');
@@ -660,6 +676,7 @@ function ActivityLogPage() {
     setSearch('');
     setActionFilter('ALL');
     setTypeFilter('ALL');
+    setVaultScopeFilter('ALL');
     setDeptFilter('ALL');
     setLoginStatusFilter('ALL');
     setUnreadTypeFilter('ALL');
@@ -795,6 +812,21 @@ function ActivityLogPage() {
                       className="h-10 sm:h-11 rounded-xl border border-slate-300 bg-white px-3.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-indigo-500/30"
                     >
                       {TYPE_FILTERS.map((item) => (
+                        <option key={item.value} value={item.value}>
+                          {item.label}
+                        </option>
+                      ))}
+                    </select>
+
+                    <select
+                      value={vaultScopeFilter}
+                      onChange={(e) => {
+                        setVaultScopeFilter(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="h-10 sm:h-11 rounded-xl border border-slate-300 bg-white px-3.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-indigo-500/30 font-medium"
+                    >
+                      {VAULT_SCOPE_FILTERS.map((item) => (
                         <option key={item.value} value={item.value}>
                           {item.label}
                         </option>

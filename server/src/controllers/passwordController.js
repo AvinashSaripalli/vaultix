@@ -1459,6 +1459,7 @@ const logCopyPassword = async (req, res) => {
     }
 
     const vaultType = await getVaultType(password.vaultId);
+    const isPersonal = vaultType === 'PERSONAL';
 
     const isAutofill = req.body?.mode === 'autofill';
     const action = isAutofill ? 'AUTOFILL_PASSWORD' : 'COPY_PASSWORD';
@@ -1479,6 +1480,7 @@ const logCopyPassword = async (req, res) => {
           folderId: password.folderId,
           vaultId: password.vaultId,
           vaultType,
+          personalVault: isPersonal,
           mode: isAutofill ? 'autofill' : 'copy',
           clientSource,
           ...(domain ? { domain } : {}),
@@ -1530,6 +1532,7 @@ const logViewPassword = async (req, res) => {
     });
 
     const vaultType = await getVaultType(password.vaultId);
+    const isPersonal = vaultType === 'PERSONAL';
     const clientSource = req.body?.clientSource || 'WEB';
 
     await prisma.activityLog.create({
@@ -1545,6 +1548,7 @@ const logViewPassword = async (req, res) => {
           folderId: password.folderId,
           vaultId: password.vaultId,
           vaultType,
+          personalVault: isPersonal,
           clientSource,
         },
       },
