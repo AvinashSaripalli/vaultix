@@ -12,6 +12,7 @@ let waitQueue = [];
 
 const clearAuth = () => {
   localStorage.removeItem('token');
+  localStorage.removeItem('refreshToken');
   localStorage.removeItem('user');
   clearSecureSession();
   try {
@@ -39,13 +40,13 @@ const flushQueue = (token, refreshStatus) => {
   waitQueue = [];
 };
 
-// Attempt to obtain a fresh access token using the refresh cookie set by the
-// server on login/refresh. The token never touches localStorage or JS.
+// Attempt to obtain a fresh access token using the refresh cookie or backup token.
 const refreshAccessToken = async () => {
   try {
+    const fallbackRefreshToken = localStorage.getItem('refreshToken');
     const res = await api.post(
       '/auth/refresh',
-      {},
+      fallbackRefreshToken ? { refreshToken: fallbackRefreshToken } : {},
       {
         headers: { 'Content-Type': 'application/json' },
         skipAuthRefresh: true,
@@ -55,9 +56,22 @@ const refreshAccessToken = async () => {
     if (newToken) {
       localStorage.setItem('token', newToken);
     }
+    if (res.data?.refreshToken) {
+      localStorage.setItem('refreshToken', res.data.refreshToken);
+    }
     return { token: newToken || null, status: res.status };
   } catch (err) {
     return { token: null, status: err.response?.status || 0 };
+  }
+};
+
+const applyAuthHeader = (config, token) => {
+  config._retry = true;
+  if (config.headers?.set) {
+    config.headers.set('Authorization', `Bearer ${token}`);
+  } else if (config.headers) {
+    config.headers.Authorization = `Bearer ${token}`;
+    config.headers.authorization = `Bearer ${token}`;
   }
 };
 
@@ -65,7 +79,11 @@ api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
 
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+    if (config.headers?.set) {
+      config.headers.set('Authorization', `Bearer ${token}`);
+    } else if (config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
 
   return config;
@@ -82,13 +100,12 @@ api.interceptors.response.use(
     }
 
     // Only auto-refresh on 401 from an authenticated request we haven't already
-    // retried, and never on the refresh request itself. Whether a refresh is
-    // possible is determined by the server's httpOnly cookie.
+    // retried, and never on the refresh request itself.
     const shouldRefresh =
       response.status === 401 &&
       !config?.skipAuthRefresh &&
       !config?._retry &&
-      !!localStorage.getItem('token');
+      (!!localStorage.getItem('token') || !!localStorage.getItem('refreshToken'));
 
     if (!shouldRefresh) {
       if (response.status === 401 && !config?.skipAuthRefresh && localStorage.getItem('token')) {
@@ -105,8 +122,7 @@ api.interceptors.response.use(
       })
         .then((newToken) => {
           if (newToken) {
-            config._retry = true;
-            config.headers.Authorization = `Bearer ${newToken}`;
+            applyAuthHeader(config, newToken);
             return api(config);
           }
           return Promise.reject(error);
@@ -125,8 +141,7 @@ api.interceptors.response.use(
 
     if (newToken) {
       flushQueue(newToken, 200);
-      config._retry = true;
-      config.headers.Authorization = `Bearer ${newToken}`;
+      applyAuthHeader(config, newToken);
       return api(config);
     }
 

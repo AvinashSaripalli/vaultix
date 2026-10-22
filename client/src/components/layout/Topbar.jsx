@@ -87,8 +87,10 @@ function Topbar() {
     setLoading(true);
     try {
       const res = await api.get('/notifications/recent-activity');
+      const count = res.data?.unreadCount || 0;
       setItems(res.data?.items || []);
-      setUnreadCount(res.data?.unreadCount || 0);
+      setUnreadCount(count);
+      window.dispatchEvent(new CustomEvent('vaultix:unread-count', { detail: count }));
     } catch (err) {
       if (err?.response?.status !== 401) {
         console.error('fetchRecentActivity error:', err);

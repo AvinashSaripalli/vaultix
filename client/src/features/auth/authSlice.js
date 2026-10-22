@@ -673,6 +673,7 @@ const authSlice = createSlice({
       state.userLoaded = true;
 
       localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
       localStorage.removeItem('user');
       purgeSecureSession();
     },
@@ -699,6 +700,9 @@ const authSlice = createSlice({
         state.sessionAdminMasterPassword = null;
         state.userLoaded = true;
         localStorage.setItem('token', action.payload.token);
+        if (action.payload.refreshToken) {
+          localStorage.setItem('refreshToken', action.payload.refreshToken);
+        }
         saveUser(action.payload.user);
         purgeSecureSession();
       })
@@ -728,6 +732,9 @@ const authSlice = createSlice({
         state.sessionAdminMasterPassword = null;
         state.userLoaded = true;
         localStorage.setItem('token', action.payload.token);
+        if (action.payload.refreshToken) {
+          localStorage.setItem('refreshToken', action.payload.refreshToken);
+        }
         saveUser(action.payload.user);
         purgeSecureSession();
       })
@@ -747,6 +754,9 @@ const authSlice = createSlice({
         state.sessionAdminMasterPassword = null;
         state.userLoaded = true;
         localStorage.setItem('token', action.payload.token);
+        if (action.payload.refreshToken) {
+          localStorage.setItem('refreshToken', action.payload.refreshToken);
+        }
         saveUser(action.payload.user);
         purgeSecureSession();
       })
@@ -768,6 +778,9 @@ const authSlice = createSlice({
         state.isAuthenticated = true;
         state.userLoaded = true;
         localStorage.setItem('token', action.payload.token);
+        if (action.payload.refreshToken) {
+          localStorage.setItem('refreshToken', action.payload.refreshToken);
+        }
         saveUser(action.payload.user);
       })
 
@@ -802,6 +815,7 @@ const authSlice = createSlice({
           state.sessionAdminMasterPassword = null;
 
           localStorage.removeItem('token');
+          localStorage.removeItem('refreshToken');
           localStorage.removeItem('user');
           purgeSecureSession();
         }

@@ -59,23 +59,29 @@ function Sidebar() {
   }, [dispatch, currentVaultId]);
 
   useEffect(() => {
-    const fetchUnread = async () => {
+    const handleCount = (e) => {
+      if (typeof e.detail === 'number') {
+        setUnreadCount(e.detail);
+      }
+    };
+    window.addEventListener('vaultix:unread-count', handleCount);
+
+    const initUnread = async () => {
       if (!localStorage.getItem('token')) return;
       try {
         const res = await api.get('/notifications/recent-activity');
-        setUnreadCount(res.data.unreadCount || 0);
+        setUnreadCount(res.data?.unreadCount || 0);
       } catch {
         setUnreadCount(0);
       }
     };
-    fetchUnread();
-    const interval = setInterval(fetchUnread, 30000);
+    initUnread();
 
-    const handleUpdate = () => fetchUnread();
+    const handleUpdate = () => initUnread();
     window.addEventListener('vaultix:notifications-updated', handleUpdate);
 
     return () => {
-      clearInterval(interval);
+      window.removeEventListener('vaultix:unread-count', handleCount);
       window.removeEventListener('vaultix:notifications-updated', handleUpdate);
     };
   }, []);
@@ -83,6 +89,7 @@ function Sidebar() {
   useEffect(() => {
     if (!isAdmin(user) || !localStorage.getItem('token')) return;
     const fetchPendingApprovals = async () => {
+      if (!localStorage.getItem('token')) return;
       try {
         const res = await api.get('/admin-approvals/pending-count');
         setPendingApprovalsCount(res.data?.count || 0);

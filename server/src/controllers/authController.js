@@ -154,7 +154,7 @@ const SESSION_HINT_COOKIE_NAME = 'vaultix_session';
 const cookieBase = () => ({
   httpOnly: false,
   secure: process.env.NODE_ENV === 'production',
-  sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+  sameSite: 'lax',
   path: '/',
   maxAge: REFRESH_TOKEN_TTL_SECONDS * 1000,
 });
@@ -170,10 +170,10 @@ const clearRefreshTokenCookie = (res) => {
   res.clearCookie(SESSION_HINT_COOKIE_NAME, opts);
 };
 
-// Accept the refresh token from the httpOnly cookie (web client) or the
-// request body (browser extension / API clients).
+// Accept the refresh token from the httpOnly cookie (web client), the
+// request body (browser extension / API clients), or custom header.
 const getRefreshTokenFromRequest = (req) =>
-  req.cookies?.[REFRESH_COOKIE_NAME] || req.body?.refreshToken || null;
+  req.cookies?.[REFRESH_COOKIE_NAME] || req.body?.refreshToken || req.headers?.['x-refresh-token'] || null;
 
 const refresh = async (req, res) => {
   try {
