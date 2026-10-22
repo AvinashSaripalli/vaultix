@@ -112,6 +112,9 @@ async function init() {
   }
   $('lnkRefresh').addEventListener('click', () => loadCreds(true));
   $('btnLock').addEventListener('click', lockVault);
+  if ($('btnLogout')) $('btnLogout').addEventListener('click', logout);
+  if ($('lnkLogoutUnlock')) $('lnkLogoutUnlock').addEventListener('click', logout);
+  if ($('lnkLogoutFooter')) $('lnkLogoutFooter').addEventListener('click', logout);
   $('btnLogin').addEventListener('click', onLogin);
   $('btnUnlock').addEventListener('click', onUnlock);
   $('search').addEventListener('input', () => renderList());
@@ -149,9 +152,13 @@ function show(view) {
   for (const v of ['viewLogin', 'viewUnlock', 'viewList']) {
     $(v).style.display = v === view ? 'block' : 'none';
   }
-  const authed = view === 'viewList';
-  $('btnLock').style.display = authed ? 'inline' : 'none';
-  $('footerBar').style.display = authed ? 'flex' : 'none';
+  const isUnlocked = view === 'viewList';
+  const isLocked = view === 'viewUnlock';
+  $('btnLock').style.display = isUnlocked ? 'inline-flex' : 'none';
+  $('footerBar').style.display = isUnlocked ? 'flex' : 'none';
+  if ($('btnLogout')) {
+    $('btnLogout').style.display = (isUnlocked || isLocked) ? 'inline-flex' : 'none';
+  }
 }
 
 // Rotates the access token once via the long-lived refresh token. Keeps the
@@ -214,6 +221,7 @@ async function onLogin() {
     token = data.token;
     refreshToken = data.refreshToken || '';
     user = data.user;
+    if ($('unlockUser')) $('unlockUser').textContent = user ? user.email : '';
     await updateLockTimeout();
     await chrome.storage.local.set({ token, refreshToken, user });
 
@@ -282,7 +290,35 @@ async function lockVault() {
   await chrome.storage.session.remove(['master', 'cache', 'privKey']);
   creds = [];
   $('unlockMaster').value = '';
+  $('unlockUser').textContent = user ? user.email : '';
   show('viewUnlock');
+}
+
+async function logout() {
+  clearInterval(lockTimerId);
+  lockAt = 0;
+  const lastEmail = user?.email || $('unlockUser')?.textContent || '';
+
+  token = '';
+  refreshToken = '';
+  user = null;
+  creds = [];
+
+  try {
+    await chrome.storage.session.remove(['master', 'cache', 'privKey', 'pendingLogin', 'vaultServer']);
+  } catch {
+    /* session storage fallback */
+  }
+  await chrome.storage.local.remove(['token', 'refreshToken', 'user']);
+
+  if ($('loginPassword')) $('loginPassword').value = '';
+  if ($('loginMaster')) $('loginMaster').value = '';
+  if ($('unlockMaster')) $('unlockMaster').value = '';
+  if ($('unlockError')) $('unlockError').textContent = '';
+  if ($('loginError')) $('loginError').textContent = '';
+  if ($('loginEmail') && lastEmail) $('loginEmail').value = lastEmail;
+
+  show('viewLogin');
 }
 
 // Legacy envelopes carry no KDF markers, so the salt/iterations used to create

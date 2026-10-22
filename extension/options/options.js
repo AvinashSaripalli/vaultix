@@ -51,3 +51,49 @@ testBtn.addEventListener('click', async () => {
 
 document.getElementById('version').textContent =
   chrome.runtime.getManifest().version;
+
+const accountCard = document.getElementById('accountCard');
+const accountUser = document.getElementById('accountUser');
+const accountDesc = document.getElementById('accountDesc');
+const btnLogoutOptions = document.getElementById('btnLogoutOptions');
+const accountStatus = document.getElementById('accountStatus');
+
+function updateAccountUI() {
+  chrome.storage.local.get(['token', 'user'], ({ token, user }) => {
+    if (token && user) {
+      if (accountCard) accountCard.style.display = 'block';
+      if (accountUser) accountUser.textContent = user.email || user.fullName || 'Signed in';
+      if (accountDesc) accountDesc.innerHTML = `Signed in as <strong id="accountUser">${user.email || user.fullName || 'User'}</strong>`;
+      if (btnLogoutOptions) btnLogoutOptions.style.display = 'inline-block';
+    } else {
+      if (accountDesc) accountDesc.textContent = 'Not currently signed in to Vaultix.';
+      if (btnLogoutOptions) btnLogoutOptions.style.display = 'none';
+    }
+  });
+}
+
+updateAccountUI();
+
+if (btnLogoutOptions) {
+  btnLogoutOptions.addEventListener('click', async () => {
+    btnLogoutOptions.disabled = true;
+    accountStatus.textContent = 'Logging out…';
+    try {
+      try {
+        await chrome.storage.session.remove(['master', 'cache', 'privKey', 'pendingLogin', 'vaultServer']);
+      } catch {
+        /* ignore session errors */
+      }
+      await chrome.storage.local.remove(['token', 'refreshToken', 'user']);
+      accountStatus.textContent = 'Logged out successfully';
+      updateAccountUI();
+    } catch {
+      accountStatus.textContent = 'Error logging out';
+    } finally {
+      btnLogoutOptions.disabled = false;
+      setTimeout(() => {
+        if (accountStatus) accountStatus.textContent = '';
+      }, 3000);
+    }
+  });
+}
