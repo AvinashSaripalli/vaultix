@@ -45,11 +45,13 @@ function NotificationsPage() {
 
   const markAsRead = async (id) => {
     await api.patch(`/notifications/${id}/read`);
+    window.dispatchEvent(new CustomEvent('vaultix:notifications-updated'));
     fetchNotifications();
   };
 
   const markAllRead = async () => {
     await api.patch('/notifications/mark-all-read');
+    window.dispatchEvent(new CustomEvent('vaultix:notifications-updated'));
     fetchNotifications();
   };
 

@@ -1,5 +1,6 @@
 const prisma = require('../config/prisma');
 const generateId = require('../utils/generateId');
+const createNotification = require('../utils/createNotification');
 const {
   getVaultAccess,
   getUserDepartmentIds,
@@ -530,6 +531,14 @@ const shareVault = async (req, res) => {
       },
     });
 
+    await createNotification({
+      userId: user.id,
+      title: 'Vault Shared',
+      message: `${req.user.fullName || 'An administrator'} shared the vault "${vault.name}" with you (${accessLevel})`,
+      type: 'SHARE_VAULT',
+      metadata: { vaultId, accessLevel },
+    });
+
     res.status(201).json(permission);
   } catch (error) {
     console.error('Share vault error:', error);
@@ -575,6 +584,14 @@ const unshareVault = async (req, res) => {
         targetId: vaultId,
         metadata: { vaultId, removedUserId: userId },
       },
+    });
+
+    await createNotification({
+      userId,
+      title: 'Vault Access Revoked',
+      message: `Your access to the vault "${vault.name}" was revoked`,
+      type: 'SHARE_VAULT',
+      metadata: { vaultId },
     });
 
     res.json({ message: 'Vault access removed and wrapped keys revoked' });

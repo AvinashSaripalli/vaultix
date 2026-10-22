@@ -85,14 +85,12 @@ const getRecentActivity = async (req, res) => {
   try {
     const userId = req.user.id;
     const isAdmin = ['SUPER_ADMIN', 'ADMIN'].includes(req.user.role);
-    const { since } = req.query;
-    const sinceDate = since ? new Date(since) : null;
 
     const activityWhere = isAdmin ? {} : { userId };
 
     const loginWhere = isAdmin ? {} : { userId };
 
-    let [activityLogs, loginActivities, notifications] = await Promise.all([
+    let [activityLogs, loginActivities, notifications, unreadNotifCount] = await Promise.all([
       prisma.activityLog.findMany({
         where: activityWhere,
         orderBy: { createdAt: 'desc' },
@@ -114,6 +112,9 @@ const getRecentActivity = async (req, res) => {
         orderBy: { createdAt: 'desc' },
         take: 50,
       }),
+      prisma.notification.count({
+        where: { userId, isRead: false },
+      }),
     ]);
 
     if (isAdmin) {
@@ -121,29 +122,21 @@ const getRecentActivity = async (req, res) => {
     }
 
     const items = [
-      ...activityLogs.map((log) => {
-        const isRead = sinceDate ? new Date(log.createdAt) <= sinceDate : true;
-
-        return {
-          id: `activity-${log.id}`,
-          sourceId: log.id,
-          type: 'ACTIVITY',
-          title: log.action === 'COPY_PASSWORD' && log.metadata?.mode === 'autofill'
-            ? 'Password autofilled'
-            : formatActivityTitle(log.action),
-          message: log.metadata?.name
-            ? log.metadata.name
-            : log.targetId || '',
-          isRead,
-          createdAt: log.createdAt,
-          meta: { action: log.action, ...(log.metadata || {}) },
-        };
-      }),
+      ...activityLogs.map((log) => ({
+        id: `activity-${log.id}`,
+        sourceId: log.id,
+        type: 'ACTIVITY',
+        title: log.action === 'COPY_PASSWORD' && log.metadata?.mode === 'autofill'
+          ? 'Password autofilled'
+          : formatActivityTitle(log.action),
+        message: log.metadata?.name
+          ? log.metadata.name
+          : log.targetId || '',
+        isRead: true,
+        createdAt: log.createdAt,
+        meta: { action: log.action, ...(log.metadata || {}) },
+      })),
       ...loginActivities.map((item) => {
-        const isRead = sinceDate
-          ? new Date(item.createdAt) <= sinceDate
-          : true;
-
         const userName = item.user?.fullName || item.user?.email || 'Unknown';
 
         return {
@@ -155,7 +148,7 @@ const getRecentActivity = async (req, res) => {
               ? `Login: ${userName}`
               : `Failed login: ${userName}`,
           message: `IP: ${item.ipAddress || 'Unknown'}${item.userAgent ? ' · ' + item.userAgent.split(' ')[0] : ''}`,
-          isRead,
+          isRead: true,
           createdAt: item.createdAt,
           meta: { status: item.status, ipAddress: item.ipAddress, userAgent: item.userAgent, user: userName },
         };
@@ -176,21 +169,9 @@ const getRecentActivity = async (req, res) => {
 
     const recent = items.slice(0, 30);
 
-    const unreadNotifCount = await prisma.notification.count({
-      where: { userId, isRead: false },
-    });
-
-    const unreadActivityCount = sinceDate
-      ? activityLogs.filter((l) => new Date(l.createdAt) > sinceDate).length
-      : 0;
-
-    const loginCount = sinceDate
-      ? loginActivities.filter((l) => new Date(l.createdAt) > sinceDate).length
-      : 0;
-
     const unreadCount = unreadNotifCount;
 
-    res.json({ items: recent, unreadCount, unreadNotifCount, unreadActivityCount, loginCount });
+    res.json({ items: recent, unreadCount, unreadNotifCount });
   } catch (error) {
     console.error('Recent activity error:', error);
     res.status(500).json({ message: 'Server error' });

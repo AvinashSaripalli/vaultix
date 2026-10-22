@@ -1,4 +1,5 @@
 const prisma = require('../config/prisma');
+const createNotification = require('../utils/createNotification');
 const {
   isAdminUser,
   getFolderAccess,
@@ -170,6 +171,14 @@ const shareFolder = async (req, res) => {
           accessLevel,
         },
       },
+    });
+
+    await createNotification({
+      userId: user.id,
+      title: 'Folder Shared',
+      message: `${req.user.fullName || 'An administrator'} shared the folder "${folder.name}" with you (${accessLevel})`,
+      type: 'SHARE_FOLDER',
+      metadata: { folderId, accessLevel },
     });
 
     res.json(permission);
@@ -621,6 +630,14 @@ const deleteFolderPermission = async (req, res) => {
           revokedAccessLevel: existing.accessLevel,
         },
       },
+    });
+
+    await createNotification({
+      userId: existing.userId,
+      title: 'Folder Access Revoked',
+      message: `Your access to the folder "${existing.folder?.name || 'folder'}" was revoked`,
+      type: 'SHARE_FOLDER',
+      metadata: { folderId: existing.folderId },
     });
 
     res.json({ message: 'User removed from folder' });

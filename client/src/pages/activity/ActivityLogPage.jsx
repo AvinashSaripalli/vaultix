@@ -413,12 +413,7 @@ function ActivityLogPage() {
   const fetchAllActivity = useCallback(async () => {
     setNotifLoading(true);
     try {
-      const params = {};
-      const lastViewed = localStorage.getItem('lastViewedAt');
-      if (lastViewed) {
-        params.since = lastViewed;
-      }
-      const res = await api.get('/notifications/recent-activity', { params });
+      const res = await api.get('/notifications/recent-activity');
       setAllActivityItems(res.data?.items || []);
       setTotalUnreadCount(res.data?.unreadCount || 0);
     } catch (err) {
@@ -431,6 +426,10 @@ function ActivityLogPage() {
   }, []);
 
   useEffect(() => {
+    fetchAllActivity();
+  }, [fetchAllActivity]);
+
+  useEffect(() => {
     if (activeTab === 'login') fetchLoginActivities();
   }, [activeTab]);
 
@@ -440,7 +439,13 @@ function ActivityLogPage() {
       const interval = setInterval(fetchAllActivity, 10000);
       return () => clearInterval(interval);
     }
-  }, [activeTab]);
+  }, [activeTab, fetchAllActivity]);
+
+  useEffect(() => {
+    const onUpdate = () => fetchAllActivity();
+    window.addEventListener('vaultix:notifications-updated', onUpdate);
+    return () => window.removeEventListener('vaultix:notifications-updated', onUpdate);
+  }, [fetchAllActivity]);
 
   const markAsRead = async (item) => {
     if (item.type !== 'ACTIVITY' && item.type !== 'LOGIN') {
@@ -450,7 +455,7 @@ function ActivityLogPage() {
         console.error('markAsRead error:', err);
       }
     }
-    localStorage.setItem('lastViewedAt', new Date().toISOString());
+    window.dispatchEvent(new CustomEvent('vaultix:notifications-updated'));
     fetchAllActivity();
   };
 
@@ -460,7 +465,7 @@ function ActivityLogPage() {
     } catch (err) {
       console.error('markAllRead error:', err);
     }
-    localStorage.setItem('lastViewedAt', new Date().toISOString());
+    window.dispatchEvent(new CustomEvent('vaultix:notifications-updated'));
     fetchAllActivity();
   };
 
@@ -653,11 +658,7 @@ function ActivityLogPage() {
   const unreadTotalPages =
     Math.ceil(filteredUnreadItems.length / PAGE_SIZE) || 1;
 
-  const unreadBadgeCount = useMemo(() => {
-    return allActivityItems.filter(
-      (i) => !i.isRead
-    ).length;
-  }, [allActivityItems]);
+  const unreadBadgeCount = totalUnreadCount;
 
   // --- Handlers ---
   const resetFilters = () => {
@@ -1313,7 +1314,7 @@ function ActivityLogPage() {
                     {totalUnreadCount > 99 ? '99+' : totalUnreadCount} unread
                   </span>
                 )}
-                {unreadItems.length > 0 && (
+                {totalUnreadCount > 0 && (
                   <button
                     onClick={markAllRead}
                     className="text-xs sm:text-sm font-semibold text-indigo-600 hover:text-indigo-700 transition dark:text-indigo-400"

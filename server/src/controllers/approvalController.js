@@ -1,5 +1,6 @@
 const prisma = require('../config/prisma');
 const generateId = require('../utils/generateId');
+const createNotification = require('../utils/createNotification');
 const { getEffectiveOrganizationPolicy } = require('../utils/organizationPolicy');
 
 const isSuperAdminRole = (role) => role === 'SUPER_ADMIN';
@@ -362,6 +363,16 @@ const approveRequest = async (req, res) => {
       },
     });
 
+    if (request.requesterId && request.requesterId !== req.user.id) {
+      await createNotification({
+        userId: request.requesterId,
+        title: 'Request Approved',
+        message: `Your request "${request.title}" has been approved`,
+        type: 'SECURITY',
+        metadata: { requestId: id, actionType: request.actionType },
+      });
+    }
+
     res.json({
       message: 'Request approved and executed successfully',
       request: updated,
@@ -437,6 +448,16 @@ const rejectRequest = async (req, res) => {
         },
       },
     });
+
+    if (request.requesterId && request.requesterId !== req.user.id) {
+      await createNotification({
+        userId: request.requesterId,
+        title: 'Request Rejected',
+        message: `Your request "${request.title}" was rejected: ${note || 'Rejected by administrator'}`,
+        type: 'SECURITY',
+        metadata: { requestId: id, actionType: request.actionType },
+      });
+    }
 
     res.json({
       message: 'Approval request rejected',

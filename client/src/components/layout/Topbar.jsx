@@ -86,12 +86,7 @@ function Topbar() {
     if (!localStorage.getItem('token')) return;
     setLoading(true);
     try {
-      const params = {};
-      const lastViewed = localStorage.getItem('lastViewedAt');
-      if (lastViewed) {
-        params.since = lastViewed;
-      }
-      const res = await api.get('/notifications/recent-activity', { params });
+      const res = await api.get('/notifications/recent-activity');
       setItems(res.data?.items || []);
       setUnreadCount(res.data?.unreadCount || 0);
     } catch (err) {
@@ -109,6 +104,14 @@ function Topbar() {
     fetchRecentActivity();
     const interval = setInterval(fetchRecentActivity, 30000);
     return () => clearInterval(interval);
+  }, [fetchRecentActivity]);
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      fetchRecentActivity();
+    };
+    window.addEventListener('vaultix:notifications-updated', handleUpdate);
+    return () => window.removeEventListener('vaultix:notifications-updated', handleUpdate);
   }, [fetchRecentActivity]);
 
   useEffect(() => {
@@ -132,7 +135,7 @@ function Topbar() {
         console.error('markAsRead error:', err);
       }
     }
-    localStorage.setItem('lastViewedAt', new Date().toISOString());
+    window.dispatchEvent(new CustomEvent('vaultix:notifications-updated'));
     fetchRecentActivity();
   };
 
@@ -142,7 +145,7 @@ function Topbar() {
     } catch (err) {
       console.error('markAllRead error:', err);
     }
-    localStorage.setItem('lastViewedAt', new Date().toISOString());
+    window.dispatchEvent(new CustomEvent('vaultix:notifications-updated'));
     fetchRecentActivity();
   };
 

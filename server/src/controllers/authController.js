@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const prisma = require('../config/prisma');
 const generateId = require('../utils/generateId');
+const createNotification = require('../utils/createNotification');
 const sendMail = require('../utils/sendMail');
 const { clientUrl } = require('../utils/clientUrl');
 const { renderEmail } = require('../utils/emailTemplate');
@@ -581,6 +582,14 @@ const login = async (req, res) => {
         status: 'FAILED',
       });
 
+      await createNotification({
+        userId: user.id,
+        title: 'Failed Sign-in Attempt',
+        message: `A sign-in attempt failed with an incorrect password (IP: ${getClientIp(req) || 'Unknown'})`,
+        type: 'SECURITY',
+        metadata: { ipAddress: getClientIp(req), userAgent: req.headers['user-agent'] },
+      });
+
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
@@ -627,6 +636,15 @@ const login = async (req, res) => {
           userId: user.id,
           status: 'FAILED',
         });
+
+        await createNotification({
+          userId: user.id,
+          title: 'Failed 2FA Attempt',
+          message: `A sign-in attempt failed with an incorrect 2FA code (IP: ${getClientIp(req) || 'Unknown'})`,
+          type: 'SECURITY',
+          metadata: { ipAddress: getClientIp(req), userAgent: req.headers['user-agent'] },
+        });
+
         return res.status(400).json({ message: 'Invalid 2FA code' });
       }
     }

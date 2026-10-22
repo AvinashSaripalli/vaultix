@@ -62,16 +62,22 @@ function Sidebar() {
     const fetchUnread = async () => {
       if (!localStorage.getItem('token')) return;
       try {
-        const params = {};
-        const lastViewed = localStorage.getItem('lastViewedAt');
-        if (lastViewed) params.since = lastViewed;
-        const res = await api.get('/notifications/recent-activity', { params });
+        const res = await api.get('/notifications/recent-activity');
         setUnreadCount(res.data.unreadCount || 0);
-      } catch { setUnreadCount(0); }
+      } catch {
+        setUnreadCount(0);
+      }
     };
     fetchUnread();
     const interval = setInterval(fetchUnread, 30000);
-    return () => clearInterval(interval);
+
+    const handleUpdate = () => fetchUnread();
+    window.addEventListener('vaultix:notifications-updated', handleUpdate);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('vaultix:notifications-updated', handleUpdate);
+    };
   }, []);
 
   useEffect(() => {
