@@ -512,7 +512,7 @@ function PersonalAccountCard({
             </div>
           ) : hasLogin ? (
             <>
-              <h2 className="text-lg sm:text-xl font-semibold text-slate-900 dark:text-slate-100 break-all">
+              <h2 className="text-lg sm:text-xl font-semibold text-slate-900 dark:text-slate-100 break-words truncate max-w-full">
                 {item.login}
               </h2>
               <p className="text-xs sm:text-sm text-slate-500 mt-0.5 dark:text-slate-400">Account details</p>
@@ -797,11 +797,11 @@ function ItemDetailsPanel({
       </div>
 
       {/* Tabs: Credentials vs Activity */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-700/80 pb-2 mb-5">
+      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-700/80 pb-2 mb-5 overflow-x-auto scrollbar-thin">
         <button
           type="button"
           onClick={() => setActiveTab('credentials')}
-          className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition ${
+          className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap shrink-0 transition ${
             activeTab === 'credentials'
               ? 'bg-indigo-600 text-white shadow-sm'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -814,7 +814,7 @@ function ItemDetailsPanel({
         <button
           type="button"
           onClick={() => setActiveTab('activity')}
-          className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition ${
+          className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap shrink-0 transition ${
             activeTab === 'activity'
               ? 'bg-indigo-600 text-white shadow-sm'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'

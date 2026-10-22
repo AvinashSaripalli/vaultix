@@ -50,12 +50,24 @@ function MyVaultPasswordWorkspace({
     );
   }, [filteredPasswords, passwords]);
 
-  const selectedGroup =
-    groupedPasswords.find((group) =>
-      group.items.some((item) => item.id === selectedPasswordId)
-    ) || groupedPasswords[0];
+  const selectedGroup = useMemo(() => {
+    if (!selectedPasswordId) return null;
+    return (
+      groupedPasswords.find((group) =>
+        group.items.some((item) => item.id === selectedPasswordId)
+      ) || null
+    );
+  }, [groupedPasswords, selectedPasswordId]);
 
-  const selectedPassword = selectedGroup?.items?.[0] || null;
+  const selectedPassword = useMemo(() => {
+    if (!selectedGroup) return null;
+    return (
+      selectedGroup.items.find((item) => item.id === selectedPasswordId) ||
+      selectedGroup.items[0] ||
+      null
+    );
+  }, [selectedGroup, selectedPasswordId]);
+
   const selectedGroupItems = selectedGroup?.items || [];
 
   const handleSelect = (id) => {
@@ -79,9 +91,9 @@ function MyVaultPasswordWorkspace({
           <p className="text-sm">Add your first login, card, or secure note to get started</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] lg:grid-cols-[280px_1fr] xl:grid-cols-[300px_1fr] min-h-[600px] divide-y md:divide-y-0 md:divide-x divide-slate-200 dark:divide-slate-700 min-w-0">
+        <div className="grid grid-cols-1 xl:grid-cols-[280px_1fr] 2xl:grid-cols-[320px_1fr] min-h-[500px] lg:min-h-[600px] divide-y xl:divide-y-0 xl:divide-x divide-slate-200 dark:divide-slate-700 min-w-0">
           {/* Left Side */}
-          <div className={`p-3.5 sm:p-5 bg-slate-50/50 dark:bg-slate-800/50 min-w-0 ${selectedPasswordId ? 'hidden md:block' : 'block'}`}>
+          <div className={`p-3.5 sm:p-5 bg-slate-50/50 dark:bg-slate-800/50 min-w-0 ${selectedPasswordId ? 'hidden xl:block' : 'block'}`}>
             <div className="relative mb-5">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
@@ -145,11 +157,11 @@ function MyVaultPasswordWorkspace({
           </div>
 
           {/* Right Side */}
-          <div className={`p-4 sm:p-6 lg:p-8 min-w-0 ${!selectedPasswordId ? 'hidden md:block' : 'block'}`}>
+          <div className={`p-4 sm:p-6 lg:p-8 min-w-0 ${!selectedPasswordId ? 'hidden xl:block' : 'block'}`}>
             <button
               type="button"
               onClick={() => onSelectPassword(null)}
-              className="md:hidden inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 mb-4 py-1.5 px-3 rounded-xl bg-indigo-50/70 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 transition border border-indigo-100 dark:border-indigo-800"
+              className="xl:hidden inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 mb-4 py-1.5 px-3 rounded-xl bg-indigo-50/70 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 transition border border-indigo-100 dark:border-indigo-800 cursor-pointer"
             >
               <ArrowLeft size={14} />
               Back to items

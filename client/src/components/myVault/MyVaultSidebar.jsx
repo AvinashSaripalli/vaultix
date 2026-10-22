@@ -40,33 +40,33 @@ function MyVaultSidebar({
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-3 min-h-[600px] h-full dark:bg-slate-800 dark:border-slate-700 shadow-sm flex flex-col min-w-0">
-      <div className="px-2 py-1.5 mb-1">
+    <div className="bg-white rounded-2xl border border-slate-200 p-2.5 sm:p-3 lg:min-h-[600px] lg:h-full dark:bg-slate-800 dark:border-slate-700 shadow-sm flex flex-col min-w-0">
+      <div className="px-1.5 sm:px-2 py-1 mb-1.5 flex items-center justify-between">
         <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
           Personal Folders
         </p>
       </div>
 
-      <button
-        type="button"
-        onClick={() => {
-          onSelectFolder(null);
-          setOpenMenuId(null);
-        }}
-        className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition text-left mb-1.5 ${
-          !selectedFolderId && !trashOpen
-            ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
-            : 'text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-750'
-        }`}
-      >
-        <Layers
-          size={17}
-          className={!selectedFolderId && !trashOpen ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}
-        />
-        <span>All Items</span>
-      </button>
+      <div className="flex flex-row lg:flex-col gap-1.5 overflow-x-auto lg:overflow-x-visible lg:overflow-y-auto flex-1 pb-1 lg:pb-0 scrollbar-thin">
+        <button
+          type="button"
+          onClick={() => {
+            onSelectFolder(null);
+            setOpenMenuId(null);
+          }}
+          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition text-left shrink-0 lg:w-full whitespace-nowrap ${
+            !selectedFolderId && !trashOpen
+              ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
+              : 'text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-750'
+          }`}
+        >
+          <Layers
+            size={16}
+            className={!selectedFolderId && !trashOpen ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}
+          />
+          <span>All Items</span>
+        </button>
 
-      <div className="space-y-1 flex-1 overflow-y-auto">
         {folders.map((folder) => {
           const isSelected = !trashOpen && selectedFolderId === folder.id;
           return (
@@ -76,34 +76,34 @@ function MyVaultSidebar({
                 onSelectFolder(folder.id);
                 setOpenMenuId(null);
               }}
-              className={`relative group flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition cursor-pointer ${
+              className={`relative group flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition cursor-pointer shrink-0 lg:w-full whitespace-nowrap ${
                 isSelected
                   ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 font-semibold'
                   : 'text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-750'
               }`}
             >
-              <div className="flex items-center gap-2.5 min-w-0 flex-1" title={folder.name}>
+              <div className="flex items-center gap-2 min-w-0" title={folder.name}>
                 {isSelected ? (
                   <FolderOpen size={16} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
                 ) : (
                   <Folder size={16} className="text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 shrink-0 transition-colors" />
                 )}
-                <span className="truncate flex-1 min-w-0">{folder.name}</span>
+                <span className="truncate max-w-[130px] lg:max-w-none">{folder.name}</span>
               </div>
 
               <button
                 type="button"
                 onClick={(e) => toggleMenu(e, folder.id)}
-                className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 shrink-0 transition"
+                className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 shrink-0 transition ml-1"
                 title="Folder actions"
                 aria-label={`Actions for folder ${folder.name}`}
               >
-                <MoreHorizontal size={15} className="shrink-0" />
+                <MoreHorizontal size={14} className="shrink-0" />
               </button>
 
               {openMenuId === folder.id && (
                 <div
-                  className="absolute right-2 top-10 z-30 w-36 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 dark:bg-slate-800 dark:border-slate-700 animate-slide-up"
+                  className="absolute left-0 lg:left-auto lg:right-2 top-10 z-30 w-36 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 dark:bg-slate-800 dark:border-slate-700 animate-slide-up"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <button
@@ -143,14 +143,42 @@ function MyVaultSidebar({
         })}
 
         {folders.length === 0 && (
-          <div className="px-3 py-6 text-center text-xs text-slate-400 dark:text-slate-500">
+          <div className="hidden lg:block px-3 py-6 text-center text-xs text-slate-400 dark:text-slate-500">
             No folders created yet.
           </div>
         )}
+
+        {/* On mobile / tablet (< lg), Trash button right in the scrollable row */}
+        <div className="lg:hidden shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              onToggleTrash?.();
+              setOpenMenuId(null);
+            }}
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition whitespace-nowrap ${
+              trashOpen
+                ? 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 font-semibold border border-rose-200/70 dark:border-rose-800/50'
+                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-750 dark:hover:text-slate-200'
+            }`}
+            title="View deleted passwords in Trash"
+          >
+            <Trash2
+              size={15}
+              className={trashOpen ? 'text-rose-600 dark:text-rose-400 shrink-0' : 'text-slate-400 shrink-0'}
+            />
+            <span>Trash</span>
+            {trashCount > 0 && (
+              <span className="h-4 min-w-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold inline-flex items-center justify-center shrink-0">
+                {trashCount > 99 ? '99+' : trashCount}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
-      {/* Bottom Trash Link with live badge */}
-      <div className="pt-2 mt-auto border-t border-slate-100 dark:border-slate-700/60">
+      {/* On desktop (>= lg), Trash button pinned to bottom */}
+      <div className="hidden lg:block pt-2 mt-auto border-t border-slate-100 dark:border-slate-700/60 shrink-0">
         <button
           type="button"
           onClick={() => {

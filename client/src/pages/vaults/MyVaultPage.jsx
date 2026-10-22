@@ -352,21 +352,23 @@ function MyVaultPage() {
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-4 sm:gap-5 items-stretch min-w-0">
-          <MyVaultSidebar
-            folders={folders}
-            selectedFolderId={selectedFolderId}
-            onSelectFolder={(id) => {
-              setTrashOpen(false);
-              dispatch(setSelectedFolderId(id));
-              setSelectedPasswordId(null);
-            }}
-            onEditFolder={handleEditFolder}
-            onDeleteFolder={handleDeleteFolder}
-            onViewHistory={(folder) => setHistoryFolder(folder)}
-            trashOpen={trashOpen}
-            trashCount={totalTrashCount}
-            onToggleTrash={handleToggleTrash}
-          />
+          <div className={selectedPasswordId ? 'hidden md:block' : 'block'}>
+            <MyVaultSidebar
+              folders={folders}
+              selectedFolderId={selectedFolderId}
+              onSelectFolder={(id) => {
+                setTrashOpen(false);
+                dispatch(setSelectedFolderId(id));
+                setSelectedPasswordId(null);
+              }}
+              onEditFolder={handleEditFolder}
+              onDeleteFolder={handleDeleteFolder}
+              onViewHistory={(folder) => setHistoryFolder(folder)}
+              trashOpen={trashOpen}
+              trashCount={totalTrashCount}
+              onToggleTrash={handleToggleTrash}
+            />
+          </div>
 
           {trashOpen ? (
             <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm dark:bg-slate-800 dark:border-slate-700 min-h-[600px] flex flex-col min-w-0 p-4 sm:p-6 lg:p-8">
