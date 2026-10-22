@@ -68,6 +68,8 @@ model User {
   recoveryKey             String?
   recoveryKeyEscrow       String?
   tokenVersion            Int                @default(0)
+  lastReadNotificationAt  DateTime?          @default(now())
+  readNotificationIds     Json?              @default("[]")
   activityLogs            ActivityLog[]
   departmentMemberships   DepartmentMember[]
   folderPermissions       FolderPermission[]

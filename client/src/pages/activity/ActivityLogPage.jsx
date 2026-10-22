@@ -448,18 +448,18 @@ function ActivityLogPage() {
   }, [fetchAllActivity]);
 
   const markAsRead = async (item) => {
-    if (item.type !== 'ACTIVITY' && item.type !== 'LOGIN') {
-      try {
-        await api.patch(`/notifications/${item.sourceId}/read`);
-      } catch (err) {
-        console.error('markAsRead error:', err);
-      }
+    try {
+      await api.patch(`/notifications/${item.id}/read`);
+    } catch (err) {
+      console.error('markAsRead error:', err);
     }
     window.dispatchEvent(new CustomEvent('vaultix:notifications-updated'));
     fetchAllActivity();
   };
 
   const markAllRead = async () => {
+    setTotalUnreadCount(0);
+    window.dispatchEvent(new CustomEvent('vaultix:unread-count', { detail: 0 }));
     try {
       await api.patch('/notifications/mark-all-read');
     } catch (err) {
@@ -1395,11 +1395,19 @@ function ActivityLogPage() {
             )}
 
             {!notifLoading && !paginatedUnread.length && (
-              <div className="py-14 text-center">
-                <p className="text-slate-500 dark:text-slate-400">
+              <div className="py-16 text-center">
+                <div className="mx-auto w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/60 flex items-center justify-center text-emerald-600 dark:text-emerald-400 mb-3 shadow-xs">
+                  <CheckCircle2 size={24} />
+                </div>
+                <h3 className="text-base font-semibold text-slate-800 dark:text-slate-200 mb-1">
                   {search || unreadTypeFilter !== 'ALL'
-                    ? 'No items match your filters.'
-                    : 'No recent activity.'}
+                    ? 'No matching notifications'
+                    : "You're all caught up!"}
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+                  {search || unreadTypeFilter !== 'ALL'
+                    ? 'Try adjusting your search or filters.'
+                    : 'There are no new unread notifications or collaborator activities.'}
                 </p>
               </div>
             )}

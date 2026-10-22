@@ -130,18 +130,18 @@ function Topbar() {
   }, []);
 
   const markAsRead = async (item) => {
-    if (item.type !== 'ACTIVITY' && item.type !== 'LOGIN') {
-      try {
-        await api.patch(`/notifications/${item.sourceId}/read`);
-      } catch (err) {
-        console.error('markAsRead error:', err);
-      }
+    try {
+      await api.patch(`/notifications/${item.id}/read`);
+    } catch (err) {
+      console.error('markAsRead error:', err);
     }
     window.dispatchEvent(new CustomEvent('vaultix:notifications-updated'));
     fetchRecentActivity();
   };
 
   const markAllRead = async () => {
+    setUnreadCount(0);
+    window.dispatchEvent(new CustomEvent('vaultix:unread-count', { detail: 0 }));
     try {
       await api.patch('/notifications/mark-all-read');
     } catch (err) {
@@ -260,13 +260,20 @@ function Topbar() {
                   >
                     <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
                   </button>
-                  {unreadCount > 0 && (
+                  {unreadCount > 0 ? (
                     <button
                       onClick={markAllRead}
-                      className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+                      className="inline-flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 font-semibold hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+                      title="Mark all notifications as read"
                     >
-                      Mark all read
+                      <CheckCircle2 size={13} />
+                      <span>Mark all read</span>
                     </button>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium select-none">
+                      <CheckCircle2 size={12} />
+                      <span>All read</span>
+                    </span>
                   )}
                   <button
                     onClick={() => {
@@ -318,10 +325,10 @@ function Topbar() {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           {isUnread && (
-                            <span className="h-1.5 w-1.5 rounded-full bg-indigo-600 shrink-0" />
+                            <span className="h-2 w-2 rounded-full bg-indigo-600 dark:bg-indigo-400 shrink-0" />
                           )}
-                          {!isUnread && item.type !== 'ACTIVITY' && item.type !== 'LOGIN' && (
-                            <CheckCircle2 size={11} className="text-green-500 shrink-0" />
+                          {!isUnread && (
+                            <CheckCircle2 size={11} className="text-emerald-500 shrink-0 opacity-60" />
                           )}
                           <p className="text-sm font-semibold text-[var(--text-primary)] truncate">
                             {item.title}
@@ -353,7 +360,7 @@ function Topbar() {
                 <p className="text-[11px] text-[var(--text-muted)] truncate">
                   {activityCount} actions · {loginCount} logins · {alertCount} alerts
                 </p>
-                <p className="text-[11px] font-semibold text-[var(--text-secondary)] shrink-0 ml-2">
+                <p className={`text-[11px] font-semibold shrink-0 ml-2 ${unreadCount > 0 ? 'text-red-500 dark:text-red-400 font-bold' : 'text-[var(--text-muted)]'}`}>
                   {unreadCount} unread
                 </p>
               </div>
