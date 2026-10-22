@@ -17,6 +17,9 @@
   --color-blue-800: #3730a3;
   --color-blue-900: #312e81;
   --color-blue-950: #1e1b4b;
+
+  --color-slate-650: #405068;
+  --color-slate-750: #243044;
 }
 
 :root {

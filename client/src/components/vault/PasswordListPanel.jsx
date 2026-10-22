@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Folder } from 'lucide-react';
 import {
   selectPassword,
   setSearchTerm,
@@ -196,10 +196,13 @@ function PasswordListPanel() {
                   </span>
                   {!selectedFolderId && (
                     <span
-                      className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-750 text-slate-600 dark:text-slate-300 truncate max-w-[110px]"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200/80 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60 truncate max-w-[130px] shrink-0"
                       title={firstItem?.folder?.name || folders.find((f) => f.id === firstItem?.folderId)?.name || 'Vault Root'}
                     >
-                      {firstItem?.folder?.name || folders.find((f) => f.id === firstItem?.folderId)?.name || 'Vault Root'}
+                      <Folder size={11} className="text-amber-600 dark:text-amber-400 shrink-0" />
+                      <span className="truncate">
+                        {firstItem?.folder?.name || folders.find((f) => f.id === firstItem?.folderId)?.name || 'Vault Root'}
+                      </span>
                     </span>
                   )}
                   <ItemTypeBadge type={firstItem?.type} />
