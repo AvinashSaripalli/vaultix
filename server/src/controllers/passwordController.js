@@ -913,6 +913,17 @@ const updatePassword = async (req, res) => {
         },
       });
 
+      const isFolderChanged = existingPassword.folderId !== updated.folderId;
+      let fromFolderName = null;
+      let toFolderName = updated.folder?.name || null;
+      if (isFolderChanged && existingPassword.folderId) {
+        const fromF = await tx.folder.findUnique({
+          where: { id: existingPassword.folderId },
+          select: { name: true },
+        });
+        fromFolderName = fromF?.name || null;
+      }
+
       await tx.activityLog.create({
         data: {
           id: await generateId('activityLog'),
@@ -926,6 +937,15 @@ const updatePassword = async (req, res) => {
             vaultId: updated.vaultId,
             tags: cleanTags || undefined,
             vaultType,
+            ...(isFolderChanged
+              ? {
+                  moved: true,
+                  fromFolderId: existingPassword.folderId,
+                  fromFolderName,
+                  toFolderId: updated.folderId,
+                  toFolderName,
+                }
+              : {}),
           },
         },
       });
@@ -1440,26 +1460,34 @@ const logCopyPassword = async (req, res) => {
 
     const vaultType = await getVaultType(password.vaultId);
 
-    const mode = req.body?.mode === 'autofill' ? 'autofill' : 'copy';
+    const isAutofill = req.body?.mode === 'autofill';
+    const action = isAutofill ? 'AUTOFILL_PASSWORD' : 'COPY_PASSWORD';
+    const clientSource = req.body?.clientSource || (isAutofill ? 'EXTENSION' : 'WEB');
+    const domain = req.body?.domain || null;
+    const url = req.body?.url || null;
 
     await prisma.activityLog.create({
       data: {
         id: await generateId('activityLog'),
         userId: req.user.id,
-        action: 'COPY_PASSWORD',
+        action,
         targetType: 'PasswordEntry',
         targetId: password.id,
         metadata: {
           name: password.name,
+          login: password.login,
           folderId: password.folderId,
           vaultId: password.vaultId,
           vaultType,
-          mode,
+          mode: isAutofill ? 'autofill' : 'copy',
+          clientSource,
+          ...(domain ? { domain } : {}),
+          ...(url ? { url } : {}),
         },
       },
     });
 
-    res.json({ message: 'Password copy activity logged' });
+    res.json({ message: `${action} activity logged` });
   } catch (error) {
     console.error('Log copy password error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -1502,6 +1530,7 @@ const logViewPassword = async (req, res) => {
     });
 
     const vaultType = await getVaultType(password.vaultId);
+    const clientSource = req.body?.clientSource || 'WEB';
 
     await prisma.activityLog.create({
       data: {
@@ -1512,9 +1541,11 @@ const logViewPassword = async (req, res) => {
         targetId: password.id,
         metadata: {
           name: password.name,
+          login: password.login,
           folderId: password.folderId,
           vaultId: password.vaultId,
           vaultType,
+          clientSource,
         },
       },
     });
@@ -1522,6 +1553,83 @@ const logViewPassword = async (req, res) => {
     res.json({ message: 'Password view activity logged' });
   } catch (error) {
     console.error('Log view password error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+const getPasswordActivity = async (req, res) => {
+  try {
+    const passwordId = req.params.id;
+    const includeGroup = req.query.includeGroup === 'true';
+
+    const password = await prisma.passwordEntry.findUnique({
+      where: { id: passwordId },
+      include: {
+        vault: true,
+        folder: true,
+      },
+    });
+
+    if (!password) {
+      return res.status(404).json({ message: 'Password not found' });
+    }
+
+    const hasItemAccess = await getPasswordItemAccess(password, req.user.id);
+    const hasShare = await prisma.passwordShare.findFirst({
+      where: {
+        passwordId: password.id,
+        sharedWithId: req.user.id,
+      },
+    });
+
+    const isAuthorized =
+      hasItemAccess &&
+      ['ADMINISTRATOR', 'READ_WRITE', 'READ_ONLY', 'FULL_ACCESS'].includes(hasItemAccess);
+
+    if (!isAuthorized && !hasShare) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    let targetIds = [password.id];
+    if (includeGroup && password.name) {
+      const siblings = await prisma.passwordEntry.findMany({
+        where: {
+          vaultId: password.vaultId,
+          name: password.name,
+        },
+        select: { id: true },
+      });
+      targetIds = siblings.map((s) => s.id);
+    }
+
+    const orConditions = [
+      { targetId: { in: targetIds } },
+      ...targetIds.map((id) => ({
+        metadata: { path: ['passwordId'], equals: id },
+      })),
+    ];
+
+    const logs = await prisma.activityLog.findMany({
+      where: {
+        OR: orConditions,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    res.json(logs);
+  } catch (error) {
+    console.error('Get password activity error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -1743,6 +1851,7 @@ module.exports = {
   getTrash,
   logCopyPassword,
   logViewPassword,
+  getPasswordActivity,
   importPasswordsFromExcel,
   getPasswordsOwnedByUser,
   getItemsNeedingWrapping,

@@ -1,0 +1,2 @@
+-- AlterEnum: Add AUTOFILL_PASSWORD to ActivityAction
+ALTER TYPE "ActivityAction" ADD VALUE IF NOT EXISTS 'AUTOFILL_PASSWORD';

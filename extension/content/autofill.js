@@ -494,7 +494,13 @@
         if (filled) {
           try {
             chrome.runtime.sendMessage(
-              { type: 'VAULTIX_LOG', passwordId: cred.id, action: 'autofill' },
+              {
+                type: 'VAULTIX_LOG',
+                passwordId: cred.id,
+                action: 'autofill',
+                domain: window.location.hostname,
+                url: window.location.href,
+              },
               () => {
                 void chrome.runtime.lastError;
               }

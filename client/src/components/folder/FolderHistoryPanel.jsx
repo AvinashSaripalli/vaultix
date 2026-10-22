@@ -11,6 +11,8 @@ import {
   Plus,
   ChevronRight,
   Search,
+  Sparkles,
+  Download,
 } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import api from '../../services/api';
@@ -47,6 +49,12 @@ function getActionConfig(action) {
         label: 'Copied password',
         icon: Copy,
         badge: 'bg-purple-100 text-purple-700',
+      };
+    case 'AUTOFILL_PASSWORD':
+      return {
+        label: 'Autofilled password',
+        icon: Sparkles,
+        badge: 'bg-emerald-100 text-emerald-700',
       };
     case 'CREATE_FOLDER':
       return {
@@ -119,6 +127,12 @@ function getActionConfig(action) {
 
 function getTargetName(log) {
   const m = log?.metadata;
+  if (log.action === 'AUTOFILL_PASSWORD' && m?.domain) {
+    return `${m.name || 'Login'} (autofilled on ${m.domain})`;
+  }
+  if (m?.moved && m?.fromFolderName && m?.toFolderName) {
+    return `${m.name || 'Login'} (moved: ${m.fromFolderName} → ${m.toFolderName})`;
+  }
   if (log.action === 'UPDATE_FOLDER' && m?.oldName && m?.newName && m.oldName !== m.newName) {
     return `Renamed from "${m.oldName}" to "${m.newName}"`;
   }
@@ -179,9 +193,38 @@ function FolderHistoryPanel({ open, onClose, folderId }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [exporting, setExporting] = useState(false);
 
   const selectedFolder = folders.find((f) => f.id === folderId);
   const permissions = selectedFolder?.permissions || [];
+
+  const handleExportCSV = async () => {
+    if (!selectedFolder?.vaultId) return;
+    try {
+      setExporting(true);
+      const res = await api.get(
+        `/activity/vault/${selectedFolder.vaultId}/export?folderId=${folderId}&format=csv`,
+        {
+          responseType: 'blob',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      const blobUrl = window.URL.createObjectURL(new Blob([res.data], { type: 'text/csv' }));
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = `folder-${(selectedFolder?.name || folderId).replace(/[^a-zA-Z0-9_-]/g, '_')}-audit.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error('Failed to export folder audit:', err);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const filteredLogs = useMemo(() => {
     if (!searchQuery.trim()) return logs;
@@ -251,12 +294,27 @@ function FolderHistoryPanel({ open, onClose, folderId }) {
             </p>
           </div>
 
-          <button
-            onClick={onClose}
-            className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 shrink-0"
-          >
-            <X size={18} />
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {selectedFolder?.vaultId && (
+              <button
+                type="button"
+                onClick={handleExportCSV}
+                disabled={exporting || loading}
+                className="inline-flex h-9 sm:h-10 items-center gap-1.5 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 transition shadow-xs"
+                title="Export folder audit as CSV"
+              >
+                <Download size={14} className={exporting ? 'animate-bounce' : ''} />
+                <span className="hidden sm:inline">Export CSV</span>
+              </button>
+            )}
+
+            <button
+              onClick={onClose}
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 shrink-0"
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         <div className="p-4 sm:p-6 overflow-y-auto flex-1 bg-slate-50 dark:bg-slate-800/50">

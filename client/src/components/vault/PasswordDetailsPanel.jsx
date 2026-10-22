@@ -12,6 +12,11 @@ import {
   Plus,
   Check,
   ArrowLeft,
+  History,
+  Sparkles,
+  RefreshCw,
+  KeyRound,
+  Share2,
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import api from '../../services/api';
@@ -123,6 +128,45 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
   const [reVerifyOpen, setReVerifyOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
   const [verifiedAtMap, setVerifiedAtMap] = useState({});
+  const [activeTab, setActiveTab] = useState('credentials');
+  const [itemActivityLogs, setItemActivityLogs] = useState([]);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [activityError, setActivityError] = useState('');
+
+  useEffect(() => {
+    setActiveTab('credentials');
+  }, [selectedPasswordId]);
+
+  useEffect(() => {
+    if (!selectedPasswordId || activeTab !== 'activity') return;
+
+    let isMounted = true;
+    const fetchItemActivity = async () => {
+      try {
+        setActivityLoading(true);
+        setActivityError('');
+        const res = await api.get(`/passwords/${selectedPasswordId}/activity?includeGroup=true`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (isMounted) {
+          setItemActivityLogs(res.data || []);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setActivityError(err.response?.data?.message || 'Failed to load item activity');
+        }
+      } finally {
+        if (isMounted) {
+          setActivityLoading(false);
+        }
+      }
+    };
+
+    fetchItemActivity();
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedPasswordId, activeTab, token]);
 
   // Pre-decrypt typed (fields) items as soon as they are selected so masked
   // values are shown instead of '-' and the copy buttons work on first click.
@@ -475,6 +519,36 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
         </div>
       </div>
 
+      {/* Tabs: Credentials vs Activity */}
+      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-700/80 pb-2">
+        <button
+          type="button"
+          onClick={() => setActiveTab('credentials')}
+          className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition ${
+            activeTab === 'credentials'
+              ? 'bg-indigo-600 text-white shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
+        >
+          <KeyRound size={15} />
+          <span>Credentials & Fields</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('activity')}
+          className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition ${
+            activeTab === 'activity'
+              ? 'bg-indigo-600 text-white shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
+        >
+          <History size={15} />
+          <span>Activity & History</span>
+        </button>
+      </div>
+
+      {activeTab === 'credentials' && (
       <div className="space-y-5">
         {sameNamePasswords.map((item, index) => {
           const isVisible = !!visiblePasswords[item.id];
@@ -876,6 +950,169 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
           </button>
         )}
       </div>
+      )}
+
+      {activeTab === 'activity' && (
+        <div className="rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+          <div className="flex items-center justify-between gap-3 mb-5 pb-3 border-b border-slate-100 dark:border-slate-700/60">
+            <div>
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <History size={18} className="text-indigo-600 dark:text-indigo-400" />
+                <span>Activity & History</span>
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Audit timeline for {selectedPassword.name}
+                {sameNamePasswords.length > 1 ? ` (${sameNamePasswords.length} accounts in group)` : ''}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActivityLoading(true);
+                api
+                  .get(`/passwords/${selectedPasswordId}/activity?includeGroup=true`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                  })
+                  .then((res) => setItemActivityLogs(res.data || []))
+                  .catch(() => {})
+                  .finally(() => setActivityLoading(false));
+              }}
+              disabled={activityLoading}
+              className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
+            >
+              <RefreshCw size={13} className={activityLoading ? 'animate-spin' : ''} />
+              <span>Refresh</span>
+            </button>
+          </div>
+
+          {activityLoading && (
+            <div className="py-12 text-center text-sm text-slate-500 dark:text-slate-400">
+              Loading activity timeline...
+            </div>
+          )}
+
+          {activityError && (
+            <div className="p-4 rounded-xl border border-red-200 bg-red-50 text-xs text-red-600 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
+              {activityError}
+            </div>
+          )}
+
+          {!activityLoading && !activityError && itemActivityLogs.length > 0 && (
+            <div className="divide-y divide-slate-100 dark:divide-slate-700/60">
+              {itemActivityLogs.map((log) => {
+                const isAutofill = log.action === 'AUTOFILL_PASSWORD';
+                const isCopy = log.action === 'COPY_PASSWORD';
+                const isView = log.action === 'VIEW_PASSWORD';
+                const isCreate = log.action === 'CREATE_PASSWORD';
+                const isUpdate = log.action === 'UPDATE_PASSWORD';
+                const isShare = log.action === 'SHARE_PASSWORD';
+                const isRevokeShare = log.action === 'REVOKE_SHARE_PASSWORD';
+
+                let icon = <Eye size={16} className="text-slate-500" />;
+                let badge = 'bg-slate-100 text-slate-700';
+                let label = log.action;
+
+                if (isAutofill) {
+                  icon = <Sparkles size={16} className="text-purple-600" />;
+                  badge = 'bg-purple-50 text-purple-700';
+                  label = 'Autofilled on Web';
+                } else if (isView) {
+                  icon = <Eye size={16} className="text-blue-600" />;
+                  badge = 'bg-blue-50 text-blue-700';
+                  label = 'Viewed Password';
+                } else if (isCopy) {
+                  icon = <Copy size={16} className="text-emerald-600" />;
+                  badge = 'bg-emerald-50 text-emerald-700';
+                  label = 'Copied to Clipboard';
+                } else if (isCreate) {
+                  icon = <Plus size={16} className="text-green-600" />;
+                  badge = 'bg-green-50 text-green-700';
+                  label = 'Created Item';
+                } else if (isUpdate) {
+                  icon = <Pencil size={16} className="text-amber-600" />;
+                  badge = 'bg-amber-50 text-amber-700';
+                  label = log.metadata?.moved ? 'Moved Folder' : 'Updated Item';
+                } else if (isShare) {
+                  icon = <Share2 size={16} className="text-indigo-600" />;
+                  badge = 'bg-indigo-50 text-indigo-700';
+                  label = 'Shared Item';
+                } else if (isRevokeShare) {
+                  icon = <Trash2 size={16} className="text-red-600" />;
+                  badge = 'bg-red-50 text-red-700';
+                  label = 'Revoked Share';
+                }
+
+                return (
+                  <div
+                    key={log.id}
+                    className="py-3.5 flex items-start gap-3 hover:bg-slate-50/50 dark:hover:bg-slate-700/20 px-2 rounded-xl transition"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center shrink-0 mt-0.5">
+                      {icon}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-md ${badge}`}>
+                          {label}
+                        </span>
+                        {(log.metadata?.clientSource === 'EXTENSION' || isAutofill) && (
+                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
+                            via Chrome Extension
+                          </span>
+                        )}
+                        {log.metadata?.domain && (
+                          <span className="text-xs font-mono text-indigo-600 dark:text-indigo-400">
+                            on {log.metadata.domain}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="text-xs text-slate-600 dark:text-slate-300 mt-1">
+                        {log.metadata?.login && (
+                          <span className="font-medium mr-2">
+                            Account:{' '}
+                            <span className="text-slate-900 dark:text-slate-100">
+                              {log.metadata.login}
+                            </span>
+                          </span>
+                        )}
+                        {log.metadata?.moved && log.metadata?.fromFolderName && log.metadata?.toFolderName && (
+                          <span className="text-amber-600 dark:text-amber-400 font-medium">
+                            Moved: {log.metadata.fromFolderName} → {log.metadata.toFolderName}
+                          </span>
+                        )}
+                        {isShare && log.metadata?.sharedWithName && (
+                          <span>Shared with {log.metadata.sharedWithName}</span>
+                        )}
+                        {isRevokeShare && (log.metadata?.revokedFromUserName || log.metadata?.revokedFromUserEmail) && (
+                          <span>
+                            Revoked from {log.metadata?.revokedFromUserName || log.metadata?.revokedFromUserEmail}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[11px] text-slate-400 dark:text-slate-500">
+                        <span>{log.user?.fullName || log.user?.email || 'User'}</span>
+                        <span>•</span>
+                        <span>
+                          {log.createdAt ? new Date(log.createdAt).toLocaleString() : '-'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {!activityLoading && !activityError && !itemActivityLogs.length && (
+            <div className="py-12 text-center text-sm text-slate-500 dark:text-slate-400">
+              No recorded activity yet for this item.
+            </div>
+          )}
+        </div>
+      )}
 
       <ConfirmModal
         open={confirmDelete.open}

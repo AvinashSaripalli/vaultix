@@ -1270,10 +1270,28 @@ async function doFill(cred) {
   }
 }
 
-function logUse(cred, action = 'copy') {
+async function logUse(cred, action = 'copy') {
   try {
+    let domain = null;
+    let url = null;
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab?.url) {
+        url = tab.url;
+        domain = new URL(tab.url).hostname;
+      }
+    } catch {
+      /* ignore tab query errors */
+    }
+
     chrome.runtime.sendMessage(
-      { type: 'VAULTIX_LOG', passwordId: cred.id, action },
+      {
+        type: 'VAULTIX_LOG',
+        passwordId: cred.id,
+        action,
+        domain,
+        url,
+      },
       () => {
         void chrome.runtime.lastError;
       }

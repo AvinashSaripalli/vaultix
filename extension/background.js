@@ -989,15 +989,23 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         ? `${baseUrl}/api/v1/passwords/${msg.passwordId}/view-log`
         : `${baseUrl}/api/v1/passwords/${msg.passwordId}/copy-log`;
 
-      const body = action === 'view' ? undefined : JSON.stringify({ mode: action });
+      const domain = msg.domain || hostOf(sender.tab?.url) || null;
+      const url = msg.url || sender.tab?.url || null;
+
+      const body = JSON.stringify({
+        mode: action,
+        clientSource: 'EXTENSION',
+        ...(domain ? { domain } : {}),
+        ...(url ? { url } : {}),
+      });
 
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${local.token}`,
-          ...(body ? { 'Content-Type': 'application/json' } : {}),
+          'Content-Type': 'application/json',
         },
-        ...(body ? { body } : {}),
+        body,
       });
       sendResponse({ ok: res.ok });
     } catch {

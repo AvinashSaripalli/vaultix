@@ -16,6 +16,7 @@ router.post('/batch-wrap', authenticate, passwordController.batchWrapKeys);
 router.get('/vault/:vaultId', authenticate, passwordController.getPasswordsByVault);
 router.get('/vault/:vaultId/trash', authenticate, passwordController.getTrash);
 router.get('/:id', authenticate, passwordController.getPasswordById);
+router.get('/:id/activity', authenticate, passwordController.getPasswordActivity);
 router.put('/:id', authenticate, passwordController.updatePassword);
 router.delete('/:id', authenticate, passwordController.deletePassword);
 router.post('/:id/restore', authenticate, passwordController.restorePassword);

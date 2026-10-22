@@ -17,6 +17,7 @@ import {
   Share2,
   ShieldAlert,
   Bell,
+  Sparkles,
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import AppLayout from '../../components/layout/AppLayout';
@@ -32,6 +33,7 @@ const ACTION_FILTERS = [
   { label: 'Update', value: 'UPDATE' },
   { label: 'Delete / Revoke', value: 'DELETE' },
   { label: 'Restore', value: 'RESTORE' },
+  { label: 'Autofill', value: 'AUTOFILL' },
   { label: 'View', value: 'VIEW' },
   { label: 'Copy', value: 'COPY' },
   { label: 'Share / Grant', value: 'SHARE' },
@@ -83,6 +85,7 @@ function formatAction(action) {
     case 'RESTORE_PASSWORD': return 'Restore Password';
     case 'VIEW_PASSWORD': return 'View Password';
     case 'COPY_PASSWORD': return 'Copy Password';
+    case 'AUTOFILL_PASSWORD': return 'Autofill Password';
     case 'SHARE_PASSWORD': return 'Share Password';
     case 'REVOKE_PASSWORD_SHARE': return 'Revoke Password Share';
     case 'CREATE_VAULT': return 'Create Vault';
@@ -116,6 +119,9 @@ function formatAction(action) {
 }
 
 function getActionBadge(action) {
+  if (action === 'AUTOFILL_PASSWORD') {
+    return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400';
+  }
   if (action?.startsWith('CREATE') || action?.startsWith('RESTORE') || action === 'ENABLE_2FA' || action === 'APPROVE_REQUEST') {
     return 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400';
   }
@@ -140,6 +146,7 @@ function getActionBadge(action) {
 }
 
 function getActionIcon(action) {
+  if (action === 'AUTOFILL_PASSWORD') return <Sparkles size={15} />;
   if (action?.includes('PASSWORD')) return <KeyRound size={15} />;
   if (action?.includes('FOLDER')) return <Folder size={15} />;
   if (action?.includes('VAULT')) return <Database size={15} />;
@@ -985,10 +992,30 @@ function ActivityLogPage() {
                                 </span>
                               </td>
                               <td className="px-4 sm:px-6 py-3.5 sm:py-4 text-xs sm:text-sm text-slate-700 dark:text-slate-300">
-                                <div className="flex items-center gap-2">
+                                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                                   <p className="font-semibold">
                                     {log.metadata?.name || log.targetId || '-'}
                                   </p>
+                                  {log.metadata?.login && (
+                                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                                      ({log.metadata.login})
+                                    </span>
+                                  )}
+                                  {log.metadata?.domain && (
+                                    <span className="text-[11px] font-mono text-indigo-600 dark:text-indigo-400">
+                                      on {log.metadata.domain}
+                                    </span>
+                                  )}
+                                  {(log.metadata?.clientSource === 'EXTENSION' || log.action === 'AUTOFILL_PASSWORD') && (
+                                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 shrink-0 dark:bg-violet-900/30 dark:text-violet-300">
+                                      Extension
+                                    </span>
+                                  )}
+                                  {log.metadata?.moved && log.metadata?.fromFolderName && log.metadata?.toFolderName && (
+                                    <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400 block w-full">
+                                      Moved: {log.metadata.fromFolderName} → {log.metadata.toFolderName}
+                                    </span>
+                                  )}
                                   {log.metadata?.personalVault && (
                                     <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-teal-50 text-teal-700 shrink-0 dark:bg-teal-900/20 dark:text-teal-400">
                                       Personal Vault
@@ -1001,7 +1028,7 @@ function ActivityLogPage() {
                                   )}
                                 </div>
                                 {log.metadata?.name && log.targetId && (
-                                  <p className="text-xs text-slate-400 dark:text-slate-500">
+                                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                                     {log.targetId}
                                   </p>
                                 )}
