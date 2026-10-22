@@ -4,7 +4,7 @@ import { useNavigate, Navigate } from 'react-router-dom';
 import AppLayout from '../../components/layout/AppLayout';
 import api from '../../services/api';
 import ConfirmModal from '../../components/common/ConfirmModal';
-import ModalPortal from '../../components/common/ModalPortal';
+import ModalPortal, { ModalBackdrop } from '../../components/common/ModalPortal';
 import RoleBadge from '../../components/common/RoleBadge';
 import { isAdmin, isSuperAdmin, ROLES, ROLE_DEFINITIONS } from '../../utils/roles';
 import { showToast } from '../../utils/toast';
@@ -233,11 +233,8 @@ function AddUserPage() {
           )}
         </div>
 
-        <ModalPortal open onClose={() => navigate('/team-management')}>
-          <div
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 overflow-y-auto"
-            onClick={() => navigate('/team-management')}
-          >
+        <ModalPortal open onClose={() => navigate('/team-management')} closeOnEscape={false}>
+          <ModalBackdrop onClose={() => navigate('/team-management')} disableBackdropClick={true}>
             <div
               className="w-full max-w-md bg-white rounded-2xl border border-slate-200 p-6 shadow-2xl dark:bg-slate-800 dark:border-slate-700 my-auto"
               onClick={(e) => e.stopPropagation()}
@@ -353,7 +350,7 @@ function AddUserPage() {
               </div>
             </form>
           </div>
-          </div>
+          </ModalBackdrop>
         </ModalPortal>
 
         <ConfirmModal

@@ -1,6 +1,6 @@
 import { Lock, Eye, EyeOff, X } from 'lucide-react';
 import { useState } from 'react';
-import ModalPortal from './ModalPortal';
+import ModalPortal, { ModalBackdrop } from './ModalPortal';
 
 function DecryptDialog({ open, onDecrypt, onClose, error, decrypting }) {
   const [masterPassword, setMasterPassword] = useState('');
@@ -21,10 +21,7 @@ function DecryptDialog({ open, onDecrypt, onClose, error, decrypting }) {
 
   return (
     <ModalPortal open={open} onClose={handleCancel}>
-      <div
-        className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
-        onClick={handleCancel}
-      >
+      <ModalBackdrop onClose={handleCancel}>
         <div
           className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-2xl my-auto"
           onClick={(e) => e.stopPropagation()}
@@ -92,7 +89,7 @@ function DecryptDialog({ open, onDecrypt, onClose, error, decrypting }) {
           </button>
         </div>
       </div>
-      </div>
+      </ModalBackdrop>
     </ModalPortal>
   );
 }

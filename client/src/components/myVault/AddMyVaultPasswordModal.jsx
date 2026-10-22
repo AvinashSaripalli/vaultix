@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { KeyRound, Lock, X, Eye, EyeOff, FolderDown, Sparkles } from 'lucide-react';
 import { useSelector } from 'react-redux';
-import ModalPortal from '../common/ModalPortal';
+import ModalPortal, { ModalBackdrop } from '../common/ModalPortal';
 import ItemFormFields from '../common/ItemFormFields';
 import { encryptText, encryptFields } from '../../utils/crypto';
 import { generatePassword } from '../../utils/passwordGenerator';
@@ -222,11 +222,8 @@ function AddMyVaultPasswordModal({
   };
 
   return (
-    <ModalPortal open={open} onClose={handleClose}>
-      <div
-        className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
-        onClick={handleClose}
-      >
+    <ModalPortal open={open} onClose={handleClose} closeOnEscape={false}>
+      <ModalBackdrop onClose={handleClose} disableBackdropClick={true}>
         <div
           className="w-full max-w-2xl bg-white rounded-2xl p-6 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto dark:bg-slate-800 dark:border-slate-700 my-auto"
           onClick={(e) => e.stopPropagation()}
@@ -298,7 +295,7 @@ function AddMyVaultPasswordModal({
           </div>
         </div>
       </div>
-      </div>
+      </ModalBackdrop>
     </ModalPortal>
   );
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Share2, X } from 'lucide-react';
 import api from '../../services/api';
-import ModalPortal from '../common/ModalPortal';
+import ModalPortal, { ModalBackdrop } from '../common/ModalPortal';
 
 function SharePasswordModal({
   open,
@@ -59,10 +59,7 @@ function SharePasswordModal({
 
   return (
     <ModalPortal open={open} onClose={handleClose}>
-      <div
-        className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
-        onClick={handleClose}
-      >
+      <ModalBackdrop onClose={handleClose} disableBackdropClick={true}>
         <div
           className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 dark:bg-slate-800 my-auto"
           onClick={(e) => e.stopPropagation()}
@@ -138,7 +135,7 @@ function SharePasswordModal({
           </button>
         </div>
       </div>
-      </div>
+      </ModalBackdrop>
     </ModalPortal>
   );
 }

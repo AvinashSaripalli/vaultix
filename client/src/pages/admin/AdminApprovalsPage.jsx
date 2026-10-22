@@ -19,6 +19,7 @@ import {
 import AppLayout from '../../components/layout/AppLayout';
 import RoleBadge from '../../components/common/RoleBadge';
 import ConfirmModal from '../../components/common/ConfirmModal';
+import ModalPortal, { ModalBackdrop } from '../../components/common/ModalPortal';
 import api from '../../services/api';
 import { isAdmin, isSuperAdmin } from '../../utils/roles';
 import { showToast } from '../../utils/toast';
@@ -415,8 +416,15 @@ function AdminApprovalsPage() {
 
         {/* Action Confirmation Modal */}
         {actionModal.open && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 sm:p-7 max-w-lg w-full shadow-2xl space-y-4">
+          <ModalPortal open={actionModal.open} onClose={() => setActionModal({ open: false, type: null, request: null, note: '', loading: false })}>
+            <ModalBackdrop
+              disableBackdropClick={true}
+              onClose={() => setActionModal({ open: false, type: null, request: null, note: '', loading: false })}
+            >
+              <div
+                className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 sm:p-7 max-w-lg w-full shadow-2xl space-y-4 my-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
               <div className="flex items-center gap-3">
                 <div
                   className={`h-10 w-10 rounded-xl flex items-center justify-center ${
@@ -507,8 +515,9 @@ function AdminApprovalsPage() {
                 </button>
               </div>
             </div>
-          </div>
-        )}
+          </ModalBackdrop>
+        </ModalPortal>
+      )}
       </div>
     </AppLayout>
   );

@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout';
 import api from '../../services/api';
-import ModalPortal from '../../components/common/ModalPortal';
+import ModalPortal, { ModalBackdrop } from '../../components/common/ModalPortal';
 
 const DEPT_ACCESS_LABELS = {
   NOT_SET: 'Not set',
@@ -265,9 +265,9 @@ function MyDepartmentsPage() {
 
       {selectedDept && (
         <ModalPortal open={!!selectedDept} onClose={closeDrawer}>
-          <div
+          <ModalBackdrop
             className="fixed inset-0 z-[9998] bg-slate-900/50 backdrop-blur-xs"
-            onClick={closeDrawer}
+            onClose={closeDrawer}
           />
 
           <aside className="fixed inset-y-0 right-0 z-[9999] w-full max-w-md bg-white shadow-2xl overflow-y-auto dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700">

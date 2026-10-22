@@ -6,7 +6,7 @@ import {
   MASTER_VERIFIER_STORAGE_KEY,
 } from '../../utils/crypto';
 import { verifyMasterPassword } from '../../utils/verifyMasterPassword';
-import ModalPortal from '../common/ModalPortal';
+import ModalPortal, { ModalBackdrop } from '../common/ModalPortal';
 
 function VerifyAdminMasterPasswordModal({ open, onClose, onVerified }) {
   const dispatch = useDispatch();
@@ -95,10 +95,7 @@ function VerifyAdminMasterPasswordModal({ open, onClose, onVerified }) {
 
   return (
     <ModalPortal open={open} onClose={handleClose}>
-      <div
-        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 overflow-y-auto"
-        onClick={handleClose}
-      >
+      <ModalBackdrop onClose={handleClose}>
         <div
           className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 my-auto"
           onClick={(e) => e.stopPropagation()}
@@ -156,7 +153,7 @@ function VerifyAdminMasterPasswordModal({ open, onClose, onVerified }) {
           </div>
         </form>
       </div>
-      </div>
+      </ModalBackdrop>
     </ModalPortal>
   );
 }

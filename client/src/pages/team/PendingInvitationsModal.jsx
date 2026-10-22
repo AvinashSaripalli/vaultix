@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import api from '../../services/api';
-import ModalPortal from '../../components/common/ModalPortal';
+import ModalPortal, { ModalBackdrop } from '../../components/common/ModalPortal';
 import RoleBadge from '../../components/common/RoleBadge';
 import { isSuperAdmin } from '../../utils/roles';
 
@@ -70,10 +70,7 @@ function PendingInvitationsModal({ open, onClose }) {
 
   return (
     <ModalPortal open={open} onClose={onClose}>
-      <div
-        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 overflow-y-auto"
-        onClick={onClose}
-      >
+      <ModalBackdrop onClose={onClose}>
         <div
           className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden dark:bg-slate-800 my-auto"
           onClick={(e) => e.stopPropagation()}
@@ -235,7 +232,7 @@ function PendingInvitationsModal({ open, onClose }) {
           </button>
         </div>
       </div>
-      </div>
+      </ModalBackdrop>
     </ModalPortal>
   );
 }

@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout';
 import ConfirmModal from '../../components/common/ConfirmModal';
-import ModalPortal from '../../components/common/ModalPortal';
+import ModalPortal, { ModalBackdrop } from '../../components/common/ModalPortal';
 import api from '../../services/api';
 import { showToast } from '../../utils/toast';
 
@@ -176,10 +176,7 @@ function AddMemberModal({ open, onClose, users, existingMemberIds, onAdd }) {
 
   return (
     <ModalPortal open={open} onClose={onClose}>
-      <div
-        className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto"
-        onClick={onClose}
-      >
+      <ModalBackdrop onClose={onClose}>
         <div
           className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-800 max-h-[85vh] flex flex-col my-auto"
           onClick={(e) => e.stopPropagation()}
@@ -259,7 +256,7 @@ function AddMemberModal({ open, onClose, users, existingMemberIds, onAdd }) {
           </button>
         </div>
       </div>
-      </div>
+      </ModalBackdrop>
     </ModalPortal>
   );
 }
@@ -642,9 +639,9 @@ function DepartmentsPage() {
       {/* Department drawer */}
       {selectedDept && (
         <ModalPortal open={!!selectedDept} onClose={closeDrawer}>
-          <div
+          <ModalBackdrop
             className="fixed inset-0 z-[9998] bg-slate-900/60 backdrop-blur-sm"
-            onClick={closeDrawer}
+            onClose={closeDrawer}
           />
 
           <aside className="fixed inset-y-0 right-0 z-[9999] w-full max-w-md bg-white shadow-2xl overflow-y-auto dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700">
@@ -939,10 +936,7 @@ function DepartmentsPage() {
 
       {formOpen && (
         <ModalPortal open={formOpen} onClose={() => setFormOpen(false)}>
-          <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto"
-            onClick={() => setFormOpen(false)}
-          >
+          <ModalBackdrop onClose={() => setFormOpen(false)} disableBackdropClick={true}>
             <div
               className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-800 my-auto"
               onClick={(e) => e.stopPropagation()}
@@ -1027,7 +1021,7 @@ function DepartmentsPage() {
               </div>
             </form>
           </div>
-          </div>
+          </ModalBackdrop>
         </ModalPortal>
       )}
 

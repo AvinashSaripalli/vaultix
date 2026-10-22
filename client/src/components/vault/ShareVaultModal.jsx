@@ -1,9 +1,9 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import api from '../../services/api';
 import { showToast } from '../../utils/toast';
-import ModalPortal from '../common/ModalPortal';
+import ModalPortal, { ModalBackdrop } from '../common/ModalPortal';
 
 function ShareVaultModal({ open, onClose, vaultId }) {
   const { user } = useSelector((state) => state.auth);
@@ -78,10 +78,7 @@ function ShareVaultModal({ open, onClose, vaultId }) {
 
   return (
     <ModalPortal open={open} onClose={handleClose}>
-      <div
-        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 overflow-y-auto"
-        onClick={handleClose}
-      >
+      <ModalBackdrop onClose={handleClose} disableBackdropClick={true}>
         <div
           className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 max-h-[85vh] overflow-y-auto my-auto"
           onClick={(e) => e.stopPropagation()}
@@ -155,7 +152,7 @@ function ShareVaultModal({ open, onClose, vaultId }) {
           </div>
         </form>
       </div>
-      </div>
+      </ModalBackdrop>
     </ModalPortal>
   );
 }

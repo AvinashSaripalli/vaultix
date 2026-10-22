@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import api from '../../services/api';
-import ModalPortal from '../common/ModalPortal';
+import ModalPortal, { ModalBackdrop } from '../common/ModalPortal';
 
 const ACCESS_OPTIONS = [
   { value: 'ADMINISTRATOR', label: 'Administrator', icon: Crown },
@@ -222,10 +222,7 @@ function FolderUsersModal({ open, onClose, folderId, folderName, onSaved }) {
 
   return (
     <ModalPortal open={open} onClose={onClose}>
-      <div
-        className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
-        onClick={onClose}
-      >
+      <ModalBackdrop onClose={onClose}>
         <div
           className="w-full max-w-2xl bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden max-h-[90vh] flex flex-col my-auto"
           onClick={(e) => e.stopPropagation()}
@@ -397,7 +394,7 @@ function FolderUsersModal({ open, onClose, folderId, folderName, onSaved }) {
           )}
         </div>
       </div>
-      </div>
+      </ModalBackdrop>
     </ModalPortal>
   );
 }

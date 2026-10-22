@@ -3,7 +3,7 @@ import { X } from 'lucide-react';
 import api from '../../services/api';
 import { showToast } from '../../utils/toast';
 import { ITEM_TYPES } from '../../utils/itemTypes';
-import ModalPortal from '../common/ModalPortal';
+import ModalPortal, { ModalBackdrop } from '../common/ModalPortal';
 
 const ALLOWED_TYPES_OPTIONS = ITEM_TYPES.map((item) => item.value);
 
@@ -92,10 +92,7 @@ function VaultPolicyModal({ open, onClose, vaultId }) {
 
   return (
     <ModalPortal open={open} onClose={onClose}>
-      <div
-        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 overflow-y-auto"
-        onClick={onClose}
-      >
+      <ModalBackdrop onClose={onClose} disableBackdropClick={true}>
         <div
           className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 max-h-[85vh] overflow-y-auto my-auto"
           onClick={(e) => e.stopPropagation()}
@@ -202,7 +199,7 @@ function VaultPolicyModal({ open, onClose, vaultId }) {
           </div>
         )}
       </div>
-      </div>
+      </ModalBackdrop>
     </ModalPortal>
   );
 }

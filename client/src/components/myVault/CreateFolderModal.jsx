@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { FolderPlus, X } from 'lucide-react';
-import ModalPortal from '../common/ModalPortal';
+import ModalPortal, { ModalBackdrop } from '../common/ModalPortal';
 
 function CreateFolderModal({
   open,
@@ -20,10 +20,7 @@ function CreateFolderModal({
 
   return (
     <ModalPortal open={open} onClose={onClose}>
-      <div
-        className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
-        onClick={onClose}
-      >
+      <ModalBackdrop onClose={onClose} disableBackdropClick={true}>
         <div
           className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 dark:bg-slate-800 my-auto"
           onClick={(e) => e.stopPropagation()}
@@ -78,7 +75,7 @@ function CreateFolderModal({
           </button>
         </div>
       </div>
-      </div>
+      </ModalBackdrop>
     </ModalPortal>
   );
 }

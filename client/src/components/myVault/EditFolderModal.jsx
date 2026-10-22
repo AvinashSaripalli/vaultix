@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
-import ModalPortal from '../common/ModalPortal';
+import ModalPortal, { ModalBackdrop } from '../common/ModalPortal';
 
 function EditFolderModal({ open, folder, onClose, onSubmit }) {
   const [name, setName] = useState('');
@@ -20,10 +20,7 @@ function EditFolderModal({ open, folder, onClose, onSubmit }) {
 
   return (
     <ModalPortal open={open} onClose={onClose}>
-      <div
-        className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
-        onClick={onClose}
-      >
+      <ModalBackdrop onClose={onClose} disableBackdropClick={true}>
         <div
           className="w-full max-w-sm bg-white rounded-2xl shadow-2xl p-5 dark:bg-slate-800 my-auto"
           onClick={(e) => e.stopPropagation()}
@@ -57,7 +54,7 @@ function EditFolderModal({ open, folder, onClose, onSubmit }) {
           </button>
         </div>
       </div>
-      </div>
+      </ModalBackdrop>
     </ModalPortal>
   );
 }

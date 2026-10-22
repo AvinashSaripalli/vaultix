@@ -3,7 +3,7 @@ import { Eye, ExternalLink, Globe, KeyRound, Search, Share2, User, Folder, Chevr
 import { useDispatch, useSelector } from 'react-redux';
 import AppLayout from '../../components/layout/AppLayout';
 import ViewSharedPasswordModal from './ViewSharedPasswordModal';
-import ModalPortal from '../../components/common/ModalPortal';
+import ModalPortal, { ModalBackdrop } from '../../components/common/ModalPortal';
 import VerifyMasterPasswordModal from '../../components/security/VerifyMasterPasswordModal';
 import { fetchSharedWithMe } from '../../features/sharedPasswords/sharedPasswordsSlice';
 import {
@@ -297,10 +297,7 @@ function SharedWithMePage() {
 
         {decryptError && (
           <ModalPortal open={!!decryptError} onClose={() => setDecryptError('')}>
-            <div
-              className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
-              onClick={() => setDecryptError('')}
-            >
+            <ModalBackdrop onClose={() => setDecryptError('')}>
               <div
                 className="w-full max-w-md bg-white rounded-2xl shadow-2xl dark:bg-slate-800 my-auto"
                 onClick={(e) => e.stopPropagation()}
@@ -323,7 +320,7 @@ function SharedWithMePage() {
                 </button>
               </div>
             </div>
-            </div>
+            </ModalBackdrop>
           </ModalPortal>
         )}
 

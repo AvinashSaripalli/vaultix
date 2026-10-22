@@ -4,7 +4,7 @@ import { useSelector } from 'react-redux';
 import { decryptText, isEncryptedFormat } from '../../utils/crypto';
 import { secureCopyText } from '../../utils/clipboard';
 import VerifyMasterPasswordModal from '../security/VerifyMasterPasswordModal';
-import ModalPortal from '../common/ModalPortal';
+import ModalPortal, { ModalBackdrop } from '../common/ModalPortal';
 
 function ViewMyVaultPasswordModal({ open, password, onClose }) {
   const { user, sessionMasterPassword } = useSelector((state) => state.auth);
@@ -85,10 +85,7 @@ function ViewMyVaultPasswordModal({ open, password, onClose }) {
 
   return (
     <ModalPortal open={open} onClose={handleClose}>
-      <div
-        className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
-        onClick={handleClose}
-      >
+      <ModalBackdrop onClose={handleClose}>
         <div
           className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 dark:bg-slate-800 my-auto"
           onClick={(e) => e.stopPropagation()}
@@ -214,7 +211,7 @@ function ViewMyVaultPasswordModal({ open, password, onClose }) {
           setReVerifyOpen(false);
         }}
       />
-      </div>
+      </ModalBackdrop>
     </ModalPortal>
   );
 }
