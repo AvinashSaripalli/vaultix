@@ -531,7 +531,7 @@ const getUserAccessSummary = async (req, res) => {
         role: true,
         isActive: true,
         createdAt: true,
-        departmentMembers: {
+        departmentMemberships: {
           include: {
             department: {
               select: { id: true, name: true, parentId: true },
@@ -546,7 +546,7 @@ const getUserAccessSummary = async (req, res) => {
     }
 
     // 1. Resolve User Departments & Ancestor Department IDs
-    const directDepartmentIds = (targetUser.departmentMembers || []).map((dm) => dm.departmentId);
+    const directDepartmentIds = (targetUser.departmentMemberships || []).map((dm) => dm.departmentId);
     const allDepartmentIds = await getDepartmentIdsWithAncestors(directDepartmentIds);
 
     // Fetch department details for any inherited departments
@@ -556,10 +556,10 @@ const getUserAccessSummary = async (req, res) => {
     });
     const deptNameMap = new Map(allDepartments.map((d) => [d.id, d.name]));
 
-    const departmentsSummary = (targetUser.departmentMembers || []).map((dm) => ({
+    const departmentsSummary = (targetUser.departmentMemberships || []).map((dm) => ({
       id: dm.departmentId,
       name: dm.department?.name || 'Department',
-      role: dm.role,
+      role: dm.memberRole || 'MEMBER',
     }));
 
     // 2. Fetch all non-personal Vaults and their Folders
