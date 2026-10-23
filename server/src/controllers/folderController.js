@@ -156,6 +156,21 @@ const shareFolder = async (req, res) => {
       },
     });
 
+    const currentBlocked = Array.isArray(folder.blockedUserIds) ? folder.blockedUserIds : [];
+    if (accessLevel === 'FORBIDDEN') {
+      if (!currentBlocked.includes(user.id)) {
+        await prisma.folder.update({
+          where: { id: folderId },
+          data: { blockedUserIds: [...currentBlocked, user.id] },
+        });
+      }
+    } else if (currentBlocked.includes(user.id)) {
+      await prisma.folder.update({
+        where: { id: folderId },
+        data: { blockedUserIds: currentBlocked.filter((id) => id !== user.id) },
+      });
+    }
+
     const activityId = await generateId('activityLog');
 
     await prisma.activityLog.create({

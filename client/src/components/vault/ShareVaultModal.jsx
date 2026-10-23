@@ -1,9 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import api from '../../services/api';
 import { showToast } from '../../utils/toast';
 import ModalPortal, { ModalBackdrop } from '../common/ModalPortal';
+
+const ACCESS_LEVEL_LABELS = {
+  READ_ONLY: 'Read only',
+  READ_WRITE: 'Read and write',
+  FULL_ACCESS: 'Full access',
+  ADMINISTRATOR: 'Administrator',
+};
 
 function ShareVaultModal({ open, onClose, vaultId }) {
   const { user } = useSelector((state) => state.auth);
@@ -13,7 +20,7 @@ function ShareVaultModal({ open, onClose, vaultId }) {
   const [fetchingUsers, setFetchingUsers] = useState(false);
   const [error, setError] = useState('');
   const [sharing, setSharing] = useState(false);
-  const [memberIds, setMemberIds] = useState([]);
+  const [vaultPermissions, setVaultPermissions] = useState([]);
 
   useEffect(() => {
     if (!open) return;
@@ -39,15 +46,44 @@ function ShareVaultModal({ open, onClose, vaultId }) {
         const res = await api.get('/vaults');
         const vault = (res.data || []).find((v) => v.id === vaultId);
         const perms = vault?.permissions || [];
-        setMemberIds(perms.map((p) => p.user?.id).filter(Boolean));
+        setVaultPermissions(perms);
       } catch {
-        setMemberIds([]);
+        setVaultPermissions([]);
       }
     };
     fetchVaultMembers();
   }, [open, vaultId]);
 
-  const shareableUsers = users.filter((item) => !memberIds.includes(item.id));
+  const memberAccessMap = useMemo(() => {
+    const map = {};
+    for (const perm of vaultPermissions) {
+      const uId = perm.user?.id || perm.userId;
+      if (uId) {
+        map[uId] = perm.accessLevel;
+      }
+    }
+    return map;
+  }, [vaultPermissions]);
+
+  const selectedUserObj = useMemo(() => {
+    return users.find((u) => u.email === userEmail);
+  }, [users, userEmail]);
+
+  const existingAccess = selectedUserObj ? memberAccessMap[selectedUserObj.id] : null;
+
+  const handleUserChange = (email) => {
+    setUserEmail(email);
+    if (!email) {
+      setAccessLevel('READ_ONLY');
+      return;
+    }
+    const targetUser = users.find((u) => u.email === email);
+    if (targetUser && memberAccessMap[targetUser.id]) {
+      setAccessLevel(memberAccessMap[targetUser.id]);
+    } else {
+      setAccessLevel('READ_ONLY');
+    }
+  };
 
   const resetForm = () => {
     setUserEmail('');
@@ -65,7 +101,7 @@ function ShareVaultModal({ open, onClose, vaultId }) {
       setSharing(true);
       setError('');
       await api.post(`/vaults/${vaultId}/share`, { userEmail, accessLevel });
-      showToast('Vault shared successfully');
+      showToast(existingAccess ? 'Vault access updated successfully' : 'Vault shared successfully');
       handleClose();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to share vault');
@@ -84,8 +120,8 @@ function ShareVaultModal({ open, onClose, vaultId }) {
           onClick={(e) => e.stopPropagation()}
         >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">Share Vault</h2>
-          <button onClick={handleClose} className="text-slate-400 dark:text-slate-500">
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Share Vault</h2>
+          <button onClick={handleClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
             <X size={20} />
           </button>
         </div>
@@ -98,33 +134,44 @@ function ShareVaultModal({ open, onClose, vaultId }) {
 
         <form onSubmit={handleShare} className="space-y-4">
           <div>
-            <label className="text-sm text-slate-600 dark:text-slate-300 mb-1 block">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">
               Select user
             </label>
             <select
               value={userEmail}
-              onChange={(e) => setUserEmail(e.target.value)}
-              className="w-full border border-slate-300 dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 rounded-lg px-3 py-2 text-sm"
+              onChange={(e) => handleUserChange(e.target.value)}
+              className="w-full border border-slate-300 dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <option value="">
-                {fetchingUsers ? 'Loading...' : 'Choose user'}
+                {fetchingUsers ? 'Loading active users...' : 'Choose user'}
               </option>
-              {shareableUsers.map((item) => (
-                <option key={item.id} value={item.email}>
-                  {item.fullName}
-                </option>
-              ))}
+              {users.map((item) => {
+                const currentAccess = memberAccessMap[item.id];
+                const statusLabel = currentAccess
+                  ? ` — [${ACCESS_LEVEL_LABELS[currentAccess] || currentAccess}]`
+                  : '';
+                return (
+                  <option key={item.id} value={item.email}>
+                    {item.fullName} ({item.email}){statusLabel}
+                  </option>
+                );
+              })}
             </select>
+            {existingAccess && (
+              <p className="mt-1.5 text-xs text-indigo-600 dark:text-indigo-400">
+                User already has {ACCESS_LEVEL_LABELS[existingAccess] || existingAccess} access. Changing this will update their permission.
+              </p>
+            )}
           </div>
 
           <div>
-            <label className="text-sm text-slate-600 dark:text-slate-300 mb-1 block">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">
               Access level
             </label>
             <select
               value={accessLevel}
               onChange={(e) => setAccessLevel(e.target.value)}
-              className="w-full border border-slate-300 dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-slate-300 dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <option value="READ_ONLY">Read only</option>
               <option value="READ_WRITE">Read and write</option>
@@ -137,7 +184,7 @@ function ShareVaultModal({ open, onClose, vaultId }) {
             <button
               type="button"
               onClick={handleClose}
-              className="px-4 py-2 rounded-lg border text-sm"
+              className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm font-medium transition"
             >
               Cancel
             </button>
@@ -145,9 +192,9 @@ function ShareVaultModal({ open, onClose, vaultId }) {
             <button
               type="submit"
               disabled={sharing}
-              className="px-5 py-2 rounded-lg bg-indigo-600 text-white text-sm"
+              className="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition disabled:opacity-50"
             >
-              {sharing ? 'Sharing...' : 'Share'}
+              {sharing ? 'Saving...' : existingAccess ? 'Update Access' : 'Share Vault'}
             </button>
           </div>
         </form>
