@@ -7,14 +7,6 @@ import { unwrapItemKey, wrapItemKey } from '../../utils/crypto';
 import ModalPortal, { ModalBackdrop } from '../common/ModalPortal';
 import { showToast } from '../../utils/toast';
 
-const ACCESS_LEVEL_LABELS = {
-  READ_ONLY: 'Read only',
-  READ_WRITE: 'Read and write',
-  FULL_ACCESS: 'Full access',
-  ADMINISTRATOR: 'Administrator',
-  FORBIDDEN: 'Forbidden (Blocked)',
-};
-
 function ShareFolderModal({ open, onClose, folderId, vaultId }) {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
@@ -26,8 +18,7 @@ function ShareFolderModal({ open, onClose, folderId, vaultId }) {
   const [accessLevel, setAccessLevel] = useState('READ_ONLY');
   const [fetchingUsers, setFetchingUsers] = useState(false);
   const [error, setError] = useState('');
-  const [folderPermissions, setFolderPermissions] = useState([]);
-  const [blockedUserIds, setBlockedUserIds] = useState([]);
+  const [activeMemberUserIds, setActiveMemberUserIds] = useState([]);
 
   useEffect(() => {
     if (!open) return;
@@ -39,7 +30,7 @@ function ShareFolderModal({ open, onClose, folderId, vaultId }) {
 
         const response = await api.get('/users/shareable');
 
-        // Show all active users in the workspace except current user
+        // All active users in the workspace except current logged-in user
         const allActiveUsers = (response.data || []).filter(
           (item) => item.id !== user?.id
         );
@@ -61,54 +52,46 @@ function ShareFolderModal({ open, onClose, folderId, vaultId }) {
     const fetchFolderMembers = async () => {
       try {
         const res = await api.get(`/folders/${folderId}`);
-        const perms = res.data?.permissions || [];
-        const blocked = Array.isArray(res.data?.blockedUserIds)
-          ? res.data.blockedUserIds
+        const folderData = res.data;
+        const perms = folderData?.permissions || [];
+        const blocked = Array.isArray(folderData?.blockedUserIds)
+          ? folderData.blockedUserIds
           : [];
-        setFolderPermissions(perms);
-        setBlockedUserIds(blocked);
+        const deptMembers = folderData?.departmentMembers || [];
+        const ownerId = folderData?.vault?.owner?.id || folderData?.vault?.ownerId;
+
+        // Users who currently have active access to this folder:
+        // 1. Direct permissions where accessLevel is NOT 'FORBIDDEN'
+        const directActiveIds = perms
+          .filter((p) => p.accessLevel && p.accessLevel !== 'FORBIDDEN')
+          .map((p) => p.user?.id || p.userId)
+          .filter(Boolean);
+
+        // 2. Department members who are NOT blocked
+        const deptActiveIds = deptMembers
+          .map((dm) => dm.user?.id || dm.userId)
+          .filter((id) => id && !blocked.includes(id));
+
+        // 3. Vault owner (always has access)
+        const ownerIds = ownerId ? [ownerId] : [];
+
+        const allActiveMemberIds = [
+          ...new Set([...directActiveIds, ...deptActiveIds, ...ownerIds]),
+        ];
+
+        setActiveMemberUserIds(allActiveMemberIds);
       } catch {
-        setFolderPermissions([]);
-        setBlockedUserIds([]);
+        setActiveMemberUserIds([]);
       }
     };
 
     fetchFolderMembers();
   }, [open, folderId]);
 
-  const memberAccessMap = useMemo(() => {
-    const map = {};
-    for (const perm of folderPermissions) {
-      const uId = perm.user?.id || perm.userId;
-      if (uId) {
-        map[uId] = perm.accessLevel;
-      }
-    }
-    for (const bId of blockedUserIds) {
-      map[bId] = 'FORBIDDEN';
-    }
-    return map;
-  }, [folderPermissions, blockedUserIds]);
-
-  const selectedUserObj = useMemo(() => {
-    return users.find((u) => u.email === userEmail);
-  }, [users, userEmail]);
-
-  const existingAccess = selectedUserObj ? memberAccessMap[selectedUserObj.id] : null;
-
-  const handleUserChange = (email) => {
-    setUserEmail(email);
-    if (!email) {
-      setAccessLevel('READ_ONLY');
-      return;
-    }
-    const targetUser = users.find((u) => u.email === email);
-    if (targetUser && memberAccessMap[targetUser.id]) {
-      setAccessLevel(memberAccessMap[targetUser.id]);
-    } else {
-      setAccessLevel('READ_ONLY');
-    }
-  };
+  // Only show users who do NOT currently have active access in this folder
+  const eligibleUsers = useMemo(() => {
+    return users.filter((u) => !activeMemberUserIds.includes(u.id));
+  }, [users, activeMemberUserIds]);
 
   const resetForm = () => {
     setUserEmail('');
@@ -126,7 +109,7 @@ function ShareFolderModal({ open, onClose, folderId, vaultId }) {
 
     if (!folderId) return setError('Select a folder');
     if (!vaultId) return setError('Vault missing');
-    if (!userEmail) return setError('Select a user');
+    if (!userEmail) return setError('Please select a user to share with');
 
     setError('');
     handleVerified();
@@ -146,10 +129,10 @@ function ShareFolderModal({ open, onClose, folderId, vaultId }) {
       if (accessLevel !== 'FORBIDDEN') {
         await wrapKeysForNewUser(userEmail);
       }
-      showToast(existingAccess ? 'Folder access updated successfully' : 'Folder shared successfully');
+      showToast('Folder shared successfully');
       handleClose();
     } else {
-      setError(result.payload || 'Failed to share');
+      setError(result.payload || 'Failed to share folder');
     }
   };
 
@@ -225,29 +208,22 @@ function ShareFolderModal({ open, onClose, folderId, vaultId }) {
             </label>
             <select
               value={userEmail}
-              onChange={(e) => handleUserChange(e.target.value)}
+              onChange={(e) => setUserEmail(e.target.value)}
               className="w-full border border-slate-300 dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <option value="">
-                {fetchingUsers ? 'Loading active users...' : 'Choose user'}
+                {fetchingUsers
+                  ? 'Loading active users...'
+                  : eligibleUsers.length === 0
+                  ? 'All active users already have access'
+                  : 'Choose user'}
               </option>
-              {users.map((item) => {
-                const currentAccess = memberAccessMap[item.id];
-                const statusLabel = currentAccess
-                  ? ` — [${ACCESS_LEVEL_LABELS[currentAccess] || currentAccess}]`
-                  : '';
-                return (
-                  <option key={item.id} value={item.email}>
-                    {item.fullName} ({item.email}){statusLabel}
-                  </option>
-                );
-              })}
+              {eligibleUsers.map((item) => (
+                <option key={item.id} value={item.email}>
+                  {item.fullName} ({item.email})
+                </option>
+              ))}
             </select>
-            {existingAccess && (
-              <p className="mt-1.5 text-xs text-indigo-600 dark:text-indigo-400">
-                User already has {ACCESS_LEVEL_LABELS[existingAccess] || existingAccess} access. Changing this will update their permission.
-              </p>
-            )}
           </div>
 
           <div>
@@ -263,7 +239,6 @@ function ShareFolderModal({ open, onClose, folderId, vaultId }) {
               <option value="READ_WRITE">Read and write</option>
               <option value="FULL_ACCESS">Full access</option>
               <option value="ADMINISTRATOR">Administrator</option>
-              <option value="FORBIDDEN">Forbidden (Block Access)</option>
             </select>
           </div>
 
@@ -278,10 +253,10 @@ function ShareFolderModal({ open, onClose, folderId, vaultId }) {
 
             <button
               type="submit"
-              disabled={actionLoading}
+              disabled={actionLoading || eligibleUsers.length === 0}
               className="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition disabled:opacity-50"
             >
-              {actionLoading ? 'Saving...' : existingAccess ? 'Update Access' : 'Share Folder'}
+              {actionLoading ? 'Sharing...' : 'Share Folder'}
             </button>
           </div>
         </form>

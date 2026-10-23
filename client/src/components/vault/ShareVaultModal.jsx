@@ -5,13 +5,6 @@ import api from '../../services/api';
 import { showToast } from '../../utils/toast';
 import ModalPortal, { ModalBackdrop } from '../common/ModalPortal';
 
-const ACCESS_LEVEL_LABELS = {
-  READ_ONLY: 'Read only',
-  READ_WRITE: 'Read and write',
-  FULL_ACCESS: 'Full access',
-  ADMINISTRATOR: 'Administrator',
-};
-
 function ShareVaultModal({ open, onClose, vaultId }) {
   const { user } = useSelector((state) => state.auth);
   const [users, setUsers] = useState([]);
@@ -20,7 +13,7 @@ function ShareVaultModal({ open, onClose, vaultId }) {
   const [fetchingUsers, setFetchingUsers] = useState(false);
   const [error, setError] = useState('');
   const [sharing, setSharing] = useState(false);
-  const [vaultPermissions, setVaultPermissions] = useState([]);
+  const [activeMemberUserIds, setActiveMemberUserIds] = useState([]);
 
   useEffect(() => {
     if (!open) return;
@@ -46,44 +39,28 @@ function ShareVaultModal({ open, onClose, vaultId }) {
         const res = await api.get('/vaults');
         const vault = (res.data || []).find((v) => v.id === vaultId);
         const perms = vault?.permissions || [];
-        setVaultPermissions(perms);
+        const ownerId = vault?.owner?.id || vault?.ownerId;
+
+        // Users who already have access in this vault
+        const activeIds = perms
+          .filter((p) => p.accessLevel && p.accessLevel !== 'FORBIDDEN')
+          .map((p) => p.user?.id || p.userId)
+          .filter(Boolean);
+
+        if (ownerId) activeIds.push(ownerId);
+
+        setActiveMemberUserIds([...new Set(activeIds)]);
       } catch {
-        setVaultPermissions([]);
+        setActiveMemberUserIds([]);
       }
     };
     fetchVaultMembers();
   }, [open, vaultId]);
 
-  const memberAccessMap = useMemo(() => {
-    const map = {};
-    for (const perm of vaultPermissions) {
-      const uId = perm.user?.id || perm.userId;
-      if (uId) {
-        map[uId] = perm.accessLevel;
-      }
-    }
-    return map;
-  }, [vaultPermissions]);
-
-  const selectedUserObj = useMemo(() => {
-    return users.find((u) => u.email === userEmail);
-  }, [users, userEmail]);
-
-  const existingAccess = selectedUserObj ? memberAccessMap[selectedUserObj.id] : null;
-
-  const handleUserChange = (email) => {
-    setUserEmail(email);
-    if (!email) {
-      setAccessLevel('READ_ONLY');
-      return;
-    }
-    const targetUser = users.find((u) => u.email === email);
-    if (targetUser && memberAccessMap[targetUser.id]) {
-      setAccessLevel(memberAccessMap[targetUser.id]);
-    } else {
-      setAccessLevel('READ_ONLY');
-    }
-  };
+  // Only show users who do NOT currently have active access in this vault
+  const eligibleUsers = useMemo(() => {
+    return users.filter((u) => !activeMemberUserIds.includes(u.id));
+  }, [users, activeMemberUserIds]);
 
   const resetForm = () => {
     setUserEmail('');
@@ -96,12 +73,12 @@ function ShareVaultModal({ open, onClose, vaultId }) {
   const handleShare = async (e) => {
     e.preventDefault();
     if (!vaultId) return setError('Vault missing');
-    if (!userEmail) return setError('Select a user');
+    if (!userEmail) return setError('Please select a user to share with');
     try {
       setSharing(true);
       setError('');
       await api.post(`/vaults/${vaultId}/share`, { userEmail, accessLevel });
-      showToast(existingAccess ? 'Vault access updated successfully' : 'Vault shared successfully');
+      showToast('Vault shared successfully');
       handleClose();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to share vault');
@@ -139,29 +116,22 @@ function ShareVaultModal({ open, onClose, vaultId }) {
             </label>
             <select
               value={userEmail}
-              onChange={(e) => handleUserChange(e.target.value)}
+              onChange={(e) => setUserEmail(e.target.value)}
               className="w-full border border-slate-300 dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <option value="">
-                {fetchingUsers ? 'Loading active users...' : 'Choose user'}
+                {fetchingUsers
+                  ? 'Loading active users...'
+                  : eligibleUsers.length === 0
+                  ? 'All active users already have access'
+                  : 'Choose user'}
               </option>
-              {users.map((item) => {
-                const currentAccess = memberAccessMap[item.id];
-                const statusLabel = currentAccess
-                  ? ` — [${ACCESS_LEVEL_LABELS[currentAccess] || currentAccess}]`
-                  : '';
-                return (
-                  <option key={item.id} value={item.email}>
-                    {item.fullName} ({item.email}){statusLabel}
-                  </option>
-                );
-              })}
+              {eligibleUsers.map((item) => (
+                <option key={item.id} value={item.email}>
+                  {item.fullName} ({item.email})
+                </option>
+              ))}
             </select>
-            {existingAccess && (
-              <p className="mt-1.5 text-xs text-indigo-600 dark:text-indigo-400">
-                User already has {ACCESS_LEVEL_LABELS[existingAccess] || existingAccess} access. Changing this will update their permission.
-              </p>
-            )}
           </div>
 
           <div>
@@ -191,10 +161,10 @@ function ShareVaultModal({ open, onClose, vaultId }) {
 
             <button
               type="submit"
-              disabled={sharing}
+              disabled={sharing || eligibleUsers.length === 0}
               className="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition disabled:opacity-50"
             >
-              {sharing ? 'Saving...' : existingAccess ? 'Update Access' : 'Share Vault'}
+              {sharing ? 'Sharing...' : 'Share Vault'}
             </button>
           </div>
         </form>
