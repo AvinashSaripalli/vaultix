@@ -1,6 +1,7 @@
 const prisma = require('../config/prisma');
 const generateId = require('../utils/generateId');
 const { getEffectiveOrganizationPolicy } = require('../utils/organizationPolicy');
+const { getDepartmentIdsWithAncestors } = require('../utils/permissions');
 
 const isSuperAdminRole = (role) => role === 'SUPER_ADMIN';
 const isAdminRole = (role) => ['SUPER_ADMIN', 'ADMIN'].includes(role);
@@ -511,10 +512,235 @@ const deleteUser = async (req, res) => {
   }
 };
 
+const getUserAccessSummary = async (req, res) => {
+  try {
+    const targetUserId = req.params.id;
+    const isCallerAdmin = ['SUPER_ADMIN', 'ADMIN'].includes(req.user.role);
+
+    // Allow Admins/SuperAdmins, or user viewing their own access
+    if (!isCallerAdmin && req.user.id !== targetUserId) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    const targetUser = await prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+        departmentMembers: {
+          include: {
+            department: {
+              select: { id: true, name: true, parentId: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!targetUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // 1. Resolve User Departments & Ancestor Department IDs
+    const directDepartmentIds = (targetUser.departmentMembers || []).map((dm) => dm.departmentId);
+    const allDepartmentIds = await getDepartmentIdsWithAncestors(directDepartmentIds);
+
+    // Fetch department details for any inherited departments
+    const allDepartments = await prisma.department.findMany({
+      where: { id: { in: allDepartmentIds } },
+      select: { id: true, name: true },
+    });
+    const deptNameMap = new Map(allDepartments.map((d) => [d.id, d.name]));
+
+    const departmentsSummary = (targetUser.departmentMembers || []).map((dm) => ({
+      id: dm.departmentId,
+      name: dm.department?.name || 'Department',
+      role: dm.role,
+    }));
+
+    // 2. Fetch all non-personal Vaults and their Folders
+    const vaults = await prisma.vault.findMany({
+      where: {
+        type: { not: 'PERSONAL' },
+      },
+      include: {
+        owner: {
+          select: { id: true, fullName: true, email: true },
+        },
+        permissions: {
+          where: { userId: targetUserId },
+        },
+        folders: {
+          where: { deletedAt: null },
+          include: {
+            permissions: {
+              where: { userId: targetUserId },
+            },
+            departmentPermissions: {
+              where: { departmentId: { in: allDepartmentIds } },
+              include: {
+                department: { select: { id: true, name: true } },
+              },
+            },
+            _count: {
+              select: { passwords: { where: { deletedAt: null } } },
+            },
+          },
+          orderBy: { name: 'asc' },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    const isTargetAdmin = ['SUPER_ADMIN', 'ADMIN'].includes(targetUser.role);
+
+    const folderAccessList = [];
+
+    const RANK = {
+      READ_ONLY: 0,
+      READ_WRITE: 1,
+      FULL_ACCESS: 2,
+      ADMINISTRATOR: 3,
+    };
+
+    for (const vault of vaults) {
+      const isVaultOwner = vault.ownerId === targetUserId;
+
+      for (const folder of vault.folders) {
+        const directPerm = folder.permissions?.[0] || null;
+        const deptGrants = folder.departmentPermissions || [];
+        const blockedUsers = Array.isArray(folder.blockedUserIds) ? folder.blockedUserIds : [];
+        const isBlocked = blockedUsers.includes(targetUserId);
+
+        // Resolve Department Access Level
+        let deptAccessLevel = null;
+        let viaDepts = [];
+        if (deptGrants.length > 0) {
+          const hasForbiddenDept = deptGrants.some((g) => g.accessLevel === 'FORBIDDEN');
+          if (hasForbiddenDept) {
+            deptAccessLevel = 'FORBIDDEN';
+          } else {
+            const validGrants = deptGrants.filter(
+              (g) => g.accessLevel && g.accessLevel !== 'FORBIDDEN' && g.accessLevel !== 'NOT_SET'
+            );
+            if (validGrants.length > 0) {
+              validGrants.sort((a, b) => (RANK[b.accessLevel] ?? -1) - (RANK[a.accessLevel] ?? -1));
+              deptAccessLevel = validGrants[0].accessLevel;
+            }
+          }
+          viaDepts = deptGrants.map((g) => g.department?.name || deptNameMap.get(g.departmentId) || 'Department');
+        }
+
+        // Determine Effective Access and Source
+        let effectiveAccess = null;
+        let accessSource = 'NONE'; // 'ROLE_ADMIN' | 'VAULT_OWNER' | 'DIRECT' | 'DEPARTMENT' | 'BLOCKED' | 'NONE'
+
+        if (isTargetAdmin) {
+          effectiveAccess = 'ADMINISTRATOR';
+          accessSource = 'ROLE_ADMIN';
+        } else if (isVaultOwner) {
+          effectiveAccess = 'ADMINISTRATOR';
+          accessSource = 'VAULT_OWNER';
+        } else if (directPerm) {
+          if (directPerm.accessLevel === 'FORBIDDEN') {
+            effectiveAccess = 'FORBIDDEN';
+            accessSource = 'DIRECT_FORBIDDEN';
+          } else {
+            // Direct permission takes precedence or highest with department
+            if (deptAccessLevel && deptAccessLevel !== 'FORBIDDEN') {
+              effectiveAccess =
+                (RANK[directPerm.accessLevel] ?? -1) >= (RANK[deptAccessLevel] ?? -1)
+                  ? directPerm.accessLevel
+                  : deptAccessLevel;
+              accessSource = effectiveAccess === directPerm.accessLevel ? 'DIRECT' : 'DEPARTMENT';
+            } else {
+              effectiveAccess = directPerm.accessLevel;
+              accessSource = 'DIRECT';
+            }
+          }
+        } else if (isBlocked) {
+          effectiveAccess = 'FORBIDDEN';
+          accessSource = 'BLOCKED';
+        } else if (deptAccessLevel) {
+          if (deptAccessLevel === 'FORBIDDEN') {
+            effectiveAccess = 'FORBIDDEN';
+            accessSource = 'DEPARTMENT_FORBIDDEN';
+          } else {
+            effectiveAccess = deptAccessLevel;
+            accessSource = 'DEPARTMENT';
+          }
+        } else {
+          effectiveAccess = null;
+          accessSource = 'NONE';
+        }
+
+        folderAccessList.push({
+          folderId: folder.id,
+          folderName: folder.name,
+          vaultId: vault.id,
+          vaultName: vault.name,
+          vaultType: vault.type,
+          itemCount: folder._count?.passwords || 0,
+          effectiveAccess, // 'ADMINISTRATOR' | 'FULL_ACCESS' | 'READ_WRITE' | 'READ_ONLY' | 'FORBIDDEN' | null
+          hasAccess: Boolean(effectiveAccess && effectiveAccess !== 'FORBIDDEN'),
+          accessSource,
+          directPermission: directPerm
+            ? {
+                id: directPerm.id,
+                accessLevel: directPerm.accessLevel,
+              }
+            : null,
+          deptAccessLevel,
+          viaDepartments: viaDepts,
+          isBlocked,
+          isVaultOwner,
+          isRoleAdmin: isTargetAdmin,
+        });
+      }
+    }
+
+    // Sort: Folders with access first, then by Vault name, then Folder name
+    folderAccessList.sort((a, b) => {
+      if (a.hasAccess !== b.hasAccess) return a.hasAccess ? -1 : 1;
+      if (a.vaultName.localeCompare(b.vaultName) !== 0) return a.vaultName.localeCompare(b.vaultName);
+      return a.folderName.localeCompare(b.folderName);
+    });
+
+    const summary = {
+      user: {
+        id: targetUser.id,
+        fullName: targetUser.fullName,
+        email: targetUser.email,
+        role: targetUser.role,
+        isActive: targetUser.isActive,
+      },
+      departments: departmentsSummary,
+      stats: {
+        totalFolders: folderAccessList.length,
+        accessibleFolders: folderAccessList.filter((f) => f.hasAccess).length,
+        directGrants: folderAccessList.filter((f) => f.directPermission && f.directPermission.accessLevel !== 'FORBIDDEN').length,
+        deptGrants: folderAccessList.filter((f) => f.accessSource === 'DEPARTMENT').length,
+        forbiddenOrBlocked: folderAccessList.filter((f) => f.effectiveAccess === 'FORBIDDEN').length,
+      },
+      folders: folderAccessList,
+    };
+
+    res.json(summary);
+  } catch (error) {
+    console.error('Get user access summary error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   getShareableUsers,
   getUsers,
   createUserByAdmin,
   updateUser,
   deleteUser,
+  getUserAccessSummary,
 };

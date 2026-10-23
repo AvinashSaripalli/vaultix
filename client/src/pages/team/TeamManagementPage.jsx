@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { Navigate, useNavigate } from 'react-router-dom';
+import { KeyRound } from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout';
 import api from '../../services/api';
 import PendingInvitationsModal from './PendingInvitationsModal';
+import UserAccessModal from './UserAccessModal';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import RoleBadge from '../../components/common/RoleBadge';
 import { isAdmin, isSuperAdmin, ROLES } from '../../utils/roles';
@@ -23,6 +25,7 @@ function TeamManagementPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteUser, setDeleteUser] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [accessUser, setAccessUser] = useState(null);
 
   useEffect(() => {
     if (!isAdmin(user)) return;
@@ -249,6 +252,16 @@ function TeamManagementPage() {
 
                         <td className="px-4 sm:px-5 py-3.5 sm:py-4">
                           <div className="flex justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setAccessUser(item)}
+                              title="View and manage folder access permissions"
+                              className="rounded-xl border border-indigo-200 bg-indigo-50/70 px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm text-indigo-700 hover:bg-indigo-100 dark:border-indigo-900/60 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-900/60 transition inline-flex items-center gap-1.5 font-medium shadow-xs"
+                            >
+                              <KeyRound size={13} className="shrink-0" />
+                              <span>Access</span>
+                            </button>
+
                             {isSuperAdmin(item) && !isSuperAdmin(user) ? (
                               <button
                                 type="button"
@@ -384,6 +397,15 @@ function TeamManagementPage() {
         onConfirm={confirmDeleteUser}
         onCancel={() => setDeleteUser(null)}
         loading={deleting}
+      />
+
+      <UserAccessModal
+        open={Boolean(accessUser)}
+        onClose={() => setAccessUser(null)}
+        userId={accessUser?.id}
+        userName={accessUser?.fullName}
+        userEmail={accessUser?.email}
+        userRole={accessUser?.role}
       />
     </AppLayout>
   );

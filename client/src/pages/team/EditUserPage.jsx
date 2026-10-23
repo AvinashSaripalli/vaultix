@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate, useParams, Navigate } from 'react-router-dom';
+import { KeyRound } from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout';
 import api from '../../services/api';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import ModalPortal, { ModalBackdrop } from '../../components/common/ModalPortal';
 import RoleBadge from '../../components/common/RoleBadge';
+import UserAccessModal from './UserAccessModal';
 import { isAdmin, isSuperAdmin, ROLES, ROLE_DEFINITIONS } from '../../utils/roles';
 import { showToast } from '../../utils/toast';
 
@@ -30,6 +32,7 @@ function EditUserPage() {
   const [error, setError] = useState('');
   const [deleteUser, setDeleteUser] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [accessModalOpen, setAccessModalOpen] = useState(false);
 
   useEffect(() => {
     if (!isAdmin(user)) return;
@@ -359,6 +362,17 @@ function EditUserPage() {
                   Active User
                 </label>
 
+                <div className="pt-2 border-t border-slate-200 dark:border-slate-700/80">
+                  <button
+                    type="button"
+                    onClick={() => setAccessModalOpen(true)}
+                    className="w-full h-11 rounded-xl border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 dark:border-indigo-900/60 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-2 shadow-xs"
+                  >
+                    <KeyRound size={15} />
+                    <span>View & Manage Folder Access</span>
+                  </button>
+                </div>
+
                 <div className="flex items-center justify-end gap-3 pt-2">
                   <button
                     type="button"
@@ -391,6 +405,15 @@ function EditUserPage() {
         onConfirm={confirmDeleteUser}
         onCancel={() => setDeleteUser(null)}
         loading={deleting}
+      />
+
+      <UserAccessModal
+        open={accessModalOpen}
+        onClose={() => setAccessModalOpen(false)}
+        userId={targetUser?.id}
+        userName={targetUser?.fullName}
+        userEmail={targetUser?.email}
+        userRole={targetUser?.role}
       />
     </AppLayout>
   );
