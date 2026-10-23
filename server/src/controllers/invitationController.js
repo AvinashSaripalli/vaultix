@@ -43,14 +43,16 @@ const sendInvitation = async (req, res) => {
 
     await sendMail({
       to: email,
-      subject: 'Vaultix Registration Invitation',
+      subject: "You're invited to join Vaultix",
       html: renderEmail({
-        title: 'You are invited to Vaultix',
-        body: 'Your team is using Vaultix to keep shared credentials safe. Click the button below to create your account and set up your encrypted vault.',
-        buttonText: 'Register Now',
+        title: "You're invited to join Vaultix",
+        body: `Your team is using <strong>Vaultix</strong> to securely manage passwords, API keys, and sensitive credentials with zero-knowledge encryption.<br><br>Click the button below to accept your invitation, create your account, and set up your encrypted vault.`,
+        buttonText: 'Accept Invitation &rarr;',
         buttonUrl: registerLink,
         accent: 'purple',
-        footerNote: `This invitation was sent to ${email} and expires in 7 days.`,
+        badge: 'TEAM INVITATION',
+        icon: '🤝',
+        footerNote: `This invitation was issued for <strong>${email}</strong> and expires in 7 days. If you were not expecting this invitation, you can safely ignore this email.`,
       }),
     });
 

@@ -52,15 +52,33 @@ function createTransporter() {
   });
 }
 
-const transporter = createTransporter();
+const path = require('path');
+const fs = require('fs');
 
-const sendMail = async ({ to, subject, html }) => {
+const transporter = createTransporter();
+const logoPath = path.join(__dirname, '../assets/vaultix-logo.png');
+
+const sendMail = async ({ to, subject, html, attachments = [] }) => {
   const fromAddress = process.env.MAIL_FROM || `"Vaultix" <${mailUser}>`;
+  
+  const mailAttachments = [];
+  if (fs.existsSync(logoPath)) {
+    mailAttachments.push({
+      filename: 'vaultix-logo.png',
+      path: logoPath,
+      cid: 'vaultix-logo',
+    });
+  }
+  if (Array.isArray(attachments) && attachments.length > 0) {
+    mailAttachments.push(...attachments);
+  }
+
   await transporter.sendMail({
     from: fromAddress,
     to,
     subject,
     html,
+    attachments: mailAttachments,
   });
 };
 

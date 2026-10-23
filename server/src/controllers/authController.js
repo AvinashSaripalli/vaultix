@@ -462,17 +462,19 @@ const register = async (req, res) => {
     // Send verification email for non-invited users
     if (!emailVerified && verificationToken) {
       const verifyLink = `${clientUrl}/verify-email?token=${verificationToken}`;
-sendMail({
+      sendMail({
         to: user.email,
         subject: 'Verify your Vaultix email',
         html: renderEmail({
           title: 'Verify your email address',
-          body: 'Welcome to Vaultix! Click the button below to verify your email and activate your account.',
-          buttonText: 'Verify Email',
+          body: 'Welcome to <strong>Vaultix</strong>! Please confirm your email address by clicking the button below to activate your account and start securing your vault.',
+          buttonText: 'Verify Email &rarr;',
           buttonUrl: verifyLink,
           accent: 'blue',
+          badge: 'EMAIL VERIFICATION',
+          icon: '🛡️',
           footerNote:
-            'This link expires in 24 hours. If you did not create this account, you can safely ignore this email.',
+            'This verification link expires in 24 hours. If you did not create a Vaultix account, please ignore this email.',
         }),
       }).catch(() => {
         // Email sending is best-effort
@@ -928,15 +930,17 @@ const requestPasswordReset = async (req, res) => {
 
     await sendMail({
       to: user.email,
-      subject: 'Vaultix Password Reset',
+      subject: 'Reset your Vaultix password',
       html: renderEmail({
-        title: 'Reset your Vaultix password',
-        body: 'We received a request to reset the password for your Vaultix account. Click the button below to choose a new one.',
-        buttonText: 'Reset Password',
+        title: 'Reset your account password',
+        body: 'We received a request to reset the login password for your <strong>Vaultix</strong> account. Click the button below to securely set a new password. For security, this link can only be used once.',
+        buttonText: 'Reset Password &rarr;',
         buttonUrl: resetLink,
         accent: 'indigo',
+        badge: 'PASSWORD RESET',
+        icon: '🔑',
         footerNote:
-          'This link expires in 10 minutes. If you did not request this, you can safely ignore this email.',
+          'This password reset link expires in 10 minutes. If you did not request this, your account remains secure and you can ignore this email.',
       }),
     });
 
@@ -1273,31 +1277,40 @@ const requestMasterRecoveryKey = async (req, res) => {
       subject: 'Vaultix Master Password Recovery Key',
       html: renderEmail({
         title: 'Your Vaultix recovery key',
-        body: 'Use the recovery key below to reset your master password and recover your vault data.',
+        body: 'Use the confidential emergency recovery key below to reset your master password and regain access to your encrypted vault data.',
         accent: 'emerald',
+        badge: 'MASTER RECOVERY KEY',
+        icon: '🔐',
         extraHtml: `
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:24px 0;background-color:#0f172a;border-radius:12px;border:1px solid #1e293b;overflow:hidden">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:26px 0 20px;background-color:#090d16;border-radius:14px;border:1px solid #1e293b;overflow:hidden;box-shadow:0 8px 24px rgba(15,23,42,0.12)">
             <tr>
-              <td style="padding:10px 18px;background-color:#1e293b;border-bottom:1px solid #334155">
-                <span style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;color:#94a3b8;text-transform:uppercase">
-                  CONFIDENTIAL MASTER RECOVERY KEY
-                </span>
+              <td style="padding:12px 20px;background-color:#0f172a;border-bottom:1px solid #1e293b">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                  <tr>
+                    <td align="left" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;font-weight:700;letter-spacing:1.2px;color:#94a3b8;text-transform:uppercase">
+                      🔐 &nbsp;CONFIDENTIAL MASTER RECOVERY KEY
+                    </td>
+                    <td align="right" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:10px;font-weight:700;color:#10b981;letter-spacing:0.8px;text-transform:uppercase">
+                      EMERGENCY ACCESS
+                    </td>
+                  </tr>
+                </table>
               </td>
             </tr>
             <tr>
-              <td align="center" style="padding:24px 20px">
-                <div style="font-family:Consolas,Menlo,Monaco,monospace;font-size:24px;font-weight:700;letter-spacing:3px;color:#10b981;word-break:break-all">
+              <td align="center" style="padding:28px 20px 24px">
+                <div style="font-family:'SF Mono',Consolas,'Liberation Mono',Menlo,Monaco,monospace;font-size:25px;font-weight:700;letter-spacing:4px;color:#10b981;word-break:break-all;line-height:1.3;text-shadow:0 0 16px rgba(16,185,129,0.35)">
                   ${user.recoveryKey}
                 </div>
-                <p style="margin:10px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:12px;color:#64748b">
-                  Store this key offline in a secure location. It provides unauthenticated master recovery.
+                <p style="margin:14px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:12px;line-height:1.5;color:#94a3b8">
+                  Store this emergency key offline in a secure password manager or physical safe. It allows unauthenticated master vault reset.
                 </p>
               </td>
             </tr>
           </table>
         `,
         footerNote:
-          'Keep this key private. It grants full access to your encrypted vault. If you did not request this, please change your password immediately and contact your administrator.',
+          'Keep this key strictly private. It grants emergency access to your encrypted vault. If you did not request this recovery key, please change your password immediately and notify your administrator.',
       }),
     });
 
@@ -1571,12 +1584,14 @@ const requestEmailVerification = async (req, res) => {
       subject: 'Verify your Vaultix email',
       html: renderEmail({
         title: 'Verify your email address',
-        body: 'Welcome to Vaultix! Click the button below to verify your email and activate your account.',
-        buttonText: 'Verify Email',
+        body: 'Welcome to <strong>Vaultix</strong>! Please confirm your email address by clicking the button below to activate your account and start securing your vault.',
+        buttonText: 'Verify Email &rarr;',
         buttonUrl: verifyLink,
         accent: 'blue',
+        badge: 'EMAIL VERIFICATION',
+        icon: '🛡️',
         footerNote:
-          'This link expires in 24 hours. If you did not create this account, you can safely ignore this email.',
+          'This verification link expires in 24 hours. If you did not request this email, you can safely disregard it.',
       }),
     });
 

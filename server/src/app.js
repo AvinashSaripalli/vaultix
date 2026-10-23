@@ -3,6 +3,7 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const path = require('path');
 
 const { globalLimiter } = require('./utils/rateLimiters');
 
@@ -75,6 +76,8 @@ app.use(express.json({ limit: '1mb' }));
 app.get('/api/health', (req, res) => {
   res.json({ message: 'API is running' });
 });
+
+app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
 app.use('/api', globalLimiter);
 
