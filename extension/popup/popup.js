@@ -975,14 +975,10 @@ function renderPendingSaveCard() {
             opt.value = `company:${cv.id}:${f.id}`;
             opt.textContent = `🏢 ${f.name}`;
             const isTarget =
-              (isUpdate &&
-                pending.existingVaultType === 'COMPANY' &&
-                pending.existingFolderId &&
-                f.id === pending.existingFolderId) ||
-              (!isUpdate &&
-                pending.suggestedVaultType === 'COMPANY' &&
-                pending.suggestedFolderId &&
-                f.id === pending.suggestedFolderId);
+              isUpdate &&
+              pending.existingVaultType === 'COMPANY' &&
+              pending.existingFolderId &&
+              f.id === pending.existingFolderId;
             if (isTarget) {
               opt.selected = true;
             }
