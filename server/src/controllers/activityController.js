@@ -47,6 +47,32 @@ const getAllActivityLogs = async (req, res) => {
         )
       : logs;
 
+    const missingTypeTargetIds = [
+      ...new Set(
+        filtered
+          .filter(
+            (l) =>
+              !l.metadata?.itemType &&
+              (l.targetType === 'PasswordEntry' || (l.targetId && l.targetId.startsWith('PWD-')))
+          )
+          .map((l) => l.targetId)
+          .filter(Boolean)
+      ),
+    ];
+
+    if (missingTypeTargetIds.length > 0) {
+      const items = await prisma.passwordEntry.findMany({
+        where: { id: { in: missingTypeTargetIds } },
+        select: { id: true, type: true },
+      });
+      const typeMap = new Map(items.map((i) => [i.id, i.type]));
+      for (const log of filtered) {
+        if (!log.metadata?.itemType && log.targetId && typeMap.has(log.targetId)) {
+          log.metadata = { ...(log.metadata || {}), itemType: typeMap.get(log.targetId) };
+        }
+      }
+    }
+
     res.json(filtered);
   } catch (error) {
     console.error('Get all activity logs error:', error);

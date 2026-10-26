@@ -358,6 +358,8 @@ const createPassword = async (req, res) => {
           targetId: entry.id,
           metadata: {
             name: entry.name,
+            login: entry.login,
+            itemType: entry.type,
             vaultId,
             folderId,
             vaultType,
@@ -933,6 +935,8 @@ const updatePassword = async (req, res) => {
           targetId: updated.id,
           metadata: {
             name: updated.name,
+            login: updated.login,
+            itemType: updated.type,
             folderId: updated.folderId,
             vaultId: updated.vaultId,
             tags: cleanTags || undefined,
@@ -1037,6 +1041,8 @@ const deletePassword = async (req, res) => {
           targetId: req.params.id,
           metadata: {
             name: password.name,
+            login: password.login,
+            itemType: password.type,
             folderId: password.folderId,
             vaultId: password.vaultId,
             vaultType,
@@ -1146,6 +1152,8 @@ const restorePassword = async (req, res) => {
           targetId: req.params.id,
           metadata: {
             name: password.name,
+            login: password.login,
+            itemType: password.type,
             folderId: targetFolderId,
             vaultId: password.vaultId,
             vaultType,
@@ -1463,7 +1471,7 @@ const logCopyPassword = async (req, res) => {
 
     const isAutofill = req.body?.mode === 'autofill';
     const fieldName = req.body?.fieldName || null;
-    const action = isAutofill ? 'AUTOFILL_PASSWORD' : (fieldName ? 'COPY_FIELD' : 'COPY_PASSWORD');
+    const action = isAutofill ? 'AUTOFILL_PASSWORD' : 'COPY_PASSWORD';
     const clientSource = req.body?.clientSource || (isAutofill ? 'EXTENSION' : 'WEB');
     const domain = req.body?.domain || null;
     const url = req.body?.url || null;
@@ -1478,6 +1486,7 @@ const logCopyPassword = async (req, res) => {
         metadata: {
           name: password.name,
           login: password.login,
+          itemType: password.type,
           folderId: password.folderId,
           vaultId: password.vaultId,
           vaultType,
@@ -1536,6 +1545,7 @@ const logViewPassword = async (req, res) => {
     const vaultType = await getVaultType(password.vaultId);
     const isPersonal = vaultType === 'PERSONAL';
     const clientSource = req.body?.clientSource || 'WEB';
+    const fieldName = req.body?.fieldName || null;
 
     await prisma.activityLog.create({
       data: {
@@ -1547,11 +1557,13 @@ const logViewPassword = async (req, res) => {
         metadata: {
           name: password.name,
           login: password.login,
+          itemType: password.type,
           folderId: password.folderId,
           vaultId: password.vaultId,
           vaultType,
           personalVault: isPersonal,
           clientSource,
+          ...(fieldName ? { fieldName } : {}),
         },
       },
     });
@@ -1633,7 +1645,15 @@ const getPasswordActivity = async (req, res) => {
       },
     });
 
-    res.json(logs);
+    const enrichedLogs = logs.map((l) => ({
+      ...l,
+      metadata: {
+        ...(l.metadata || {}),
+        itemType: l.metadata?.itemType || password.type,
+      },
+    }));
+
+    res.json(enrichedLogs);
   } catch (error) {
     console.error('Get password activity error:', error);
     res.status(500).json({ message: 'Server error' });

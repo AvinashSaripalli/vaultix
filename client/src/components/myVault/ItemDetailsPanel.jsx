@@ -37,6 +37,7 @@ import {
 } from '../../utils/itemTypes';
 import { detectCardNetwork, formatCardNumber } from '../../utils/cardValidation';
 import ItemTypeBadge from './ItemTypeBadge';
+import { formatItemAction, resolveFieldLabel, getActionBadge, getActionIcon } from '../../utils/activityActionFormatter';
 import TotpField from './TotpField';
 import DecryptDialog from '../common/DecryptDialog';
 import VerifyMasterPasswordModal from '../security/VerifyMasterPasswordModal';
@@ -915,47 +916,12 @@ function ItemDetailsPanel({
             <div className="divide-y divide-slate-100 dark:divide-slate-700/60">
               {itemActivityLogs.map((log) => {
                 const isAutofill = log.action === 'AUTOFILL_PASSWORD';
-                const isCopy = log.action === 'COPY_PASSWORD';
-                const isView = log.action === 'VIEW_PASSWORD';
-                const isCreate = log.action === 'CREATE_PASSWORD';
-                const isUpdate = log.action === 'UPDATE_PASSWORD';
-                const isShare = log.action === 'SHARE_PASSWORD';
-                const isRevokeShare =
-                  log.action === 'REVOKE_SHARE_PASSWORD' || log.action === 'REVOKE_PASSWORD_SHARE';
-
-                let icon = <Eye size={16} className="text-slate-500" />;
-                let badge = 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300';
-                let label = log.action;
-
-                if (isAutofill) {
-                  icon = <Sparkles size={16} className="text-purple-600" />;
-                  badge = 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300';
-                  label = 'Autofilled on Web';
-                } else if (isView) {
-                  icon = <Eye size={16} className="text-blue-600" />;
-                  badge = 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300';
-                  label = 'Viewed Password';
-                } else if (isCopy) {
-                  icon = <Copy size={16} className="text-emerald-600" />;
-                  badge = 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300';
-                  label = 'Copied to Clipboard';
-                } else if (isCreate) {
-                  icon = <Plus size={16} className="text-green-600" />;
-                  badge = 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300';
-                  label = 'Created Item';
-                } else if (isUpdate) {
-                  icon = <Pencil size={16} className="text-amber-600" />;
-                  badge = 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300';
-                  label = log.metadata?.moved ? 'Moved Folder' : 'Updated Item';
-                } else if (isShare) {
-                  icon = <Share2 size={16} className="text-indigo-600" />;
-                  badge = 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300';
-                  label = 'Shared Item';
-                } else if (isRevokeShare) {
-                  icon = <Trash2 size={16} className="text-red-600" />;
-                  badge = 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300';
-                  label = 'Revoked Share';
-                }
+                const effectiveItemType = log.metadata?.itemType || item?.type || 'LOGIN';
+                const fieldName = log.metadata?.fieldName;
+                const fieldLabel = fieldName ? resolveFieldLabel(fieldName, effectiveItemType) : null;
+                const label = formatItemAction(log.action, { ...log.metadata, itemType: effectiveItemType }, log);
+                const icon = getActionIcon(log.action, effectiveItemType, fieldName);
+                const badge = getActionBadge(log.action, effectiveItemType);
 
                 return (
                   <div
@@ -970,6 +936,11 @@ function ItemDetailsPanel({
                         <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-md ${badge}`}>
                           {label}
                         </span>
+                        {fieldLabel && (
+                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200/60 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-800/40">
+                            Field: {fieldLabel}
+                          </span>
+                        )}
                         {(log.metadata?.clientSource === 'EXTENSION' || isAutofill) && (
                           <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
                             via Chrome Extension

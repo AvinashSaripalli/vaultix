@@ -23,6 +23,14 @@ import { useDispatch, useSelector } from 'react-redux';
 import AppLayout from '../../components/layout/AppLayout';
 import { fetchActivityLogs } from '../../features/vault/vaultSlice';
 import api from '../../services/api';
+import {
+  formatItemAction,
+  getActionBadge,
+  getActionIcon,
+  resolveItemType,
+  resolveFieldLabel,
+  getItemTypeBadge,
+} from '../../utils/activityActionFormatter';
 
 const PAGE_SIZE = 10;
 const ACTIVITY_PAGE_SIZE = 10;
@@ -76,89 +84,8 @@ const TABS = [
   { id: 'unread', label: 'Unread' },
 ];
 
-function formatAction(action) {
-  switch (action) {
-    case 'CREATE_FOLDER': return 'Create Folder';
-    case 'UPDATE_FOLDER': return 'Update Folder';
-    case 'DELETE_FOLDER': return 'Delete Folder';
-    case 'RESTORE_FOLDER': return 'Restore Folder';
-    case 'SHARE_FOLDER': return 'Share Folder';
-    case 'UPDATE_FOLDER_PERMISSION': return 'Update Folder Permission';
-    case 'REVOKE_FOLDER_ACCESS': return 'Revoke Folder Access';
-    case 'CREATE_PASSWORD': return 'Create Password';
-    case 'UPDATE_PASSWORD': return 'Update Password';
-    case 'DELETE_PASSWORD': return 'Delete Password';
-    case 'RESTORE_PASSWORD': return 'Restore Password';
-    case 'VIEW_PASSWORD': return 'View Password';
-    case 'COPY_PASSWORD': return 'Copy Password';
-    case 'AUTOFILL_PASSWORD': return 'Autofill Password';
-    case 'SHARE_PASSWORD': return 'Share Password';
-    case 'REVOKE_PASSWORD_SHARE': return 'Revoke Password Share';
-    case 'CREATE_VAULT': return 'Create Vault';
-    case 'UPDATE_VAULT': return 'Update Vault';
-    case 'DELETE_VAULT': return 'Delete Vault';
-    case 'UNSHARE_VAULT': return 'Unshare Vault';
-    case 'IMPORT_PASSWORDS': return 'Import Passwords';
-    case 'SHARE_VAULT': return 'Share Vault';
-    case 'CREATE_USER': return 'Create User';
-    case 'UPDATE_USER': return 'Update User';
-    case 'DELETE_USER': return 'Delete User';
-    case 'CREATE_DEPARTMENT': return 'Create Department';
-    case 'UPDATE_DEPARTMENT': return 'Update Department';
-    case 'DELETE_DEPARTMENT': return 'Delete Department';
-    case 'ADD_DEPARTMENT_MEMBER': return 'Add Dept Member';
-    case 'REMOVE_DEPARTMENT_MEMBER': return 'Remove Dept Member';
-    case 'UPDATE_DEPARTMENT_MEMBER': return 'Update Dept Member';
-    case 'GRANT_DEPARTMENT_ACCESS': return 'Grant Dept Access';
-    case 'REVOKE_DEPARTMENT_ACCESS': return 'Revoke Dept Access';
-    case 'ENABLE_2FA': return 'Enable 2FA';
-    case 'DISABLE_2FA': return 'Disable 2FA';
-    case 'VERIFY_EMAIL': return 'Verify Email';
-    case 'REVOKE_SESSION': return 'Revoke Session';
-    case 'UPDATE_ORGANIZATION_POLICY': return 'Update Org Policy';
-    case 'CREATE_APPROVAL_REQUEST': return 'Create Approval Request';
-    case 'APPROVE_REQUEST': return 'Approve Request';
-    case 'REJECT_REQUEST': return 'Reject Request';
-    case 'CANCEL_APPROVAL_REQUEST': return 'Cancel Approval Request';
-    default: return action?.replaceAll('_', ' ') || '-';
-  }
-}
-
-function getActionBadge(action) {
-  if (action === 'AUTOFILL_PASSWORD') {
-    return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400';
-  }
-  if (action?.startsWith('CREATE') || action?.startsWith('RESTORE') || action === 'ENABLE_2FA' || action === 'APPROVE_REQUEST') {
-    return 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400';
-  }
-  if (action?.startsWith('UPDATE') || action === 'UPDATE_ORGANIZATION_POLICY') {
-    return 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400';
-  }
-  if (
-    action?.startsWith('DELETE') ||
-    action?.startsWith('REVOKE') ||
-    action?.startsWith('UNSHARE') ||
-    action?.startsWith('REMOVE') ||
-    action === 'DISABLE_2FA' ||
-    action === 'REJECT_REQUEST'
-  ) {
-    return 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400';
-  }
-  if (action?.startsWith('VIEW')) return 'bg-blue-50 text-blue-700';
-  if (action?.startsWith('COPY')) return 'bg-sky-50 text-sky-700 dark:bg-sky-900/20';
-  if (action?.startsWith('SHARE') || action?.startsWith('GRANT')) return 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400';
-  if (action?.startsWith('IMPORT')) return 'bg-violet-50 text-violet-700 dark:bg-violet-900/20';
-  return 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300';
-}
-
-function getActionIcon(action) {
-  if (action === 'AUTOFILL_PASSWORD') return <Sparkles size={15} />;
-  if (action?.includes('PASSWORD')) return <KeyRound size={15} />;
-  if (action?.includes('FOLDER')) return <Folder size={15} />;
-  if (action?.includes('VAULT')) return <Database size={15} />;
-  if (action?.includes('USER')) return <Share2 size={15} />;
-  if (action?.includes('2FA') || action?.includes('POLICY') || action?.includes('APPROVAL')) return <ShieldAlert size={15} />;
-  return <Activity size={15} />;
+function formatAction(action, metadata = {}, log = null) {
+  return formatItemAction(action, metadata, log);
 }
 
 function getUnreadItemIcon(type, meta) {
@@ -691,15 +618,21 @@ function ActivityLogPage() {
 
   const handleExportCSV = () => {
     if (activeTab === 'actions') {
-      const headers = ['Date', 'User', 'Email', 'Action', 'TargetID', 'TargetName'];
-      const rows = filteredLogs.map((log) => ({
-        Date: log.createdAt ? new Date(log.createdAt).toLocaleString() : '',
-        User: log.user?.fullName || '',
-        Email: log.user?.email || '',
-        Action: formatAction(log.action),
-        TargetID: log.targetId || '',
-        TargetName: log.metadata?.name || '',
-      }));
+      const headers = ['Date', 'User', 'Email', 'Action', 'TargetID', 'TargetName', 'ItemType', 'Field'];
+      const rows = filteredLogs.map((log) => {
+        const itemType = resolveItemType(log);
+        const fieldName = log.metadata?.fieldName;
+        return {
+          Date: log.createdAt ? new Date(log.createdAt).toLocaleString() : '',
+          User: log.user?.fullName || '',
+          Email: log.user?.email || '',
+          Action: formatItemAction(log.action, log.metadata, log),
+          TargetID: log.targetId || '',
+          TargetName: log.metadata?.name || '',
+          ItemType: itemType || log.targetType || '',
+          Field: fieldName ? resolveFieldLabel(fieldName, itemType) : '',
+        };
+      });
       downloadCSV('activity-log.csv', rows, headers);
     }
     if (activeTab === 'login') {
@@ -1017,54 +950,81 @@ function ActivityLogPage() {
                                 </div>
                               </td>
                               <td className="px-4 sm:px-6 py-3.5 sm:py-4">
-                                <span
-                                  className={`inline-flex items-center gap-1.5 sm:gap-2 rounded-full px-2.5 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-xs font-semibold ${getActionBadge(log.action)}`}
-                                >
-                                  {getActionIcon(log.action)}
-                                  {formatAction(log.action)}
-                                </span>
+                                {(() => {
+                                  const itemType = resolveItemType(log);
+                                  const label = formatItemAction(log.action, log.metadata, log);
+                                  const badgeClass = getActionBadge(log.action, itemType);
+                                  const icon = getActionIcon(log.action, itemType, log.metadata?.fieldName);
+                                  return (
+                                    <span
+                                      className={`inline-flex items-center gap-1.5 sm:gap-2 rounded-full px-2.5 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-xs font-semibold ${badgeClass}`}
+                                    >
+                                      {icon}
+                                      {label}
+                                    </span>
+                                  );
+                                })()}
                               </td>
                               <td className="px-4 sm:px-6 py-3.5 sm:py-4 text-xs sm:text-sm text-slate-700 dark:text-slate-300">
-                                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                                  <p className="font-semibold">
-                                    {log.metadata?.name || log.targetId || '-'}
-                                  </p>
-                                  {log.metadata?.login && (
-                                    <span className="text-xs text-slate-500 dark:text-slate-400">
-                                      ({log.metadata.login})
-                                    </span>
-                                  )}
-                                  {log.metadata?.domain && (
-                                    <span className="text-[11px] font-mono text-indigo-600 dark:text-indigo-400">
-                                      on {log.metadata.domain}
-                                    </span>
-                                  )}
-                                  {(log.metadata?.clientSource === 'EXTENSION' || log.action === 'AUTOFILL_PASSWORD') && (
-                                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 shrink-0 dark:bg-violet-900/30 dark:text-violet-300">
-                                      Extension
-                                    </span>
-                                  )}
-                                  {log.metadata?.moved && log.metadata?.fromFolderName && log.metadata?.toFolderName && (
-                                    <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400 block w-full">
-                                      Moved: {log.metadata.fromFolderName} → {log.metadata.toFolderName}
-                                    </span>
-                                  )}
-                                  {log.metadata?.personalVault && (
-                                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-teal-50 text-teal-700 shrink-0 dark:bg-teal-900/20 dark:text-teal-400">
-                                      Personal Vault
-                                    </span>
-                                  )}
-                                  {log.metadata?.vaultType === 'COMPANY' && (
-                                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 shrink-0 dark:bg-amber-900/20 dark:text-amber-400">
-                                      Company Vault
-                                    </span>
-                                  )}
-                                </div>
-                                {log.metadata?.name && log.targetId && (
-                                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                                    {log.targetId}
-                                  </p>
-                                )}
+                                {(() => {
+                                  const itemType = resolveItemType(log);
+                                  const typeBadge = getItemTypeBadge(itemType);
+                                  const fieldLabel = log.metadata?.fieldName ? resolveFieldLabel(log.metadata.fieldName, itemType) : null;
+                                  return (
+                                    <>
+                                      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                                        <p className="font-semibold text-slate-900 dark:text-slate-100">
+                                          {log.metadata?.name || log.targetId || '-'}
+                                        </p>
+                                        {typeBadge && (
+                                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shadow-2xs ${typeBadge.className}`}>
+                                            {typeBadge.label}
+                                          </span>
+                                        )}
+                                        {fieldLabel && (
+                                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200/60 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-800/40 shrink-0">
+                                            Field: {fieldLabel}
+                                          </span>
+                                        )}
+                                        {log.metadata?.login && (
+                                          <span className="text-xs text-slate-500 dark:text-slate-400">
+                                            ({log.metadata.login})
+                                          </span>
+                                        )}
+                                        {log.metadata?.domain && (
+                                          <span className="text-[11px] font-mono text-indigo-600 dark:text-indigo-400">
+                                            on {log.metadata.domain}
+                                          </span>
+                                        )}
+                                        {(log.metadata?.clientSource === 'EXTENSION' || log.action === 'AUTOFILL_PASSWORD') && (
+                                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 shrink-0 dark:bg-violet-900/30 dark:text-violet-300">
+                                            Extension
+                                          </span>
+                                        )}
+                                        {log.metadata?.moved && log.metadata?.fromFolderName && log.metadata?.toFolderName && (
+                                          <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400 block w-full">
+                                            Moved: {log.metadata.fromFolderName} → {log.metadata.toFolderName}
+                                          </span>
+                                        )}
+                                        {log.metadata?.personalVault && (
+                                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-teal-50 text-teal-700 shrink-0 dark:bg-teal-900/20 dark:text-teal-400">
+                                            Personal Vault
+                                          </span>
+                                        )}
+                                        {log.metadata?.vaultType === 'COMPANY' && (
+                                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 shrink-0 dark:bg-amber-900/20 dark:text-amber-400">
+                                            Company Vault
+                                          </span>
+                                        )}
+                                      </div>
+                                      {log.metadata?.name && log.targetId && (
+                                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                                          {log.targetId}
+                                        </p>
+                                      )}
+                                    </>
+                                  );
+                                })()}
                               </td>
                             </tr>
                           ))}
