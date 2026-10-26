@@ -23,7 +23,7 @@
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (!msg) return;
     if (msg.type === 'VAULTIX_FILL') {
-      sendResponse({ ok: fillCredentials(msg.username, msg.password) });
+      sendResponse({ ok: fillCredentials(msg.username, msg.password, msg) });
       return;
     }
     if (msg.type === 'VAULTIX_PROMPT_PENDING') {
@@ -75,9 +75,9 @@
     if (form && form.querySelector('input[type="password"]')) return true;
 
     const ac = (el.getAttribute('autocomplete') || '').toLowerCase();
-    const nm = (el.name || el.id || '').toLowerCase();
-    if (ac.includes('username') || ac.includes('email') || ac.includes('login')) return true;
-    if (/user|login|email|account/.test(nm)) return true;
+    const nm = `${el.name} ${el.id} ${el.placeholder || ''}`.toLowerCase();
+    if (ac.includes('username') || ac.includes('email') || ac.includes('login') || ac.includes('cc-number')) return true;
+    if (/user|login|email|account|customer|custid|netbanking|fldlogin|card/i.test(nm)) return true;
     return false;
   }
 
@@ -99,7 +99,7 @@
 
     let best = null;
     for (const el of inputs) {
-      if (el.compareDocumentPosition(pwField) & Node.DOCUMENT_POSITION_FOLLOWING) {
+      if (!pwField || (el.compareDocumentPosition(pwField) & Node.DOCUMENT_POSITION_FOLLOWING)) {
         best = el;
       }
     }
@@ -118,27 +118,84 @@
     el.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
-  function fillCredentials(username, password) {
+  function fillCredentials(username, password, extra = {}) {
     const anchor = document.contains(activeField) ? activeField : null;
     const form = anchor?.form || anchor?.closest?.('form') || null;
 
+    // 1. Support Credit Card Autofill if cardData is passed
+    if (extra?.cardData) {
+      let filledAny = false;
+      const { cardNumber, cardholderName, expiry, cvv } = extra.cardData;
+      const scope = form || document;
+      const inputs = [...scope.querySelectorAll('input')].filter(isVisible);
+
+      for (const input of inputs) {
+        const idName = `${input.name} ${input.id} ${input.getAttribute('autocomplete') || ''} ${input.placeholder || ''}`.toLowerCase();
+        if (cardNumber && (/card.*number|cc.*num|pan|cardnum/i.test(idName) || input.getAttribute('autocomplete') === 'cc-number')) {
+          setNativeValue(input, cardNumber);
+          filledAny = true;
+        } else if (cardholderName && (/card.*name|cardholder|cc.*name|name.*card/i.test(idName) || input.getAttribute('autocomplete') === 'cc-name')) {
+          setNativeValue(input, cardholderName);
+          filledAny = true;
+        } else if (expiry && (/exp|expiry|mm\/yy/i.test(idName) || input.getAttribute('autocomplete') === 'cc-exp')) {
+          setNativeValue(input, expiry);
+          filledAny = true;
+        } else if (cvv && (/cvv|cvc|security.*code|card.*code/i.test(idName) || input.getAttribute('autocomplete') === 'cc-csc')) {
+          setNativeValue(input, cvv);
+          filledAny = true;
+        }
+      }
+      if (filledAny) {
+        closeMenu();
+        removeBadge();
+        return true;
+      }
+    }
+
+    // 2. Standard Login, Bank Account Customer ID, or Password
     let pwField = form ? findPasswordInput(form) : null;
     if (!pwField) pwField = findPasswordInput();
-    if (!pwField) return false;
 
     let userField = null;
     if (anchor && anchor.type !== 'password' && isCredField(anchor)) {
       userField = anchor;
-    } else {
+    } else if (pwField) {
       userField = findUsernameInput(pwField, form);
+    } else if (anchor) {
+      userField = anchor;
+    } else {
+      userField = findUsernameInput(null, form);
     }
 
-    if (userField && username) setNativeValue(userField, username);
-    setNativeValue(pwField, password);
-    pwField.focus();
+    let didFill = false;
+
+    // Fill Username / Customer ID on Page 1 or Unified Form
+    if (userField && username) {
+      setNativeValue(userField, username);
+      didFill = true;
+    }
+
+    // Fill Primary Password on Page 2 or Unified Form
+    if (pwField && password) {
+      setNativeValue(pwField, password);
+      pwField.focus();
+      didFill = true;
+    }
+
+    // Fill Transaction Password if requested and present
+    if (extra?.transactionPassword) {
+      const scope = form || document;
+      const pwCandidates = [...scope.querySelectorAll('input[type="password"]')].filter(isVisible);
+      const transField = pwCandidates.find(p => p !== pwField || /trans|pin|secondary|profile/i.test(`${p.name} ${p.id}`));
+      if (transField) {
+        setNativeValue(transField, extra.transactionPassword);
+        didFill = true;
+      }
+    }
+
     closeMenu();
     removeBadge();
-    return true;
+    return didFill;
   }
 
   // ─── Events ───────────────────────────────────────────────────────────────

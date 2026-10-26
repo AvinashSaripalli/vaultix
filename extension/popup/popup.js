@@ -627,10 +627,9 @@ async function loadCreds(force) {
     };
 
     for (const entry of byId.values()) {
-      if (entry.type && entry.type !== 'LOGIN') continue;
-
       let password = '';
       let totpSecret = null;
+      let decryptedFields = {};
 
       try {
         // Key-wrapped item (company vault / shared with me).
@@ -642,66 +641,70 @@ async function loadCreds(force) {
           const encryptedPw = entry.shareKey
             ? entry.rePassword || entry.encryptedPassword
             : entry.encryptedPassword;
-          password = await decryptValueWithAesKey(encryptedPw, aesKeyJwk);
-          if (!password) {
-            failures.push({ name: entry.name, reason: 'empty after AES-key decrypt' });
-            skipped++;
-            continue;
+          if (encryptedPw) {
+            password = await decryptValueWithAesKey(encryptedPw, aesKeyJwk);
           }
           const fieldsSource = entry.shareKey
             ? entry.reFields || entry.encryptedFields
             : entry.encryptedFields;
-          const fields = await decryptFieldsWithAesKey(fieldsSource, aesKeyJwk);
-          totpSecret = fields?.totpSecret || fields?.totp || fields?.TOTP || null;
+          if (fieldsSource) {
+            decryptedFields = (await decryptFieldsWithAesKey(fieldsSource, aesKeyJwk)) || {};
+            totpSecret = decryptedFields?.totpSecret || decryptedFields?.totp || decryptedFields?.TOTP || null;
+          }
         }
         // Master-password-encrypted item (personal vault).
-        else if (isEncryptedFormat(entry.encryptedPassword)) {
-          let envelope = null;
-          try {
-            envelope = JSON.parse(entry.encryptedPassword);
-          } catch {
-            envelope = null;
-          }
+        else if (isEncryptedFormat(entry.encryptedPassword) || isEncryptedFormat(entry.encryptedFields)) {
+          if (entry.encryptedPassword && isEncryptedFormat(entry.encryptedPassword)) {
+            let envelope = null;
+            try {
+              envelope = JSON.parse(entry.encryptedPassword);
+            } catch {
+              envelope = null;
+            }
 
-          if (envelope && envelope.kdf === 'PBKDF2' && envelope.v === 2) {
-            // v2 envelope embeds its own salt — decrypt directly.
-            password = await decryptText(entry.encryptedPassword, master, salt);
-          } else {
-            // Legacy marker-less envelope: probe candidate KDF combos.
-            const attempt = await tryDecryptCombos(
-              entry.encryptedPassword,
-              master,
-              legacyCombos
-            );
-            if (attempt) {
-              password = attempt.text;
-              if (!workingCombo) recordWorkingCombo(attempt.combo);
+            if (envelope && envelope.kdf === 'PBKDF2' && envelope.v === 2) {
+              // v2 envelope embeds its own salt — decrypt directly.
+              password = await decryptText(entry.encryptedPassword, master, salt);
+            } else {
+              // Legacy marker-less envelope: probe candidate KDF combos.
+              const attempt = await tryDecryptCombos(
+                entry.encryptedPassword,
+                master,
+                legacyCombos
+              );
+              if (attempt) {
+                password = attempt.text;
+                if (!workingCombo) recordWorkingCombo(attempt.combo);
+              }
             }
           }
 
-          if (!password) {
-            failures.push({
-              name: entry.name,
-              reason: workingCombo ? 'empty after master decrypt' : 'no matching KDF combo',
-              envelope: envelopeSummary(entry.encryptedPassword),
-            });
-            skipped++;
-            continue;
-          }
           if (entry.encryptedFields) {
-            const fields = await decryptFields(
+            decryptedFields = (await decryptFields(
               entry.encryptedFields,
               master,
               workingCombo ? workingCombo.salt : salt
-            );
-            totpSecret = fields?.totpSecret || fields?.totp || null;
+            )) || {};
+            totpSecret = decryptedFields?.totpSecret || decryptedFields?.totp || null;
           }
+        } else if (entry.login || entry.name) {
+          // Unencrypted or metadata-only item
+          password = entry.encryptedPassword || '';
         } else {
           failures.push({
             name: entry.name,
             reason: 'not an encrypted envelope',
             envelope: envelopeSummary(entry.encryptedPassword),
           });
+          skipped++;
+          continue;
+        }
+
+        if (!password && decryptedFields?.password) {
+          password = decryptedFields.password;
+        }
+
+        if (!password && !entry.login && Object.keys(decryptedFields).length === 0) {
           skipped++;
           continue;
         }
@@ -717,14 +720,17 @@ async function loadCreds(force) {
 
       decrypted.push({
         id: entry.id,
+        type: entry.type || 'LOGIN',
         name: entry.name || entry.login || 'Item',
-        login: entry.login || '',
-        url: entry.url || '',
+        login: entry.login || decryptedFields?.customerId || decryptedFields?.accountHolder || '',
+        url: entry.url || decryptedFields?.url || '',
         folderId: entry.folderId || entry.folder?.id || '',
         folderName: resolveFolderName(entry),
         vaultName: entry.vaultName || entry.vault?.name || '',
         password,
         totpSecret,
+        fields: decryptedFields,
+        isSensitive: !!entry.isSensitive,
         shared: !!entry.shared,
       });
     }
@@ -1143,6 +1149,28 @@ function itemRow(cred, isMatch) {
   name.textContent = cred.name + (cred.shared ? ' (shared)' : '');
   row1.appendChild(name);
 
+  // Type badge for non-login items (Bank, Card, Identity)
+  if (cred.type && cred.type !== 'LOGIN') {
+    const typeBadge = document.createElement('span');
+    typeBadge.className = 'badge';
+    typeBadge.style.fontWeight = '600';
+    typeBadge.style.letterSpacing = '0.04em';
+    if (cred.type === 'BANK_ACCOUNT') {
+      typeBadge.style.background = '#059669';
+      typeBadge.style.color = '#ffffff';
+      typeBadge.textContent = 'BANK';
+    } else if (cred.type === 'CARD') {
+      typeBadge.style.background = '#2563eb';
+      typeBadge.style.color = '#ffffff';
+      typeBadge.textContent = 'CARD';
+    } else {
+      typeBadge.style.background = '#475569';
+      typeBadge.style.color = '#ffffff';
+      typeBadge.textContent = cred.type;
+    }
+    row1.appendChild(typeBadge);
+  }
+
   if (isMatch) {
     const badge = document.createElement('span');
     badge.className = 'badge';
@@ -1170,32 +1198,145 @@ function itemRow(cred, isMatch) {
 
   const loginLine = document.createElement('div');
   loginLine.className = 'login';
-  loginLine.textContent = cred.login || '(no username)';
+  if (cred.type === 'BANK_ACCOUNT') {
+    const details = [
+      cred.fields?.accountHolder,
+      cred.fields?.customerId ? `ID: ${cred.fields.customerId}` : (cred.login ? `ID: ${cred.login}` : ''),
+      cred.fields?.accountNumber ? `A/C: ••••${String(cred.fields.accountNumber).slice(-4)}` : '',
+    ].filter(Boolean);
+    loginLine.textContent = details.length ? details.join(' • ') : (cred.login || 'Bank Account');
+  } else if (cred.type === 'CARD') {
+    const cardLast4 = cred.fields?.cardNumber ? `•••• ${String(cred.fields.cardNumber).slice(-4)}` : '';
+    const details = [
+      cred.fields?.cardholderName,
+      cred.fields?.brand,
+      cardLast4,
+      cred.fields?.expiry,
+    ].filter(Boolean);
+    loginLine.textContent = details.length ? details.join(' • ') : (cred.login || 'Payment Card');
+  } else {
+    loginLine.textContent = cred.login || '(no username)';
+  }
 
   const passLine = document.createElement('div');
   passLine.className = 'pass';
-  passLine.textContent = cred.password;
+  if (cred.type === 'BANK_ACCOUNT') {
+    const extraInfo = [];
+    if (cred.password) extraInfo.push(`Pass: ${cred.password}`);
+    if (cred.fields?.transactionPassword) extraInfo.push(`Trans PIN: ${cred.fields.transactionPassword}`);
+    if (cred.fields?.accountNumber) extraInfo.push(`A/C: ${cred.fields.accountNumber}`);
+    if (cred.fields?.routingNumber) extraInfo.push(`IFSC: ${cred.fields.routingNumber}`);
+    passLine.textContent = extraInfo.join(' | ') || cred.password;
+  } else if (cred.type === 'CARD') {
+    const extraInfo = [];
+    if (cred.fields?.cardNumber) extraInfo.push(`Card: ${cred.fields.cardNumber}`);
+    if (cred.fields?.cvv) extraInfo.push(`CVV: ${cred.fields.cvv}`);
+    if (cred.fields?.pin) extraInfo.push(`PIN: ${cred.fields.pin}`);
+    passLine.textContent = extraInfo.join(' | ');
+  } else {
+    passLine.textContent = cred.password;
+  }
   passLine.style.display = 'none';
 
   const actions = document.createElement('div');
   actions.className = 'actions';
 
-  const fillBtn = actionBtn('Fill', 'fill', () => doFill(cred));
-  const copyUserBtn = actionBtn('Copy user', '', () => {
-    copy(cred.login, 'Username copied');
-  });
-  const copyPassBtn = actionBtn('Copy pass', '', () => {
-    copy(cred.password, 'Password copied');
-    logUse(cred, 'copy');
-  });
-  let revealed = false;
-  const showBtn = actionBtn('Show', '', () => {
-    revealed = !revealed;
-    passLine.style.display = revealed ? 'block' : 'none';
-    showBtn.textContent = revealed ? 'Hide' : 'Show';
-    if (revealed) logUse(cred, 'view');
-  });
-  actions.append(fillBtn, copyUserBtn, copyPassBtn, showBtn);
+  if (cred.type === 'BANK_ACCOUNT') {
+    const fillBtn = actionBtn('Fill', 'fill', () => doFill(cred));
+    actions.appendChild(fillBtn);
+
+    if (cred.fields?.customerId || cred.login) {
+      actions.appendChild(actionBtn('Copy ID', '', () => {
+        copy(cred.fields?.customerId || cred.login, 'Customer ID copied');
+        logUse(cred, 'copy');
+      }));
+    }
+    if (cred.password) {
+      actions.appendChild(actionBtn('Copy pass', '', () => {
+        copy(cred.password, 'NetBanking password copied');
+        logUse(cred, 'copy');
+      }));
+    }
+    if (cred.fields?.transactionPassword) {
+      actions.appendChild(actionBtn('Copy PIN', '', () => {
+        copy(cred.fields.transactionPassword, 'Transaction PIN copied');
+        logUse(cred, 'copy');
+      }));
+    }
+    if (cred.fields?.accountNumber) {
+      actions.appendChild(actionBtn('Acc #', '', () => {
+        copy(cred.fields.accountNumber, 'Account number copied');
+        logUse(cred, 'copy');
+      }));
+    }
+    if (cred.fields?.routingNumber) {
+      actions.appendChild(actionBtn('IFSC', '', () => {
+        copy(cred.fields.routingNumber, 'Routing/IFSC code copied');
+        logUse(cred, 'copy');
+      }));
+    }
+
+    let revealed = false;
+    const showBtn = actionBtn('Show', '', () => {
+      revealed = !revealed;
+      passLine.style.display = revealed ? 'block' : 'none';
+      showBtn.textContent = revealed ? 'Hide' : 'Show';
+      if (revealed) logUse(cred, 'view');
+    });
+    actions.appendChild(showBtn);
+  } else if (cred.type === 'CARD') {
+    if (cred.fields?.cardNumber) {
+      actions.appendChild(actionBtn('Card #', '', () => {
+        copy(cred.fields.cardNumber, 'Card number copied');
+        logUse(cred, 'copy');
+      }));
+    }
+    if (cred.fields?.expiry) {
+      actions.appendChild(actionBtn('Exp', '', () => {
+        copy(cred.fields.expiry, 'Expiry copied');
+        logUse(cred, 'copy');
+      }));
+    }
+    if (cred.fields?.cvv) {
+      actions.appendChild(actionBtn('CVV', '', () => {
+        copy(cred.fields.cvv, 'CVV copied');
+        logUse(cred, 'copy');
+      }));
+    }
+    if (cred.fields?.pin) {
+      actions.appendChild(actionBtn('PIN', '', () => {
+        copy(cred.fields.pin, 'Card PIN copied');
+        logUse(cred, 'copy');
+      }));
+    }
+
+    let revealed = false;
+    const showBtn = actionBtn('Show', '', () => {
+      revealed = !revealed;
+      passLine.style.display = revealed ? 'block' : 'none';
+      showBtn.textContent = revealed ? 'Hide' : 'Show';
+      if (revealed) logUse(cred, 'view');
+    });
+    actions.appendChild(showBtn);
+  } else {
+    // Standard LOGIN item
+    const fillBtn = actionBtn('Fill', 'fill', () => doFill(cred));
+    const copyUserBtn = actionBtn('Copy user', '', () => {
+      copy(cred.login, 'Username copied');
+    });
+    const copyPassBtn = actionBtn('Copy pass', '', () => {
+      copy(cred.password, 'Password copied');
+      logUse(cred, 'copy');
+    });
+    let revealed = false;
+    const showBtn = actionBtn('Show', '', () => {
+      revealed = !revealed;
+      passLine.style.display = revealed ? 'block' : 'none';
+      showBtn.textContent = revealed ? 'Hide' : 'Show';
+      if (revealed) logUse(cred, 'view');
+    });
+    actions.append(fillBtn, copyUserBtn, copyPassBtn, showBtn);
+  }
 
   if (cred.totpSecret) {
     generateTOTP(cred.totpSecret).then((totp) => {
@@ -1289,14 +1430,28 @@ function actionBtn(label, cls, onClick) {
 
 async function doFill(cred) {
   try {
+    const userToFill = cred.type === 'BANK_ACCOUNT'
+      ? (cred.login || cred.fields?.customerId || '')
+      : cred.login;
+    const passToFill = cred.password || cred.fields?.password || '';
+
     const results = await chrome.tabs.sendMessage(tab.id, {
       type: 'VAULTIX_FILL',
-      username: cred.login,
-      password: cred.password,
+      itemType: cred.type || 'LOGIN',
+      username: userToFill,
+      password: passToFill,
+      transactionPassword: cred.fields?.transactionPassword || '',
+      accountNumber: cred.fields?.accountNumber || '',
+      cardData: cred.type === 'CARD' ? {
+        cardNumber: cred.fields?.cardNumber || '',
+        cardholderName: cred.fields?.cardholderName || '',
+        expiry: cred.fields?.expiry || '',
+        cvv: cred.fields?.cvv || '',
+      } : null,
     });
     const ok = Array.isArray(results) ? results.some((r) => r && r.ok) : results?.ok;
     if (ok) logUse(cred, 'autofill');
-    flash(ok ? `Filled → ${cred.name}` : 'No login form found on this page');
+    flash(ok ? `Filled → ${cred.name}` : 'No matching fields found on this page');
   } catch {
     flash('Reload the page once, then try Fill again');
   }

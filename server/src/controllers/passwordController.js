@@ -1462,7 +1462,8 @@ const logCopyPassword = async (req, res) => {
     const isPersonal = vaultType === 'PERSONAL';
 
     const isAutofill = req.body?.mode === 'autofill';
-    const action = isAutofill ? 'AUTOFILL_PASSWORD' : 'COPY_PASSWORD';
+    const fieldName = req.body?.fieldName || null;
+    const action = isAutofill ? 'AUTOFILL_PASSWORD' : (fieldName ? 'COPY_FIELD' : 'COPY_PASSWORD');
     const clientSource = req.body?.clientSource || (isAutofill ? 'EXTENSION' : 'WEB');
     const domain = req.body?.domain || null;
     const url = req.body?.url || null;
@@ -1483,6 +1484,7 @@ const logCopyPassword = async (req, res) => {
           personalVault: isPersonal,
           mode: isAutofill ? 'autofill' : 'copy',
           clientSource,
+          ...(fieldName ? { fieldName } : {}),
           ...(domain ? { domain } : {}),
           ...(url ? { url } : {}),
         },

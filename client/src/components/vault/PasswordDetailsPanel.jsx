@@ -769,6 +769,11 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
                         } else if (action === 'copy-field') {
                           if (hasValue) {
                             secureCopyText(String(rawValue), `${field.label} copied`);
+                            api.post(
+                              `/passwords/${item.id}/copy-log`,
+                              { fieldName: field.key },
+                              { headers: { Authorization: `Bearer ${token}` } }
+                            ).catch(() => {});
                           }
                         }
                       };
@@ -862,6 +867,11 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
                               String(custom.value),
                               `${custom.name || 'Field'} copied`
                             );
+                            api.post(
+                              `/passwords/${item.id}/copy-log`,
+                              { fieldName: custom.name || 'custom_field' },
+                              { headers: { Authorization: `Bearer ${token}` } }
+                            ).catch(() => {});
                           }
                         }
                       };
@@ -1191,6 +1201,11 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
                   String(customEntry.value),
                   `${customEntry.name || 'Field'} copied`
                 );
+                api.post(
+                  `/passwords/${action.item.id}/copy-log`,
+                  { fieldName: customEntry.name || 'custom_field' },
+                  { headers: { Authorization: `Bearer ${token}` } }
+                ).catch(() => {});
               }
               return;
             }
@@ -1200,6 +1215,11 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
             const fieldValue = decryptedFieldsMap[action.item.id]?.[action.fieldKey];
             if (fieldMeta && fieldValue !== undefined && fieldValue !== null && fieldValue !== '') {
               secureCopyText(String(fieldValue), `${fieldMeta.label} copied`);
+              api.post(
+                `/passwords/${action.item.id}/copy-log`,
+                { fieldName: fieldMeta.key },
+                { headers: { Authorization: `Bearer ${token}` } }
+              ).catch(() => {});
             }
             return;
           }
