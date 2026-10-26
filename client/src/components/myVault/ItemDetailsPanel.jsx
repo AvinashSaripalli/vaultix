@@ -916,6 +916,8 @@ function ItemDetailsPanel({
             <div className="divide-y divide-slate-100 dark:divide-slate-700/60">
               {itemActivityLogs.map((log) => {
                 const isAutofill = log.action === 'AUTOFILL_PASSWORD';
+                const isShare = log.action === 'SHARE_PASSWORD';
+                const isRevokeShare = log.action === 'REVOKE_SHARE_PASSWORD' || log.action === 'REVOKE_PASSWORD_SHARE';
                 const effectiveItemType = log.metadata?.itemType || item?.type || 'LOGIN';
                 const fieldName = log.metadata?.fieldName;
                 const fieldLabel = fieldName ? resolveFieldLabel(fieldName, effectiveItemType) : null;
