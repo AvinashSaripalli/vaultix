@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   Shield, Users, Activity, Folder, FolderOpen,
@@ -47,6 +47,41 @@ function Sidebar() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [expandedVaults, setExpandedVaults] = useState({});
+
+  const isVaultExpanded = useCallback(
+    (vault) => {
+      if (expandedVaults[vault.id] !== undefined) {
+        return expandedVaults[vault.id];
+      }
+      return location.pathname === `/vaults/${vault.slug}`;
+    },
+    [expandedVaults, location.pathname]
+  );
+
+  const toggleVaultExpanded = useCallback(
+    (vault, e) => {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      setExpandedVaults((prev) => {
+        const currentlyOpen =
+          prev[vault.id] !== undefined
+            ? prev[vault.id]
+            : location.pathname === `/vaults/${vault.slug}`;
+        const nextState = !currentlyOpen;
+        if (nextState && vault?.id) {
+          dispatch(fetchFoldersByVault(vault.id));
+        }
+        return {
+          ...prev,
+          [vault.id]: nextState,
+        };
+      });
+    },
+    [dispatch, location.pathname]
+  );
 
   useEffect(() => { dispatch(fetchVaults()); }, [dispatch]);
 
@@ -338,6 +373,7 @@ function Sidebar() {
 
                 {!vaultsLoading && vaults.map((vault) => {
                   const vaultActive = location.pathname === `/vaults/${vault.slug}`;
+                  const isExpanded = isVaultExpanded(vault);
                   return (
                     <div key={vault.id} className="mt-0.5 mb-1">
                       <div className={`flex items-center justify-between px-3 py-2 rounded-xl transition-all duration-150 ${
@@ -349,6 +385,10 @@ function Sidebar() {
                           to={`/vaults/${vault.slug}`}
                           onClick={() => {
                             dispatch(clearSelectedFolder());
+                            setExpandedVaults((prev) => ({
+                              ...prev,
+                              [vault.id]: true,
+                            }));
                             onNavigate();
                           }}
                           className="flex items-center gap-3 flex-1 min-w-0"
@@ -368,6 +408,7 @@ function Sidebar() {
                         <div className="flex items-center gap-1 ml-1 shrink-0">
                           {vaultActive && isAdmin(user) && (
                             <button
+                              type="button"
                               onClick={() => dispatch(openAddFolderModal())}
                               className="w-6 h-6 rounded-lg bg-[var(--bg-card)] border border-blue-200 dark:border-blue-700 flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
                               title="Add folder"
@@ -375,17 +416,25 @@ function Sidebar() {
                               <Plus size={13} />
                             </button>
                           )}
-                          {vaultActive && (
+                          <button
+                            type="button"
+                            onClick={(e) => toggleVaultExpanded(vault, e)}
+                            className="w-6 h-6 rounded-lg bg-[var(--bg-card)]/70 hover:bg-blue-100/70 dark:hover:bg-blue-900/40 flex items-center justify-center text-blue-600 dark:text-blue-400 transition-colors focus:outline-none"
+                            title={isExpanded ? 'Collapse folders' : 'Expand folders'}
+                            aria-label={isExpanded ? 'Collapse folders' : 'Expand folders'}
+                          >
                             <ChevronDown
                               size={14}
-                              className={vaultActive ? 'text-blue-600 dark:text-blue-400' : 'text-[var(--text-muted)]'}
+                              className={`transition-transform duration-200 ease-in-out ${
+                                isExpanded ? 'rotate-0' : '-rotate-90'
+                              } ${vaultActive ? 'text-blue-600 dark:text-blue-400' : 'text-[var(--text-muted)]'}`}
                             />
-                          )}
+                          </button>
                         </div>
                       </div>
 
                     {/* Folders */}
-                    {vaultActive && (
+                    {isExpanded && (
                       <div className="ml-4 mt-1 space-y-0.5 border-l-2 border-blue-100 dark:border-blue-800 pl-3">
                         {/* All Passwords Entry */}
                         {(() => {
