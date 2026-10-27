@@ -138,6 +138,21 @@ export function formatItemAction(action, metadata = {}, log = null) {
     }
   }
 
+  // 2. Specific rename action
+  if (
+    action === 'UPDATE_PASSWORD' &&
+    (metadata?.renamed || (metadata?.previousName && metadata?.newName && metadata?.previousName !== metadata?.newName))
+  ) {
+    if (itemType === 'CARD') return 'Rename Card';
+    if (itemType === 'BANK_ACCOUNT') return 'Rename Bank Account';
+    if (itemType === 'SECURE_NOTE') return 'Rename Secure Note';
+    if (itemType === 'API_TOKEN') return 'Rename API Token';
+    if (itemType === 'SSH_KEY') return 'Rename SSH Key';
+    if (itemType === 'DATABASE') return 'Rename Database';
+    if (itemType === 'WIFI') return 'Rename Wi-Fi';
+    return 'Rename Login';
+  }
+
   // 2. Item-type specific actions
   if (itemType === 'CARD') {
     switch (action) {

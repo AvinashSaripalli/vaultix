@@ -411,6 +411,12 @@ function ActivityLogPage() {
         log.user?.fullName?.toLowerCase().includes(q) ||
         log.action?.toLowerCase().includes(q) ||
         log.targetId?.toLowerCase().includes(q) ||
+        log.metadata?.currentName?.toLowerCase?.().includes(q) ||
+        log.metadata?.historicalName?.toLowerCase?.().includes(q) ||
+        log.metadata?.previousName?.toLowerCase?.().includes(q) ||
+        log.metadata?.newName?.toLowerCase?.().includes(q) ||
+        log.metadata?.login?.toLowerCase?.().includes(q) ||
+        log.metadata?.domain?.toLowerCase?.().includes(q) ||
         log.metadata?.name?.toLowerCase?.().includes(q);
       const matchesAction =
         actionFilter === 'ALL' ||
@@ -461,8 +467,8 @@ function ActivityLogPage() {
         va = a.action || '';
         vb = b.action || '';
       } else if (key === 'target') {
-        va = (a.metadata?.name || a.targetId || '').toLowerCase();
-        vb = (b.metadata?.name || b.targetId || '').toLowerCase();
+        va = (a.metadata?.currentName || a.metadata?.name || a.targetId || '').toLowerCase();
+        vb = (b.metadata?.currentName || b.metadata?.name || b.targetId || '').toLowerCase();
       }
       if (typeof va === 'number' && typeof vb === 'number') {
         return (va - vb) * factor;
@@ -629,7 +635,7 @@ function ActivityLogPage() {
           Email: log.user?.email || '',
           Action: formatItemAction(log.action, log.metadata, log),
           TargetID: log.targetId || '',
-          TargetName: log.metadata?.name || '',
+          TargetName: log.metadata?.currentName || log.metadata?.name || '',
           ItemType: itemType || log.targetType || '',
           Field: fieldName ? resolveFieldLabel(fieldName, itemType) : '',
         };
@@ -925,71 +931,113 @@ function ActivityLogPage() {
                         </div>
 
                         {/* Target Details */}
-                        <div className="bg-slate-50/80 dark:bg-slate-800/60 rounded-xl p-3 border border-slate-100 dark:border-slate-700/60 space-y-1.5">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <span
-                              className="font-semibold text-slate-900 dark:text-slate-100 text-xs break-words"
-                              title={log.targetId ? `Item ID: ${log.targetId}` : undefined}
-                            >
-                              {log.metadata?.name || log.targetId || '-'}
-                            </span>
-                            {typeBadge && (
-                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shadow-2xs shrink-0 ${typeBadge.className}`}>
-                                {typeBadge.label}
-                              </span>
-                            )}
-                            {fieldLabel && (
-                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200/60 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-800/40 shrink-0">
-                                Field: {fieldLabel}
-                              </span>
-                            )}
-                          </div>
+                        {(() => {
+                          const rawName = log.metadata?.currentName || log.metadata?.name;
+                          const isRawIdOnly = !rawName && log.targetId;
+                          const displayName = rawName || (isRawIdOnly ? `Item (${log.targetId.slice(0, 8)}...)` : '-');
+                          const hasRenameAudit = Boolean(
+                            log.metadata?.renamed ||
+                            (log.metadata?.previousName && log.metadata?.newName && log.metadata?.previousName !== log.metadata?.newName)
+                          );
+                          const hasHistoricalAudit = !hasRenameAudit && Boolean(
+                            log.metadata?.wasRenamed &&
+                            log.metadata?.historicalName &&
+                            log.metadata?.historicalName !== displayName
+                          );
 
-                          {(log.metadata?.login || log.metadata?.domain) && (
-                            <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                              {log.metadata?.login && (
-                                <span className="text-slate-600 dark:text-slate-300 font-mono text-[11px] bg-white dark:bg-slate-700/60 px-1.5 py-0.5 rounded border border-slate-200/50 dark:border-slate-600/50">
-                                  {log.metadata.login}
+                          return (
+                            <div className="bg-slate-50/80 dark:bg-slate-800/60 rounded-xl p-3 border border-slate-100 dark:border-slate-700/60 space-y-1.5">
+                              {/* Primary Title + Badges */}
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <span
+                                  className="font-semibold text-slate-900 dark:text-slate-100 text-xs break-words"
+                                  title={log.targetId ? `Item ID: ${log.targetId}` : undefined}
+                                >
+                                  {displayName}
                                 </span>
+                                {typeBadge && (
+                                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shadow-2xs shrink-0 ${typeBadge.className}`}>
+                                    {typeBadge.label}
+                                  </span>
+                                )}
+                                {fieldLabel && (
+                                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200/60 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-800/40 shrink-0">
+                                    Field: {fieldLabel}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Rename Audit Note */}
+                              {hasRenameAudit && (
+                                <div className="text-[11px] font-medium text-indigo-600 dark:text-indigo-400 flex items-center gap-1 flex-wrap">
+                                  <span>Renamed:</span>
+                                  <span className="line-through opacity-70">{log.metadata.previousName}</span>
+                                  <span>→</span>
+                                  <span className="font-semibold">{log.metadata.newName}</span>
+                                </div>
                               )}
-                              {log.metadata?.domain && (
-                                <span className="inline-flex items-center gap-1 text-[11px] font-mono text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded-md border border-indigo-100 dark:border-indigo-900/40">
-                                  <Globe size={11} className="shrink-0 text-indigo-500 dark:text-indigo-400" />
-                                  <span>{log.metadata.domain}</span>
-                                </span>
+
+                              {/* Historical Context Note (for logs prior to rename) */}
+                              {hasHistoricalAudit && (
+                                <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                  {log.action === 'CREATE_PASSWORD' ? (
+                                    <span>Created as <span className="font-medium text-slate-700 dark:text-slate-300 italic">"{log.metadata.historicalName}"</span></span>
+                                  ) : (
+                                    <span>Originally <span className="font-medium text-slate-700 dark:text-slate-300 italic">"{log.metadata.historicalName}"</span></span>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Account Login & Website Domain */}
+                              {(log.metadata?.login || log.metadata?.domain) && (
+                                <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                                  {log.metadata?.login && (
+                                    <span className="text-slate-600 dark:text-slate-300 font-mono text-[11px] bg-white dark:bg-slate-700/60 px-1.5 py-0.5 rounded border border-slate-200/50 dark:border-slate-600/50">
+                                      {log.metadata.login}
+                                    </span>
+                                  )}
+                                  {log.metadata?.domain && (
+                                    <span className="inline-flex items-center gap-1 text-[11px] font-mono text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded-md border border-indigo-100 dark:border-indigo-900/40">
+                                      <Globe size={11} className="shrink-0 text-indigo-500 dark:text-indigo-400" />
+                                      <span>{log.metadata.domain}</span>
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Move Folder Note */}
+                              {log.metadata?.moved && log.metadata?.fromFolderName && log.metadata?.toFolderName && (
+                                <div className="text-[11px] font-medium text-amber-600 dark:text-amber-400 flex items-center gap-1 flex-wrap">
+                                  <span>Moved:</span>
+                                  <span className="line-through opacity-70">{log.metadata.fromFolderName}</span>
+                                  <span>→</span>
+                                  <span className="font-semibold">{log.metadata.toFolderName}</span>
+                                </div>
+                              )}
+
+                              {/* Context Badges (Extension, Vault Type) */}
+                              {((log.metadata?.clientSource === 'EXTENSION' || log.action === 'AUTOFILL_PASSWORD') || log.metadata?.personalVault || log.metadata?.vaultType === 'COMPANY') && (
+                                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                                  {(log.metadata?.clientSource === 'EXTENSION' || log.action === 'AUTOFILL_PASSWORD') && (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-200/60 shrink-0 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-800/40">
+                                      Extension
+                                    </span>
+                                  )}
+                                  {log.metadata?.personalVault && (
+                                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200/60 shrink-0 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-800/40">
+                                      Personal Vault
+                                    </span>
+                                  )}
+                                  {log.metadata?.vaultType === 'COMPANY' && (
+                                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200/60 shrink-0 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800/40">
+                                      Company Vault
+                                    </span>
+                                  )}
+                                </div>
                               )}
                             </div>
-                          )}
-
-                          {log.metadata?.moved && log.metadata?.fromFolderName && log.metadata?.toFolderName && (
-                            <div className="text-[11px] font-medium text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                              <span>Moved:</span>
-                              <span className="line-through opacity-70">{log.metadata.fromFolderName}</span>
-                              <span>→</span>
-                              <span className="font-semibold">{log.metadata.toFolderName}</span>
-                            </div>
-                          )}
-
-                          {((log.metadata?.clientSource === 'EXTENSION' || log.action === 'AUTOFILL_PASSWORD') || log.metadata?.personalVault || log.metadata?.vaultType === 'COMPANY') && (
-                            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                              {(log.metadata?.clientSource === 'EXTENSION' || log.action === 'AUTOFILL_PASSWORD') && (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-200/60 shrink-0 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-800/40">
-                                  Extension
-                                </span>
-                              )}
-                              {log.metadata?.personalVault && (
-                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200/60 shrink-0 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-800/40">
-                                  Personal Vault
-                                </span>
-                              )}
-                              {log.metadata?.vaultType === 'COMPANY' && (
-                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200/60 shrink-0 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800/40">
-                                  Company Vault
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
+                          );
+                        })()}
                       </div>
                     );
                   })}
@@ -1096,6 +1144,19 @@ function ActivityLogPage() {
                                   const itemType = resolveItemType(log);
                                   const typeBadge = getItemTypeBadge(itemType);
                                   const fieldLabel = log.metadata?.fieldName ? resolveFieldLabel(log.metadata.fieldName, itemType) : null;
+                                  const rawName = log.metadata?.currentName || log.metadata?.name;
+                                  const isRawIdOnly = !rawName && log.targetId;
+                                  const displayName = rawName || (isRawIdOnly ? `Item (${log.targetId.slice(0, 8)}...)` : '-');
+                                  const hasRenameAudit = Boolean(
+                                    log.metadata?.renamed ||
+                                    (log.metadata?.previousName && log.metadata?.newName && log.metadata?.previousName !== log.metadata?.newName)
+                                  );
+                                  const hasHistoricalAudit = !hasRenameAudit && Boolean(
+                                    log.metadata?.wasRenamed &&
+                                    log.metadata?.historicalName &&
+                                    log.metadata?.historicalName !== displayName
+                                  );
+
                                   return (
                                     <div className="flex flex-col gap-1.5 min-w-0">
                                       {/* Row 1: Target Name + Item Type badge + Field badge */}
@@ -1104,7 +1165,7 @@ function ActivityLogPage() {
                                           className="font-semibold text-slate-900 dark:text-slate-100 text-sm break-words"
                                           title={log.targetId ? `Item ID: ${log.targetId}` : undefined}
                                         >
-                                          {log.metadata?.name || log.targetId || '-'}
+                                          {displayName}
                                         </span>
                                         {typeBadge && (
                                           <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shadow-2xs shrink-0 ${typeBadge.className}`}>
@@ -1118,7 +1179,28 @@ function ActivityLogPage() {
                                         )}
                                       </div>
 
-                                      {/* Row 2: Account Login & Website Domain (badges) */}
+                                      {/* Row 2: Rename Audit Note */}
+                                      {hasRenameAudit && (
+                                        <div className="text-[11px] font-medium text-indigo-600 dark:text-indigo-400 flex items-center gap-1 flex-wrap">
+                                          <span>Renamed:</span>
+                                          <span className="line-through opacity-70">{log.metadata.previousName}</span>
+                                          <span>→</span>
+                                          <span className="font-semibold">{log.metadata.newName}</span>
+                                        </div>
+                                      )}
+
+                                      {/* Row 2b: Historical Context Note (for logs prior to rename) */}
+                                      {hasHistoricalAudit && (
+                                        <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                          {log.action === 'CREATE_PASSWORD' ? (
+                                            <span>Created as <span className="font-medium text-slate-700 dark:text-slate-300 italic">"{log.metadata.historicalName}"</span></span>
+                                          ) : (
+                                            <span>Originally <span className="font-medium text-slate-700 dark:text-slate-300 italic">"{log.metadata.historicalName}"</span></span>
+                                          )}
+                                        </div>
+                                      )}
+
+                                      {/* Row 3: Account Login & Website Domain (badges) */}
                                       {(log.metadata?.login || log.metadata?.domain) && (
                                         <div className="flex flex-wrap items-center gap-1.5 text-xs">
                                           {log.metadata?.login && (
@@ -1135,9 +1217,9 @@ function ActivityLogPage() {
                                         </div>
                                       )}
 
-                                      {/* Row 3: Move folder info */}
+                                      {/* Row 4: Move folder info */}
                                       {log.metadata?.moved && log.metadata?.fromFolderName && log.metadata?.toFolderName && (
-                                        <div className="text-[11px] font-medium text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                                        <div className="text-[11px] font-medium text-amber-600 dark:text-amber-400 flex items-center gap-1 flex-wrap">
                                           <span>Moved:</span>
                                           <span className="line-through opacity-70">{log.metadata.fromFolderName}</span>
                                           <span>→</span>
@@ -1145,7 +1227,7 @@ function ActivityLogPage() {
                                         </div>
                                       )}
 
-                                      {/* Row 4: Origin Pills (Extension, Vault Scope) */}
+                                      {/* Row 5: Origin Pills (Extension, Vault Scope) */}
                                       {((log.metadata?.clientSource === 'EXTENSION' || log.action === 'AUTOFILL_PASSWORD') || log.metadata?.personalVault || log.metadata?.vaultType === 'COMPANY') && (
                                         <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                                           {(log.metadata?.clientSource === 'EXTENSION' || log.action === 'AUTOFILL_PASSWORD') && (

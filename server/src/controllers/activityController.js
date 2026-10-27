@@ -47,28 +47,42 @@ const getAllActivityLogs = async (req, res) => {
         )
       : logs;
 
-    const missingTypeTargetIds = [
+    const passwordTargetIds = [
       ...new Set(
         filtered
           .filter(
-            (l) =>
-              !l.metadata?.itemType &&
-              (l.targetType === 'PasswordEntry' || (l.targetId && l.targetId.startsWith('PWD-')))
+            (l) => l.targetType === 'PasswordEntry' || (l.targetId && l.targetId.startsWith('PWD-'))
           )
           .map((l) => l.targetId)
           .filter(Boolean)
       ),
     ];
 
-    if (missingTypeTargetIds.length > 0) {
+    if (passwordTargetIds.length > 0) {
       const items = await prisma.passwordEntry.findMany({
-        where: { id: { in: missingTypeTargetIds } },
-        select: { id: true, type: true },
+        where: { id: { in: passwordTargetIds } },
+        select: { id: true, type: true, name: true },
       });
-      const typeMap = new Map(items.map((i) => [i.id, i.type]));
+      const itemMap = new Map(items.map((i) => [i.id, i]));
       for (const log of filtered) {
-        if (!log.metadata?.itemType && log.targetId && typeMap.has(log.targetId)) {
-          log.metadata = { ...(log.metadata || {}), itemType: typeMap.get(log.targetId) };
+        if (log.targetId && itemMap.has(log.targetId)) {
+          const item = itemMap.get(log.targetId);
+          const meta = log.metadata || {};
+          const currentName = item.name;
+          const historicalName = meta.name;
+          const wasRenamed = Boolean(historicalName && currentName && historicalName !== currentName);
+
+          log.metadata = {
+            ...meta,
+            itemType: meta.itemType || item.type,
+            currentName,
+            ...(wasRenamed
+              ? {
+                  wasRenamed: true,
+                  historicalName,
+                }
+              : {}),
+          };
         }
       }
     }

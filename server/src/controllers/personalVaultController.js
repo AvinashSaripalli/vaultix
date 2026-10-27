@@ -866,6 +866,7 @@ const updateMyVaultPassword = async (req, res) => {
       });
 
       const isFolderChanged = password.folderId !== folderId;
+      const isNameChanged = Boolean(password.name && updated.name && password.name !== updated.name);
       let fromFolderName = null;
       let toFolderName = updated.folder?.name || null;
       if (isFolderChanged && password.folderId) {
@@ -889,6 +890,13 @@ const updateMyVaultPassword = async (req, res) => {
             folderId,
             personalVault: true,
             vaultType: 'PERSONAL',
+            ...(isNameChanged
+              ? {
+                  renamed: true,
+                  previousName: password.name,
+                  newName: updated.name,
+                }
+              : {}),
             ...(isFolderChanged
               ? {
                   moved: true,
