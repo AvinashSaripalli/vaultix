@@ -38,10 +38,6 @@ const notifyCollaboratorsOnPasswordChange = async ({
                 where: { accessLevel: { in: ['ADMINISTRATOR', 'FULL_ACCESS', 'READ_WRITE'] } },
                 select: { userId: true },
               },
-              departmentPermissions: {
-                where: { accessLevel: { in: ['ADMINISTRATOR', 'FULL_ACCESS', 'READ_WRITE'] } },
-                select: { departmentId: true },
-              },
             },
           })
         : null,
@@ -64,18 +60,6 @@ const notifyCollaboratorsOnPasswordChange = async ({
     }
     for (const perm of folder?.permissions || []) {
       if (perm.userId) recipientIds.add(perm.userId);
-    }
-
-    // Resolve department members who have folder access
-    if (folder?.departmentPermissions?.length) {
-      const deptIds = folder.departmentPermissions.map((dp) => dp.departmentId);
-      const deptMembers = await prisma.departmentMember.findMany({
-        where: { departmentId: { in: deptIds } },
-        select: { userId: true },
-      });
-      for (const dm of deptMembers) {
-        if (dm.userId) recipientIds.add(dm.userId);
-      }
     }
 
     if (actionType === 'UPDATE' && previousCreatedById) {
@@ -557,72 +541,38 @@ const getPasswordsByVault = async (req, res) => {
         orderBy: { createdAt: 'desc' },
       });
     } else {
-      const memberOfIds = await getUserDepartmentIds(req.user.id);
-      const departmentIds = await getDepartmentIdsWithAncestors(memberOfIds);
-
-      // Fetch candidate folders where user has ANY relation (direct or via department, including FORBIDDEN) - password visibility will be filtered by effective access
+      // Query candidate folders where user has direct permission
       const candidateFolders = await prisma.folder.findMany({
         where: {
           vaultId: req.params.vaultId,
-          OR: [
-            { permissions: { some: { userId: req.user.id } } },
-            ...(departmentIds.length
-              ? [{ departmentPermissions: { some: { departmentId: { in: departmentIds } } } }]
-              : []),
-          ],
+          deletedAt: null,
+          permissions: {
+            some: {
+              userId: req.user.id,
+              accessLevel: { not: 'FORBIDDEN' },
+            },
+          },
         },
         select: {
           id: true,
           blockedUserIds: true,
-          permissions: { select: { userId: true, accessLevel: true } },
-          departmentPermissions: { select: { departmentId: true, accessLevel: true } },
+          permissions: {
+            where: { userId: req.user.id },
+            select: { accessLevel: true },
+          },
         },
       });
 
-      const DEPT_TO_FOLDER_MAP = {
-        NOT_SET: null,
-        FORBIDDEN: null,
-        READ_ONLY: 'READ_ONLY',
-        READ_WRITE: 'READ_WRITE',
-        FULL_ACCESS: 'FULL_ACCESS',
-        ADMINISTRATOR: 'ADMINISTRATOR',
-      };
-      const LEVEL_RANK = { READ_ONLY: 0, READ_WRITE: 1, FULL_ACCESS: 2, ADMINISTRATOR: 3 };
-      const getHighest = (levels) =>
-        levels.reduce((best, lvl) => (!best || (lvl && LEVEL_RANK[lvl] > LEVEL_RANK[best]) ? lvl : best), null);
-
       const accessibleFolderIds = [];
       for (const f of candidateFolders) {
-        // Check blocked: blocked loses department access unless direct non-FORBIDDEN exists
-        const hasDirectNonForbidden = f.permissions.some((p) => p.userId === req.user.id && p.accessLevel !== 'FORBIDDEN');
         const blocked = Array.isArray(f.blockedUserIds) ? f.blockedUserIds : [];
-        const isBlocked = blocked.includes(req.user.id) && !hasDirectNonForbidden;
-
-        // Department access with FORBIDDEN precedence
-        const deptGrants = f.departmentPermissions.filter((g) => departmentIds.includes(g.departmentId));
-        const hasDeptForbidden = deptGrants.some((g) => g.accessLevel === 'FORBIDDEN');
-        let deptAccess = null;
-        if (!hasDeptForbidden) {
-          const levels = deptGrants.map((g) => DEPT_TO_FOLDER_MAP[g.accessLevel]).filter(Boolean);
-          deptAccess = getHighest(levels);
-        } else {
-          // FORBIDDEN is explicit deny - no access via department or direct (direct cannot override)
-          continue;
+        if (blocked.includes(req.user.id)) continue;
+        const directPerm = f.permissions?.[0];
+        if (directPerm && directPerm.accessLevel && directPerm.accessLevel !== 'FORBIDDEN') {
+          accessibleFolderIds.push(f.id);
         }
-
-        const directPerm = f.permissions.find((p) => p.userId === req.user.id);
-        if (directPerm) {
-          if (directPerm.accessLevel === 'FORBIDDEN') continue; // explicit deny wins -> no password access
-          const directAccess = directPerm.accessLevel;
-          const effective = getHighest([directAccess, deptAccess]);
-          if (effective && !isBlocked) accessibleFolderIds.push(f.id);
-          continue;
-        }
-
-        if (isBlocked) continue;
-        if (deptAccess) accessibleFolderIds.push(f.id);
       }
-      const folderIds = accessibleFolderIds.filter(Boolean);
+      const folderIds = accessibleFolderIds;
 
       const vaultAccess = await getVaultAccess(req.params.vaultId, req.user.id);
       const hasVaultLevelAccess =
@@ -1348,79 +1298,25 @@ const getTrash = async (req, res) => {
     }
 
     // Check folder permissions for non-admin users
-    const memberOfIds = await getUserDepartmentIds(req.user.id);
-    const departmentIds = await getDepartmentIdsWithAncestors(memberOfIds);
-
     const candidateFolders = await prisma.folder.findMany({
       where: {
         vaultId,
-        OR: [
-          { permissions: { some: { userId: req.user.id } } },
-          ...(departmentIds.length
-            ? [{ departmentPermissions: { some: { departmentId: { in: departmentIds } } } }]
-            : []),
-        ],
+        permissions: {
+          some: {
+            userId: req.user.id,
+            accessLevel: { in: ['ADMINISTRATOR', 'FULL_ACCESS'] },
+          },
+        },
       },
       select: {
         id: true,
         blockedUserIds: true,
-        permissions: { select: { userId: true, accessLevel: true } },
-        departmentPermissions: { select: { departmentId: true, accessLevel: true } },
       },
     });
 
-    const DEPT_TO_FOLDER_MAP = {
-      NOT_SET: null,
-      FORBIDDEN: null,
-      READ_ONLY: 'READ_ONLY',
-      READ_WRITE: 'READ_WRITE',
-      FULL_ACCESS: 'FULL_ACCESS',
-      ADMINISTRATOR: 'ADMINISTRATOR',
-    };
-    const LEVEL_RANK = { READ_ONLY: 0, READ_WRITE: 1, FULL_ACCESS: 2, ADMINISTRATOR: 3 };
-    const getHighest = (levels) =>
-      levels.reduce((best, lvl) => (!best || (lvl && LEVEL_RANK[lvl] > LEVEL_RANK[best]) ? lvl : best), null);
-
-    const accessibleFolderIds = [];
-    let hasAnyFolderAccess = false;
-
-    for (const f of candidateFolders) {
-      const hasDirectNonForbidden = f.permissions.some((p) => p.userId === req.user.id && p.accessLevel !== 'FORBIDDEN');
-      const blocked = Array.isArray(f.blockedUserIds) ? f.blockedUserIds : [];
-      const isBlocked = blocked.includes(req.user.id) && !hasDirectNonForbidden;
-
-      const deptGrants = f.departmentPermissions.filter((g) => departmentIds.includes(g.departmentId));
-      const hasDeptForbidden = deptGrants.some((g) => g.accessLevel === 'FORBIDDEN');
-      let deptAccess = null;
-      if (!hasDeptForbidden) {
-        const levels = deptGrants.map((g) => DEPT_TO_FOLDER_MAP[g.accessLevel]).filter(Boolean);
-        deptAccess = getHighest(levels);
-      } else {
-        continue;
-      }
-
-      const directPerm = f.permissions.find((p) => p.userId === req.user.id);
-      if (directPerm) {
-        if (directPerm.accessLevel === 'FORBIDDEN') continue;
-        const directAccess = directPerm.accessLevel;
-        const effective = getHighest([directAccess, deptAccess]);
-        if (effective && !isBlocked) {
-          hasAnyFolderAccess = true;
-          if (['ADMINISTRATOR', 'FULL_ACCESS'].includes(effective)) {
-            accessibleFolderIds.push(f.id);
-          }
-        }
-        continue;
-      }
-
-      if (isBlocked) continue;
-      if (deptAccess) {
-        hasAnyFolderAccess = true;
-        if (['ADMINISTRATOR', 'FULL_ACCESS'].includes(deptAccess)) {
-          accessibleFolderIds.push(f.id);
-        }
-      }
-    }
+    const accessibleFolderIds = candidateFolders
+      .filter((f) => !(Array.isArray(f.blockedUserIds) && f.blockedUserIds.includes(req.user.id)))
+      .map((f) => f.id);
 
     if (!accessibleFolderIds.length) {
       return res.json([]);

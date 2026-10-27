@@ -323,35 +323,16 @@ const getFoldersByVault = async (req, res) => {
         orderBy: { createdAt: 'asc' },
       });
     } else {
-      const memberOfIds = await getUserDepartmentIds(req.user.id);
-      const departmentIds = await getDepartmentIdsWithAncestors(memberOfIds);
-
       let candidateFolders = await prisma.folder.findMany({
         where: {
           vaultId: req.params.vaultId,
           deletedAt: null,
-          OR: [
-            {
-              permissions: {
-                some: {
-                  userId: req.user.id,
-                  accessLevel: { not: 'FORBIDDEN' },
-                },
-              },
+          permissions: {
+            some: {
+              userId: req.user.id,
+              accessLevel: { not: 'FORBIDDEN' },
             },
-            ...(departmentIds.length
-              ? [
-                  {
-                    departmentPermissions: {
-                      some: {
-                        departmentId: { in: departmentIds },
-                        accessLevel: { notIn: ['FORBIDDEN', 'NOT_SET'] },
-                      },
-                    },
-                  },
-                ]
-              : []),
-          ],
+          },
         },
         include: {
           vault: {
@@ -1016,19 +997,11 @@ const getFolderTrash = async (req, res) => {
     }
 
     // Check folder permissions for non-admin users
-    const memberOfIds = await getUserDepartmentIds(req.user.id);
-    const departmentIds = await getDepartmentIdsWithAncestors(memberOfIds);
-
     const candidateFolders = await prisma.folder.findMany({
       where: {
         vaultId,
         deletedAt: { not: null },
-        OR: [
-          { permissions: { some: { userId: req.user.id } } },
-          ...(departmentIds.length
-            ? [{ departmentPermissions: { some: { departmentId: { in: departmentIds } } } }]
-            : []),
-        ],
+        permissions: { some: { userId: req.user.id } },
       },
       include: {
         _count: {

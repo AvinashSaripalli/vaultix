@@ -75,57 +75,9 @@ const getHighestFolderLevel = (levels) =>
     null
   );
 
-const getDepartmentVaultAccess = async (vaultId, userId) => {
-  const memberOfIds = await getUserDepartmentIds(userId);
+const getDepartmentVaultAccess = async () => null;
 
-  if (!memberOfIds.length) return null;
-
-  const departmentIds = await getDepartmentIdsWithAncestors(memberOfIds);
-
-  const grants = await prisma.departmentPermission.findMany({
-    where: {
-      vaultId,
-      departmentId: { in: departmentIds },
-    },
-    orderBy: { createdAt: 'asc' },
-  });
-
-  if (!grants.length) return null;
-
-  // FORBIDDEN is an explicit deny
-  const hasForbidden = grants.some((g) => g.accessLevel === 'FORBIDDEN');
-  if (hasForbidden) return 'FORBIDDEN';
-
-  // VaultAccessLevel shares same rank as LEVEL_RANK
-  const levels = grants.map((g) => g.accessLevel).filter((l) => l !== 'FORBIDDEN' && l !== 'NOT_SET');
-  return getHighestVaultLevel(levels);
-};
-
-const getDepartmentFolderAccess = async (folderId, userId) => {
-  const memberOfIds = await getUserDepartmentIds(userId);
-
-  if (!memberOfIds.length) return null;
-
-  const departmentIds = await getDepartmentIdsWithAncestors(memberOfIds);
-
-  const grants = await prisma.departmentPermission.findMany({
-    where: {
-      folderId,
-      departmentId: { in: departmentIds },
-    },
-    orderBy: { createdAt: 'asc' },
-  });
-
-  if (!grants.length) return null;
-
-  // FORBIDDEN is an explicit deny — wins over any other grant
-  const hasForbidden = grants.some((g) => g.accessLevel === 'FORBIDDEN');
-  if (hasForbidden) return 'FORBIDDEN';
-
-  // Among remaining grants, pick the highest level
-  const levels = grants.map((g) => DEPT_TO_FOLDER_MAP[g.accessLevel]).filter(Boolean);
-  return getHighestFolderLevel(levels);
-};
+const getDepartmentFolderAccess = async () => null;
 
 const getFolderAccess = async (folderId, userId) => {
   if (!folderId) return null;
@@ -151,24 +103,14 @@ const getFolderAccess = async (folderId, userId) => {
     return 'ADMINISTRATOR';
   }
 
-  // Check department access — FORBIDDEN is an explicit deny
-  const departmentAccess = await getDepartmentFolderAccess(folder.id, userId);
-  if (departmentAccess === 'FORBIDDEN') return null;
-
   const permission = folder.permissions.find((item) => item.userId === userId);
 
   if (permission) {
-    // FORBIDDEN direct permission is an explicit deny — wins over department access
     if (permission.accessLevel === 'FORBIDDEN') return null;
-    return getHighestFolderLevel([permission.accessLevel, departmentAccess]);
+    return permission.accessLevel;
   }
 
-  // Blocked users are explicitly removed from this folder — no department
-  // access can restore them (unless a direct permission is added later).
-  const blocked = Array.isArray(folder.blockedUserIds) ? folder.blockedUserIds : [];
-  if (blocked.includes(userId)) return null;
-
-  return departmentAccess;
+  return null;
 };
 
 const getVaultAccess = async (vaultId, userId) => {
@@ -192,13 +134,9 @@ const getVaultAccess = async (vaultId, userId) => {
     return 'ADMINISTRATOR';
   }
 
-  // Check department access — FORBIDDEN is an explicit deny
-  const departmentAccess = await getDepartmentVaultAccess(vault.id, userId);
-  if (departmentAccess === 'FORBIDDEN') return null;
-
   const permission = vault.permissions.find((item) => item.userId === userId);
 
-  return getHighestVaultLevel([permission?.accessLevel, departmentAccess]);
+  return permission && permission.accessLevel !== 'FORBIDDEN' ? permission.accessLevel : null;
 };
 
 const getFolderAuthorizedUserIds = async (folderId) => {
@@ -219,60 +157,19 @@ const getFolderAuthorizedUserIds = async (folderId) => {
       return [folder.vault.ownerId];
     }
 
-    const blocked = new Set(
-      Array.isArray(folder.blockedUserIds) ? folder.blockedUserIds : []
-    );
     const userIds = new Set([folder.vault.ownerId]);
-
-    for (const blockedId of blocked) {
-      userIds.delete(blockedId);
-    }
 
     for (const perm of folder.permissions) {
       if (perm.userId && perm.accessLevel !== 'FORBIDDEN') userIds.add(perm.userId);
     }
 
-    const [admins, grants] = await Promise.all([
-      prisma.user.findMany({ where: { role: { in: ['SUPER_ADMIN', 'ADMIN'] } }, select: { id: true } }),
-      prisma.departmentPermission.findMany({
-        where: { folderId },
-        select: { departmentId: true },
-      }),
-    ]);
+    const admins = await prisma.user.findMany({
+      where: { role: { in: ['SUPER_ADMIN', 'ADMIN'] } },
+      select: { id: true },
+    });
 
     for (const admin of admins) {
       userIds.add(admin.id);
-    }
-
-    if (grants.length > 0) {
-      const [allDepartments, memberships] = await Promise.all([
-        prisma.department.findMany({ select: { id: true, parentId: true } }),
-        prisma.departmentMember.findMany({
-          select: { departmentId: true, userId: true },
-        }),
-      ]);
-
-      const childrenMap = new Map();
-      for (const dept of allDepartments) {
-        if (!childrenMap.has(dept.parentId)) childrenMap.set(dept.parentId, []);
-        childrenMap.get(dept.parentId).push(dept.id);
-      }
-
-      const expanded = new Set();
-      const stack = grants.map((grant) => grant.departmentId);
-
-      while (stack.length > 0) {
-        const current = stack.pop();
-        if (expanded.has(current)) continue;
-        expanded.add(current);
-        for (const child of childrenMap.get(current) || []) stack.push(child);
-      }
-
-      for (const member of memberships) {
-        if (member.userId && expanded.has(member.departmentId)) {
-          if (!blocked.has(member.userId)) userIds.add(member.userId);
-        }
-      }
     }
 
     return [...userIds];
@@ -326,93 +223,8 @@ const requireFolderAccess = (allowedLevels = []) => {
   };
 };
 
-const getFolderDepartmentMembers = async (folderId) => {
-  try {
-    const [grants, folder, allDepts, allMemberships] = await Promise.all([
-      prisma.departmentPermission.findMany({
-        where: { folderId },
-        include: {
-          department: { select: { id: true, name: true } },
-        },
-      }),
-      prisma.folder.findUnique({
-        where: { id: folderId },
-        select: { blockedUserIds: true, permissions: { select: { userId: true, accessLevel: true } } },
-      }),
-      prisma.department.findMany({ select: { id: true, parentId: true } }),
-      prisma.departmentMember.findMany({
-        include: { user: { select: { id: true, fullName: true, email: true } } },
-      }),
-    ]);
-
-    if (!grants.length) return [];
-
-    const blocked = new Set(
-      Array.isArray(folder?.blockedUserIds) ? folder.blockedUserIds : []
-    );
-    const forbidden = new Set(
-      (folder?.permissions || [])
-        .filter((p) => p.accessLevel === 'FORBIDDEN')
-        .map((p) => p.userId)
-    );
-
-    // Build children map to expand grants to descendant sub-departments (access flows down)
-    const childrenMap = new Map();
-    for (const d of allDepts) {
-      if (!childrenMap.has(d.parentId)) childrenMap.set(d.parentId, []);
-      childrenMap.get(d.parentId).push(d.id);
-    }
-
-    const membershipsByDept = new Map();
-    for (const m of allMemberships) {
-      if (!membershipsByDept.has(m.departmentId)) membershipsByDept.set(m.departmentId, []);
-      membershipsByDept.get(m.departmentId).push(m);
-    }
-
-    const membersByUser = new Map();
-
-    for (const grant of grants) {
-      const folderAccess = DEPT_TO_FOLDER_MAP[grant.accessLevel];
-      if (!folderAccess) continue;
-
-      // Expand grant department to include all descendants
-      const expanded = new Set([grant.department.id]);
-      const stack = [grant.department.id];
-      while (stack.length) {
-        const cur = stack.pop();
-        for (const child of childrenMap.get(cur) || []) {
-          if (!expanded.has(child)) {
-            expanded.add(child);
-            stack.push(child);
-          }
-        }
-      }
-
-      for (const deptId of expanded) {
-        const deptMembers = membershipsByDept.get(deptId) || [];
-        for (const member of deptMembers) {
-          if (!member.user) continue;
-          const uid = member.user.id;
-          if (blocked.has(uid) || forbidden.has(uid)) continue;
-          const existing = membersByUser.get(uid);
-          if (!existing || LEVEL_RANK[folderAccess] > LEVEL_RANK[existing.accessLevel]) {
-            membersByUser.set(uid, {
-              user: member.user,
-              accessLevel: folderAccess,
-              departmentName: grant.department.name,
-              departmentId: grant.department.id,
-              viaDepartment: true,
-            });
-          }
-        }
-      }
-    }
-
-    return [...membersByUser.values()];
-  } catch (error) {
-    console.error('Get folder department members error:', error);
-    return [];
-  }
+const getFolderDepartmentMembers = async () => {
+  return [];
 };
 
 const getPasswordItemAccess = async (password, userId) => {

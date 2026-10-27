@@ -398,15 +398,6 @@ export default function UserAccessModal({
                           </span>
 
                           {/* Source indicator */}
-                          {folder.accessSource === 'DEPARTMENT' && (
-                            <span
-                              className="text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-md dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
-                              title={`Inherited from ${(folder.viaDepartments || []).join(', ')}`}
-                            >
-                              via {(folder.viaDepartments || [])[0] || 'Department'}
-                            </span>
-                          )}
-
                           {folder.accessSource === 'ROLE_ADMIN' && (
                             <span className="text-[11px] font-medium text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-md dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800">
                               Admin Role
@@ -446,17 +437,6 @@ export default function UserAccessModal({
                                 <span>Revoke</span>
                               </button>
                             </div>
-                          ) : folder.accessSource === 'DEPARTMENT' ? (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setActiveTab('AVAILABLE');
-                                setSearch(folder.folderName);
-                              }}
-                              className="text-xs text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 font-medium ml-1"
-                            >
-                              Customize
-                            </button>
                           ) : null}
                         </div>
                       </div>

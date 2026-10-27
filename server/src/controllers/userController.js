@@ -580,12 +580,6 @@ const getUserAccessSummary = async (req, res) => {
             permissions: {
               where: { userId: targetUserId },
             },
-            departmentPermissions: {
-              where: { departmentId: { in: allDepartmentIds } },
-              include: {
-                department: { select: { id: true, name: true } },
-              },
-            },
             _count: {
               select: { passwords: { where: { deletedAt: null } } },
             },
@@ -600,44 +594,17 @@ const getUserAccessSummary = async (req, res) => {
 
     const folderAccessList = [];
 
-    const RANK = {
-      READ_ONLY: 0,
-      READ_WRITE: 1,
-      FULL_ACCESS: 2,
-      ADMINISTRATOR: 3,
-    };
-
     for (const vault of vaults) {
       const isVaultOwner = vault.ownerId === targetUserId;
 
       for (const folder of vault.folders) {
         const directPerm = folder.permissions?.[0] || null;
-        const deptGrants = folder.departmentPermissions || [];
         const blockedUsers = Array.isArray(folder.blockedUserIds) ? folder.blockedUserIds : [];
         const isBlocked = blockedUsers.includes(targetUserId);
 
-        // Resolve Department Access Level
-        let deptAccessLevel = null;
-        let viaDepts = [];
-        if (deptGrants.length > 0) {
-          const hasForbiddenDept = deptGrants.some((g) => g.accessLevel === 'FORBIDDEN');
-          if (hasForbiddenDept) {
-            deptAccessLevel = 'FORBIDDEN';
-          } else {
-            const validGrants = deptGrants.filter(
-              (g) => g.accessLevel && g.accessLevel !== 'FORBIDDEN' && g.accessLevel !== 'NOT_SET'
-            );
-            if (validGrants.length > 0) {
-              validGrants.sort((a, b) => (RANK[b.accessLevel] ?? -1) - (RANK[a.accessLevel] ?? -1));
-              deptAccessLevel = validGrants[0].accessLevel;
-            }
-          }
-          viaDepts = deptGrants.map((g) => g.department?.name || deptNameMap.get(g.departmentId) || 'Department');
-        }
-
-        // Determine Effective Access and Source
+        // Determine Effective Access and Source purely from Admin / Owner / Direct Grants
         let effectiveAccess = null;
-        let accessSource = 'NONE'; // 'ROLE_ADMIN' | 'VAULT_OWNER' | 'DIRECT' | 'DEPARTMENT' | 'BLOCKED' | 'NONE'
+        let accessSource = 'NONE'; // 'ROLE_ADMIN' | 'VAULT_OWNER' | 'DIRECT' | 'DIRECT_FORBIDDEN' | 'BLOCKED' | 'NONE'
 
         if (isTargetAdmin) {
           effectiveAccess = 'ADMINISTRATOR';
@@ -650,29 +617,12 @@ const getUserAccessSummary = async (req, res) => {
             effectiveAccess = 'FORBIDDEN';
             accessSource = 'DIRECT_FORBIDDEN';
           } else {
-            // Direct permission takes precedence or highest with department
-            if (deptAccessLevel && deptAccessLevel !== 'FORBIDDEN') {
-              effectiveAccess =
-                (RANK[directPerm.accessLevel] ?? -1) >= (RANK[deptAccessLevel] ?? -1)
-                  ? directPerm.accessLevel
-                  : deptAccessLevel;
-              accessSource = effectiveAccess === directPerm.accessLevel ? 'DIRECT' : 'DEPARTMENT';
-            } else {
-              effectiveAccess = directPerm.accessLevel;
-              accessSource = 'DIRECT';
-            }
+            effectiveAccess = directPerm.accessLevel;
+            accessSource = 'DIRECT';
           }
         } else if (isBlocked) {
           effectiveAccess = 'FORBIDDEN';
           accessSource = 'BLOCKED';
-        } else if (deptAccessLevel) {
-          if (deptAccessLevel === 'FORBIDDEN') {
-            effectiveAccess = 'FORBIDDEN';
-            accessSource = 'DEPARTMENT_FORBIDDEN';
-          } else {
-            effectiveAccess = deptAccessLevel;
-            accessSource = 'DEPARTMENT';
-          }
         } else {
           effectiveAccess = null;
           accessSource = 'NONE';
@@ -694,8 +644,8 @@ const getUserAccessSummary = async (req, res) => {
                 accessLevel: directPerm.accessLevel,
               }
             : null,
-          deptAccessLevel,
-          viaDepartments: viaDepts,
+          deptAccessLevel: null,
+          viaDepartments: [],
           isBlocked,
           isVaultOwner,
           isRoleAdmin: isTargetAdmin,

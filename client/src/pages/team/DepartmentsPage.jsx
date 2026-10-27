@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { Navigate } from 'react-router-dom';
 import {
-  Building2, Users, KeyRound, Plus, Pencil, Trash2, X,
+  Building2, Users, Plus, Pencil, Trash2, X,
   ChevronDown, ChevronUp, Search,
 } from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout';
@@ -11,16 +11,6 @@ import ModalPortal, { ModalBackdrop } from '../../components/common/ModalPortal'
 import api from '../../services/api';
 import { showToast } from '../../utils/toast';
 
-const VAULT_ACCESS_LEVELS = ['NOT_SET', 'FORBIDDEN', 'READ_ONLY', 'READ_WRITE', 'FULL_ACCESS', 'ADMINISTRATOR'];
-
-const DEPT_ACCESS_LABELS = {
-  NOT_SET: 'Not set',
-  FORBIDDEN: 'Forbidden',
-  READ_ONLY: 'Read only',
-  READ_WRITE: 'Read and edit',
-  FULL_ACCESS: 'Full access',
-  ADMINISTRATOR: 'Administrator',
-};
 const MEMBER_ROLES = ['MEMBER'];
 
 function buildTree(departments) {
@@ -36,31 +26,6 @@ function buildTree(departments) {
   }
 
   return roots;
-}
-
-function buildFolderOptions(folders) {
-  const byId = new Map(folders.map((f) => [f.id, { ...f, depth: 0, kids: [] }]));
-  const roots = [];
-
-  for (const node of byId.values()) {
-    if (node.parentId && byId.has(node.parentId)) {
-      node.depth = byId.get(node.parentId).depth + 1;
-      byId.get(node.parentId).kids.push(node);
-    } else {
-      roots.push(node);
-    }
-  }
-
-  const ordered = [];
-  const walk = (nodes) => {
-    nodes.forEach((node) => {
-      ordered.push(node);
-      walk(node.kids);
-    });
-  };
-  walk(roots);
-
-  return ordered;
 }
 
 function OrgNode({ node, selectedId, collapsed, toggleCollapsed, onSelect }) {
@@ -266,7 +231,6 @@ function DepartmentsPage() {
 
   const [departments, setDepartments] = useState([]);
   const [users, setUsers] = useState([]);
-  const [vaults, setVaults] = useState([]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -283,13 +247,6 @@ function DepartmentsPage() {
   const [savingDept, setSavingDept] = useState(false);
 
   const [pickerOpen, setPickerOpen] = useState(false);
-
-  const [grantForm, setGrantForm] = useState({
-    targetType: 'VAULT',
-    vaultId: '',
-    folderId: '',
-  });
-  const [foldersCache, setFoldersCache] = useState({});
 
   const [confirmState, setConfirmState] = useState({ open: false, type: null, data: null });
 
@@ -324,13 +281,8 @@ function DepartmentsPage() {
 
     const fetchSupportData = async () => {
       try {
-        const [usersRes, vaultsRes] = await Promise.all([
-          api.get('/users/shareable', authHeaders),
-          api.get('/vaults', authHeaders),
-        ]);
-
+        const usersRes = await api.get('/users/shareable', authHeaders);
         setUsers(usersRes.data);
-        setVaults(vaultsRes.data.filter((v) => v.type !== 'PERSONAL'));
       } catch {
         // support lists are optional for rendering the page
       }
@@ -379,12 +331,6 @@ function DepartmentsPage() {
 
   const openDepartment = (id) => {
     setSelectedDeptId(id);
-    setGrantForm({
-      targetType: 'VAULT',
-      vaultId: '',
-      folderId: '',
-      accessLevel: 'READ_ONLY',
-    });
   };
 
   const closeDrawer = () => setSelectedDeptId(null);
@@ -464,10 +410,6 @@ function DepartmentsPage() {
         await api.delete(`/departments/${data.departmentId}/members/${data.userId}`, authHeaders);
         showToast('Member removed');
         await fetchDepartments();
-      } else if (type === 'grant') {
-        await api.delete(`/departments/${data.departmentId}/grants/${data.grantId}`, authHeaders);
-        showToast('Access revoked');
-        await fetchDepartments();
       }
     } catch (err) {
       showToast(err.response?.data?.message || 'Action failed', 'error');
@@ -487,51 +429,6 @@ function DepartmentsPage() {
       await fetchDepartments();
     } catch (err) {
       showToast(err.response?.data?.message || 'Failed to add member', 'error');
-    }
-  };
-
-  const getFoldersForVault = async (vaultId) => {
-    if (!vaultId || foldersCache[vaultId]) return foldersCache[vaultId] || [];
-
-    try {
-      const res = await api.get(`/folders/vault/${vaultId}`, authHeaders);
-      const folders = res.data || [];
-
-      setFoldersCache((prev) => ({ ...prev, [vaultId]: folders }));
-
-      return folders;
-    } catch {
-      return [];
-    }
-  };
-
-  const handleAddGrant = async () => {
-    if (!selectedDept) return;
-
-    if (grantForm.targetType === 'VAULT' && !grantForm.vaultId) {
-      showToast('Select a vault first', 'error');
-      return;
-    }
-
-    if (grantForm.targetType === 'FOLDER' && (!grantForm.vaultId || !grantForm.folderId)) {
-      showToast('Select a vault and folder first', 'error');
-      return;
-    }
-
-    const payload =
-      grantForm.targetType === 'FOLDER'
-        ? { folderId: grantForm.folderId }
-        : { vaultId: grantForm.vaultId };
-
-    try {
-      await api.post(`/departments/${selectedDept.id}/grants`, payload, authHeaders);
-      showToast('Access granted');
-
-      setGrantForm((prev) => ({ ...prev, folderId: '' }));
-
-      await fetchDepartments();
-    } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to grant access', 'error');
     }
   };
 
@@ -555,13 +452,11 @@ function DepartmentsPage() {
   const confirmTitle = {
     department: 'Delete Department',
     member: 'Remove Member',
-    grant: 'Revoke Access',
   }[confirmState.type];
 
   const confirmMessage = {
-    department: `Delete department "${confirmState.data?.name}"? All memberships and access grants will be removed.`,
-    member: `Remove "${confirmState.data?.userName}" from this department? They will immediately lose department-based access.`,
-    grant: 'Revoke this department access? Members will lose this access immediately.',
+    department: `Delete department "${confirmState.data?.name}"? All memberships will be removed.`,
+    member: `Remove "${confirmState.data?.userName}" from this department?`,
   }[confirmState.type];
 
   return (
@@ -572,8 +467,7 @@ function DepartmentsPage() {
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100">Departments</h1>
               <p className="text-xs sm:text-sm text-slate-500 mt-1 dark:text-slate-400">
-                Your organization structure. Click a department to view its members. Access granted
-                to a parent flows down to all sub-departments.
+                Your organization structure. Click a department to view its members.
               </p>
             </div>
 
@@ -764,161 +658,6 @@ function DepartmentsPage() {
                       No members yet. Use "Add Member" above.
                     </p>
                   )}
-                </div>
-              </section>
-
-              {/* Access grants */}
-              <section className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <KeyRound size={15} className="text-slate-400" />
-                  <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                    Access Grants ({selectedDept.permissions.length})
-                  </h4>
-                </div>
-
-                <div className="space-y-2">
-                  {selectedDept.permissions.map((grant) => (
-                    <div
-                      key={grant.id}
-                      className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2.5 dark:border-slate-700"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">
-                          {grant.folder ? grant.folder.name : grant.vault?.name}
-                          <span className="ml-1.5 text-xs text-slate-400">
-                            ({grant.folder ? 'Folder' : 'Vault'})
-                          </span>
-                        </p>
-                        {grant.folder?.vault?.name && (
-                          <p className="text-xs text-slate-500 dark:text-slate-400">
-                            in {grant.folder.vault.name}
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0 ml-3">
-                        <span className="rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
-                          {DEPT_ACCESS_LABELS[grant.accessLevel] || grant.accessLevel}
-                        </span>
-
-                        <button
-                          onClick={() =>
-                            requestConfirm('grant', {
-                              departmentId: selectedDept.id,
-                              grantId: grant.id,
-                            })
-                          }
-                          className="rounded-lg p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-                          title="Revoke access"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-
-                  {!selectedDept.permissions.length && (
-                    <p className="py-4 text-center text-xs text-slate-500 dark:text-slate-400">
-                      No access granted yet.
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2 rounded-2xl bg-slate-50 p-3 dark:bg-slate-700/40">
-                  <div className="flex gap-2">
-                    {['VAULT', 'FOLDER'].map((type) => (
-                      <button
-                        key={type}
-                        onClick={() =>
-                          setGrantForm((prev) => ({ ...prev, targetType: type }))
-                        }
-                        className={`rounded-xl px-3 py-1.5 text-xs font-semibold ${
-                          grantForm.targetType === type
-                            ? 'bg-indigo-600 text-white'
-                            : 'border border-slate-300 text-slate-600 hover:bg-white dark:border-slate-600 dark:text-slate-300'
-                        }`}
-                      >
-                        {type.charAt(0) + type.slice(1).toLowerCase()}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
-                      Company vault
-                    </label>
-                    <select
-                      value={grantForm.vaultId}
-                      onChange={async (e) => {
-                        setGrantForm((prev) => ({
-                          ...prev,
-                          vaultId: e.target.value,
-                          folderId: '',
-                        }));
-                        await getFoldersForVault(e.target.value);
-                      }}
-                      className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
-                    >
-                      <option value="">Select vault...</option>
-                      {vaults.map((v) => (
-                        <option key={v.id} value={v.id}>
-                          {v.name} ({v.type === 'CLIENT' ? 'Client' : 'Company'})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {grantForm.targetType === 'FOLDER' && (
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
-                        Folder in this vault
-                      </label>
-                      {!grantForm.vaultId ? (
-                        <p className="rounded-xl border border-dashed border-slate-300 px-3 py-2 text-xs text-slate-400 dark:border-slate-600">
-                          Select a vault above to see its folders
-                        </p>
-                      ) : !(foldersCache[grantForm.vaultId] || []).length ? (
-                        <p className="rounded-xl border border-dashed border-slate-300 px-3 py-2 text-xs text-slate-400 dark:border-slate-600">
-                          This vault has no folders yet
-                        </p>
-                      ) : (
-                        <select
-                          value={grantForm.folderId}
-                          onChange={(e) =>
-                            setGrantForm((prev) => ({ ...prev, folderId: e.target.value }))
-                          }
-                          className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
-                        >
-                          <option value="">Select folder...</option>
-                          {buildFolderOptions(foldersCache[grantForm.vaultId] || []).map(
-                            (f) => (
-                              <option key={f.id} value={f.id}>
-                                {'\u00A0\u00A0'.repeat(f.depth)}
-                                {f.depth > 0 ? '↳ ' : ''}
-                                {f.name}
-                              </option>
-                            )
-                          )}
-                        </select>
-                      )}
-                    </div>
-                  )}
-
-                  <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                    {grantForm.targetType === 'FOLDER'
-                      ? 'All department members get access to this folder.'
-                      : 'All department members get access across this vault.'}
-                  </p>
-
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleAddGrant}
-                      disabled={!vaults.length}
-                      className="h-10 flex-1 rounded-xl bg-indigo-600 px-4 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Grant Access
-                    </button>
-                  </div>
                 </div>
               </section>
             </div>

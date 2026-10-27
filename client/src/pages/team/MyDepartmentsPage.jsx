@@ -2,20 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { Navigate } from 'react-router-dom';
 import {
-  Building2, Users, KeyRound, ChevronDown, ChevronUp, Search, X,
+  Building2, Users, ChevronDown, ChevronUp, Search, X,
 } from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout';
 import api from '../../services/api';
 import ModalPortal, { ModalBackdrop } from '../../components/common/ModalPortal';
-
-const DEPT_ACCESS_LABELS = {
-  NOT_SET: 'Not set',
-  FORBIDDEN: 'Forbidden',
-  READ_ONLY: 'Read only',
-  READ_WRITE: 'Read and edit',
-  FULL_ACCESS: 'Full access',
-  ADMINISTRATOR: 'Administrator',
-};
 
 function buildTree(departments) {
   const byId = new Map(departments.map((d) => [d.id, { ...d, children: [] }]));
@@ -348,48 +339,6 @@ function MyDepartmentsPage() {
                       </span>
                     </div>
                   ))}
-                </div>
-              </section>
-
-              <section className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <KeyRound size={15} className="text-slate-400" />
-                  <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                    Access Grants ({selectedDept.permissions.length})
-                  </h4>
-                </div>
-
-                <div className="space-y-2">
-                  {selectedDept.permissions.map((grant) => (
-                    <div
-                      key={grant.id}
-                      className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2.5 dark:border-slate-700"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">
-                          {grant.folder ? grant.folder.name : grant.vault?.name}
-                          <span className="ml-1.5 text-xs text-slate-400">
-                            ({grant.folder ? 'Folder' : 'Vault'})
-                          </span>
-                        </p>
-                        {grant.folder?.vault?.name && (
-                          <p className="text-xs text-slate-500 dark:text-slate-400">
-                            in {grant.folder.vault.name}
-                          </p>
-                        )}
-                      </div>
-
-                      <span className="rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 shrink-0 ml-3">
-                        {DEPT_ACCESS_LABELS[grant.accessLevel] || grant.accessLevel}
-                      </span>
-                    </div>
-                  ))}
-
-                  {!selectedDept.permissions.length && (
-                    <p className="py-4 text-center text-xs text-slate-500 dark:text-slate-400">
-                      No access grants assigned to this department.
-                    </p>
-                  )}
                 </div>
               </section>
             </div>
