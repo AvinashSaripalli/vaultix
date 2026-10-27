@@ -927,7 +927,10 @@ function ActivityLogPage() {
                         {/* Target Details */}
                         <div className="bg-slate-50/80 dark:bg-slate-800/60 rounded-xl p-3 border border-slate-100 dark:border-slate-700/60 space-y-1.5">
                           <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="font-semibold text-slate-900 dark:text-slate-100 text-xs break-words">
+                            <span
+                              className="font-semibold text-slate-900 dark:text-slate-100 text-xs break-words"
+                              title={log.targetId ? `Item ID: ${log.targetId}` : undefined}
+                            >
                               {log.metadata?.name || log.targetId || '-'}
                             </span>
                             {typeBadge && (
@@ -967,28 +970,25 @@ function ActivityLogPage() {
                             </div>
                           )}
 
-                          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                            {(log.metadata?.clientSource === 'EXTENSION' || log.action === 'AUTOFILL_PASSWORD') && (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-200/60 shrink-0 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-800/40">
-                                Extension
-                              </span>
-                            )}
-                            {log.metadata?.personalVault && (
-                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200/60 shrink-0 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-800/40">
-                                Personal Vault
-                              </span>
-                            )}
-                            {log.metadata?.vaultType === 'COMPANY' && (
-                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200/60 shrink-0 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800/40">
-                                Company Vault
-                              </span>
-                            )}
-                            {log.metadata?.name && log.targetId && (
-                              <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
-                                {log.targetId}
-                              </span>
-                            )}
-                          </div>
+                          {((log.metadata?.clientSource === 'EXTENSION' || log.action === 'AUTOFILL_PASSWORD') || log.metadata?.personalVault || log.metadata?.vaultType === 'COMPANY') && (
+                            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                              {(log.metadata?.clientSource === 'EXTENSION' || log.action === 'AUTOFILL_PASSWORD') && (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-200/60 shrink-0 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-800/40">
+                                  Extension
+                                </span>
+                              )}
+                              {log.metadata?.personalVault && (
+                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200/60 shrink-0 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-800/40">
+                                  Personal Vault
+                                </span>
+                              )}
+                              {log.metadata?.vaultType === 'COMPANY' && (
+                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200/60 shrink-0 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800/40">
+                                  Company Vault
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -1100,7 +1100,10 @@ function ActivityLogPage() {
                                     <div className="flex flex-col gap-1.5 min-w-0">
                                       {/* Row 1: Target Name + Item Type badge + Field badge */}
                                       <div className="flex flex-wrap items-center gap-1.5">
-                                        <span className="font-semibold text-slate-900 dark:text-slate-100 text-sm break-words">
+                                        <span
+                                          className="font-semibold text-slate-900 dark:text-slate-100 text-sm break-words"
+                                          title={log.targetId ? `Item ID: ${log.targetId}` : undefined}
+                                        >
                                           {log.metadata?.name || log.targetId || '-'}
                                         </span>
                                         {typeBadge && (
@@ -1142,29 +1145,26 @@ function ActivityLogPage() {
                                         </div>
                                       )}
 
-                                      {/* Row 4: Origin Pills (Extension, Vault Scope) and Target ID */}
-                                      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                                        {(log.metadata?.clientSource === 'EXTENSION' || log.action === 'AUTOFILL_PASSWORD') && (
-                                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-200/60 shrink-0 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-800/40">
-                                            Extension
-                                          </span>
-                                        )}
-                                        {log.metadata?.personalVault && (
-                                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200/60 shrink-0 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-800/40">
-                                            Personal Vault
-                                          </span>
-                                        )}
-                                        {log.metadata?.vaultType === 'COMPANY' && (
-                                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200/60 shrink-0 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800/40">
-                                            Company Vault
-                                          </span>
-                                        )}
-                                        {log.metadata?.name && log.targetId && (
-                                          <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
-                                            {log.targetId}
-                                          </span>
-                                        )}
-                                      </div>
+                                      {/* Row 4: Origin Pills (Extension, Vault Scope) */}
+                                      {((log.metadata?.clientSource === 'EXTENSION' || log.action === 'AUTOFILL_PASSWORD') || log.metadata?.personalVault || log.metadata?.vaultType === 'COMPANY') && (
+                                        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                                          {(log.metadata?.clientSource === 'EXTENSION' || log.action === 'AUTOFILL_PASSWORD') && (
+                                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-200/60 shrink-0 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-800/40">
+                                              Extension
+                                            </span>
+                                          )}
+                                          {log.metadata?.personalVault && (
+                                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200/60 shrink-0 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-800/40">
+                                              Personal Vault
+                                            </span>
+                                          )}
+                                          {log.metadata?.vaultType === 'COMPANY' && (
+                                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200/60 shrink-0 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800/40">
+                                              Company Vault
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
                                     </div>
                                   );
                                 })()}
