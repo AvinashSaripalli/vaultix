@@ -18,6 +18,7 @@ import {
   ShieldAlert,
   Bell,
   Sparkles,
+  Globe,
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import AppLayout from '../../components/layout/AppLayout';
@@ -166,9 +167,9 @@ function renderPageButtons(current, total, onPageChange) {
       <button
         key={page}
         onClick={() => onPageChange(page)}
-        className={`h-10 w-10 rounded-xl text-sm font-semibold ${
+        className={`h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition ${
           current === page
-            ? 'bg-indigo-600 text-white'
+            ? 'bg-indigo-600 text-white shadow-xs'
             : 'border border-slate-300 text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700'
         }`}
       >
@@ -196,7 +197,7 @@ function renderPageButtons(current, total, onPageChange) {
   return pages.map((page, idx) => {
     if (page === '...') {
       return (
-        <span key={`ellipsis-${idx}`} className="h-10 w-10 flex items-center justify-center text-sm text-slate-400 dark:text-slate-500">
+        <span key={`ellipsis-${idx}`} className="h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 flex items-center justify-center text-xs sm:text-sm text-slate-400 dark:text-slate-500">
           ...
         </span>
       );
@@ -205,9 +206,9 @@ function renderPageButtons(current, total, onPageChange) {
       <button
         key={page}
         onClick={() => onPageChange(page)}
-        className={`h-10 w-10 rounded-xl text-sm font-semibold ${
+        className={`h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition ${
           current === page
-            ? 'bg-indigo-600 text-white'
+            ? 'bg-indigo-600 text-white shadow-xs'
             : 'border border-slate-300 text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700'
         }`}
       >
@@ -223,9 +224,9 @@ function renderSimplePageButtons(current, total, onPageChange) {
       <button
         key={page}
         onClick={() => onPageChange(page)}
-        className={`h-10 w-10 rounded-xl text-sm font-semibold ${
+        className={`h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition ${
           current === page
-            ? 'bg-indigo-600 text-white'
+            ? 'bg-indigo-600 text-white shadow-xs'
             : 'border border-slate-300 text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700'
         }`}
       >
@@ -247,7 +248,7 @@ function renderSimplePageButtons(current, total, onPageChange) {
   return pages.map((page, idx) => {
     if (page === '...') {
       return (
-        <span key={`ellipsis-${idx}`} className="h-10 w-10 flex items-center justify-center text-sm text-slate-400 dark:text-slate-500">
+        <span key={`ellipsis-${idx}`} className="h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 flex items-center justify-center text-xs sm:text-sm text-slate-400 dark:text-slate-500">
           ...
         </span>
       );
@@ -256,9 +257,9 @@ function renderSimplePageButtons(current, total, onPageChange) {
       <button
         key={page}
         onClick={() => onPageChange(page)}
-        className={`h-10 w-10 rounded-xl text-sm font-semibold ${
+        className={`h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition ${
           current === page
-            ? 'bg-indigo-600 text-white'
+            ? 'bg-indigo-600 text-white shadow-xs'
             : 'border border-slate-300 text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700'
         }`}
       >
@@ -695,12 +696,13 @@ function ActivityLogPage() {
             </div>
 
             {/* Filters */}
-            <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3">
-              <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
-                <div className="relative w-full sm:w-[300px] lg:w-[340px]">
+            <div className="flex flex-col gap-3">
+              {/* Row 1: Search + Top Action Buttons */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="relative flex-1 min-w-[240px] max-w-full sm:max-w-md lg:max-w-lg">
                   <Search
                     size={17}
-                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none"
                   />
                   <input
                     value={search}
@@ -716,85 +718,123 @@ function ActivityLogPage() {
                         ? 'Search by user, IP, status...'
                         : 'Search activity...'
                     }
-                    className="h-10 sm:h-11 w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-indigo-500/30"
+                    className="h-10 sm:h-11 w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-indigo-500/30"
                   />
                 </div>
 
-                {activeTab === 'actions' && (
-                  <>
+                <div className="flex items-center gap-2 sm:gap-2.5 self-end sm:self-auto shrink-0">
+                  <button
+                    type="button"
+                    onClick={resetFilters}
+                    className="inline-flex h-10 sm:h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3 sm:px-4 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition shadow-2xs"
+                  >
+                    <RotateCcw size={15} />
+                    <span>Reset</span>
+                  </button>
+
+                  {(activeTab === 'login' || activeTab === 'unread') && (
+                    <button
+                      type="button"
+                      onClick={handleRefresh}
+                      disabled={loginLoading || notifLoading}
+                      className="inline-flex h-10 sm:h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3 sm:px-4 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition shadow-2xs"
+                    >
+                      <RefreshCw
+                        size={15}
+                        className={loginLoading || notifLoading ? 'animate-spin' : ''}
+                      />
+                      <span>Refresh</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleExportCSV}
+                    className="inline-flex h-10 sm:h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3 sm:px-4 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition shadow-2xs"
+                  >
+                    <Download size={15} />
+                    <span>Export CSV</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Row 2: Tab-Specific Filter Controls */}
+              {activeTab === 'actions' && (
+                <div className={`grid grid-cols-1 sm:grid-cols-2 ${departments.length > 0 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-2.5 pt-1 w-full`}>
+                  <select
+                    value={actionFilter}
+                    onChange={(e) => {
+                      setActionFilter(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="h-10 sm:h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 text-xs sm:text-sm font-medium text-slate-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:focus:ring-indigo-500/30 cursor-pointer shadow-2xs"
+                  >
+                    {ACTION_FILTERS.map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={typeFilter}
+                    onChange={(e) => {
+                      setTypeFilter(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="h-10 sm:h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 text-xs sm:text-sm font-medium text-slate-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:focus:ring-indigo-500/30 cursor-pointer shadow-2xs"
+                  >
+                    {TYPE_FILTERS.map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={vaultScopeFilter}
+                    onChange={(e) => {
+                      setVaultScopeFilter(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="h-10 sm:h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 text-xs sm:text-sm font-medium text-slate-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:focus:ring-indigo-500/30 cursor-pointer shadow-2xs"
+                  >
+                    {VAULT_SCOPE_FILTERS.map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
+
+                  {departments.length > 0 && (
                     <select
-                      value={actionFilter}
+                      value={deptFilter}
                       onChange={(e) => {
-                        setActionFilter(e.target.value);
+                        setDeptFilter(e.target.value);
                         setCurrentPage(1);
                       }}
-                      className="h-10 sm:h-11 rounded-xl border border-slate-300 bg-white px-3.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-indigo-500/30"
+                      className="h-10 sm:h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 text-xs sm:text-sm font-medium text-slate-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:focus:ring-indigo-500/30 cursor-pointer shadow-2xs"
                     >
-                      {ACTION_FILTERS.map((item) => (
-                        <option key={item.value} value={item.value}>
-                          {item.label}
+                      <option value="ALL">All Departments</option>
+                      {departments.map((dept) => (
+                        <option key={dept.id} value={dept.id}>
+                          {dept.name}
                         </option>
                       ))}
                     </select>
+                  )}
+                </div>
+              )}
 
-                    <select
-                      value={typeFilter}
-                      onChange={(e) => {
-                        setTypeFilter(e.target.value);
-                        setCurrentPage(1);
-                      }}
-                      className="h-10 sm:h-11 rounded-xl border border-slate-300 bg-white px-3.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-indigo-500/30"
-                    >
-                      {TYPE_FILTERS.map((item) => (
-                        <option key={item.value} value={item.value}>
-                          {item.label}
-                        </option>
-                      ))}
-                    </select>
-
-                    <select
-                      value={vaultScopeFilter}
-                      onChange={(e) => {
-                        setVaultScopeFilter(e.target.value);
-                        setCurrentPage(1);
-                      }}
-                      className="h-10 sm:h-11 rounded-xl border border-slate-300 bg-white px-3.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-indigo-500/30 font-medium"
-                    >
-                      {VAULT_SCOPE_FILTERS.map((item) => (
-                        <option key={item.value} value={item.value}>
-                          {item.label}
-                        </option>
-                      ))}
-                    </select>
-
-                    {departments.length > 0 && (
-                      <select
-                        value={deptFilter}
-                        onChange={(e) => {
-                          setDeptFilter(e.target.value);
-                          setCurrentPage(1);
-                        }}
-                        className="h-10 sm:h-11 rounded-xl border border-slate-300 bg-white px-3.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-indigo-500/30"
-                      >
-                        <option value="ALL">All Departments</option>
-                        {departments.map((dept) => (
-                          <option key={dept.id} value={dept.id}>
-                            {dept.name}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  </>
-                )}
-
-                {activeTab === 'login' && (
+              {activeTab === 'login' && (
+                <div className="w-full sm:w-64 pt-1">
                   <select
                     value={loginStatusFilter}
                     onChange={(e) => {
                       setLoginStatusFilter(e.target.value);
                       setCurrentPage(1);
                     }}
-                    className="h-10 sm:h-11 rounded-xl border border-slate-300 bg-white px-3.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-indigo-500/30"
+                    className="h-10 sm:h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 text-xs sm:text-sm font-medium text-slate-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:focus:ring-indigo-500/30 cursor-pointer shadow-2xs"
                   >
                     {LOGIN_STATUS_FILTERS.map((item) => (
                       <option key={item.value} value={item.value}>
@@ -802,64 +842,29 @@ function ActivityLogPage() {
                       </option>
                     ))}
                   </select>
-                )}
+                </div>
+              )}
 
-                {activeTab === 'unread' && (
-                  <div className="flex flex-wrap gap-2">
-                    {UNREAD_TYPE_FILTERS.map((f) => (
-                      <button
-                        key={f.value}
-                        onClick={() => {
-                          setUnreadTypeFilter(f.value);
-                          setCurrentPage(1);
-                        }}
-                        className={`h-10 sm:h-11 px-3.5 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold border transition ${
-                          unreadTypeFilter === f.value
-                            ? 'bg-indigo-600 text-white border-indigo-600'
-                            : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-700'
-                        }`}
-                      >
-                        {f.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="flex items-center flex-wrap gap-2 sm:gap-2.5 shrink-0">
-                <button
-                  type="button"
-                  onClick={resetFilters}
-                  className="inline-flex h-10 sm:h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3.5 sm:px-4 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition shadow-sm"
-                >
-                  <RotateCcw size={15} />
-                  <span>Reset</span>
-                </button>
-
-                {(activeTab === 'login' || activeTab === 'unread') && (
-                  <button
-                    type="button"
-                    onClick={handleRefresh}
-                    disabled={loginLoading || notifLoading}
-                    className="inline-flex h-10 sm:h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3.5 sm:px-4 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition shadow-sm"
-                  >
-                    <RefreshCw
-                      size={15}
-                      className={loginLoading || notifLoading ? 'animate-spin' : ''}
-                    />
-                    <span>Refresh</span>
-                  </button>
-                )}
-
-                <button
-                  type="button"
-                  onClick={handleExportCSV}
-                  className="inline-flex h-10 sm:h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3.5 sm:px-4 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition shadow-sm"
-                >
-                  <Download size={15} />
-                  <span>Export CSV</span>
-                </button>
-              </div>
+              {activeTab === 'unread' && (
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  {UNREAD_TYPE_FILTERS.map((f) => (
+                    <button
+                      key={f.value}
+                      onClick={() => {
+                        setUnreadTypeFilter(f.value);
+                        setCurrentPage(1);
+                      }}
+                      className={`h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold border transition ${
+                        unreadTypeFilter === f.value
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                          : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-700 shadow-2xs'
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -879,32 +884,144 @@ function ActivityLogPage() {
             )}
             {!activityLoading && !error && (
               <>
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[760px]">
-                    <thead className="bg-slate-50 dark:bg-slate-800/50">
-                      <tr className="text-left text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                        <th className="px-4 sm:px-6 py-3.5 sm:py-4">
+                {/* Mobile View: Clean card layout (< md) */}
+                <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-700">
+                  {paginatedLogs.map((log) => {
+                    const itemType = resolveItemType(log);
+                    const label = formatItemAction(log.action, log.metadata, log);
+                    const badgeClass = getActionBadge(log.action, itemType);
+                    const icon = getActionIcon(log.action, itemType, log.metadata?.fieldName);
+                    const typeBadge = getItemTypeBadge(itemType);
+                    const fieldLabel = log.metadata?.fieldName ? resolveFieldLabel(log.metadata.fieldName, itemType) : null;
+                    return (
+                      <div key={log.id} className="p-4 space-y-2.5 hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition">
+                        {/* Header: User & Date */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="h-8 w-8 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200/50 dark:border-indigo-800/50 flex items-center justify-center font-bold text-xs shrink-0">
+                              {log.user?.fullName?.charAt(0) || 'U'}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">
+                                {log.user?.fullName || 'User'}
+                              </p>
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                                {log.user?.email || '-'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right text-[11px] text-slate-400 dark:text-slate-500 shrink-0">
+                            <div>{log.createdAt ? new Date(log.createdAt).toLocaleDateString() : '-'}</div>
+                            <div>{log.createdAt ? new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</div>
+                          </div>
+                        </div>
+
+                        {/* Action Badge */}
+                        <div>
+                          <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${badgeClass}`}>
+                            {icon}
+                            <span>{label}</span>
+                          </span>
+                        </div>
+
+                        {/* Target Details */}
+                        <div className="bg-slate-50/80 dark:bg-slate-800/60 rounded-xl p-3 border border-slate-100 dark:border-slate-700/60 space-y-1.5">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="font-semibold text-slate-900 dark:text-slate-100 text-xs break-words">
+                              {log.metadata?.name || log.targetId || '-'}
+                            </span>
+                            {typeBadge && (
+                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shadow-2xs shrink-0 ${typeBadge.className}`}>
+                                {typeBadge.label}
+                              </span>
+                            )}
+                            {fieldLabel && (
+                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200/60 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-800/40 shrink-0">
+                                Field: {fieldLabel}
+                              </span>
+                            )}
+                          </div>
+
+                          {(log.metadata?.login || log.metadata?.domain) && (
+                            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                              {log.metadata?.login && (
+                                <span className="text-slate-600 dark:text-slate-300 font-mono text-[11px] bg-white dark:bg-slate-700/60 px-1.5 py-0.5 rounded border border-slate-200/50 dark:border-slate-600/50">
+                                  {log.metadata.login}
+                                </span>
+                              )}
+                              {log.metadata?.domain && (
+                                <span className="inline-flex items-center gap-1 text-[11px] font-mono text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded-md border border-indigo-100 dark:border-indigo-900/40">
+                                  <Globe size={11} className="shrink-0 text-indigo-500 dark:text-indigo-400" />
+                                  <span>{log.metadata.domain}</span>
+                                </span>
+                              )}
+                            </div>
+                          )}
+
+                          {log.metadata?.moved && log.metadata?.fromFolderName && log.metadata?.toFolderName && (
+                            <div className="text-[11px] font-medium text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                              <span>Moved:</span>
+                              <span className="line-through opacity-70">{log.metadata.fromFolderName}</span>
+                              <span>→</span>
+                              <span className="font-semibold">{log.metadata.toFolderName}</span>
+                            </div>
+                          )}
+
+                          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                            {(log.metadata?.clientSource === 'EXTENSION' || log.action === 'AUTOFILL_PASSWORD') && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-200/60 shrink-0 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-800/40">
+                                Extension
+                              </span>
+                            )}
+                            {log.metadata?.personalVault && (
+                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200/60 shrink-0 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-800/40">
+                                Personal Vault
+                              </span>
+                            )}
+                            {log.metadata?.vaultType === 'COMPANY' && (
+                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200/60 shrink-0 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800/40">
+                                Company Vault
+                              </span>
+                            )}
+                            {log.metadata?.name && log.targetId && (
+                              <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
+                                {log.targetId}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Desktop & Tablet View: Structured Table (>= md) */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full min-w-[760px] table-fixed">
+                    <thead className="bg-slate-50/80 border-b border-slate-200 dark:border-slate-700 dark:bg-slate-800/80">
+                      <tr className="text-left text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                        <th className="w-[180px] px-4 sm:px-6 py-3.5 sm:py-4">
                           <button
                             onClick={() => handleSort('date')}
-                            className="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400"
+                            className="inline-flex items-center gap-1.5 hover:text-indigo-600 dark:hover:text-indigo-400 transition"
                           >
                             Date
                             {sortIcon('date')}
                           </button>
                         </th>
-                        <th className="px-4 sm:px-6 py-3.5 sm:py-4">
+                        <th className="w-[200px] sm:w-[220px] px-4 sm:px-6 py-3.5 sm:py-4">
                           <button
                             onClick={() => handleSort('user')}
-                            className="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400"
+                            className="inline-flex items-center gap-1.5 hover:text-indigo-600 dark:hover:text-indigo-400 transition"
                           >
                             User
                             {sortIcon('user')}
                           </button>
                         </th>
-                        <th className="px-4 sm:px-6 py-3.5 sm:py-4">
+                        <th className="w-[180px] sm:w-[200px] px-4 sm:px-6 py-3.5 sm:py-4">
                           <button
                             onClick={() => handleSort('action')}
-                            className="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400"
+                            className="inline-flex items-center gap-1.5 hover:text-indigo-600 dark:hover:text-indigo-400 transition"
                           >
                             Action
                             {sortIcon('action')}
@@ -913,7 +1030,7 @@ function ActivityLogPage() {
                         <th className="px-4 sm:px-6 py-3.5 sm:py-4">
                           <button
                             onClick={() => handleSort('target')}
-                            className="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400"
+                            className="inline-flex items-center gap-1.5 hover:text-indigo-600 dark:hover:text-indigo-400 transition"
                           >
                             Target
                             {sortIcon('target')}
@@ -932,24 +1049,33 @@ function ActivityLogPage() {
                           {group.items.map((log) => (
                             <tr
                               key={log.id}
-                              className="border-t border-slate-100 hover:bg-slate-50/70 dark:border-slate-700 dark:hover:bg-slate-700/50"
+                              className="border-t border-slate-100 hover:bg-slate-50/70 transition-colors dark:border-slate-700/60 dark:hover:bg-slate-700/40"
                             >
-                              <td className="whitespace-nowrap px-4 sm:px-6 py-3.5 sm:py-4 text-xs sm:text-sm text-slate-700 dark:text-slate-300">
-                                {log.createdAt
-                                  ? new Date(log.createdAt).toLocaleString()
-                                  : '-'}
+                              <td className="align-top whitespace-nowrap px-4 sm:px-6 py-4 text-xs sm:text-sm">
+                                {log.createdAt ? (
+                                  <div>
+                                    <p className="font-semibold text-slate-800 dark:text-slate-200">
+                                      {new Date(log.createdAt).toLocaleDateString()}
+                                    </p>
+                                    <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+                                      {new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                    </p>
+                                  </div>
+                                ) : (
+                                  '-'
+                                )}
                               </td>
-                              <td className="px-4 sm:px-6 py-3.5 sm:py-4 text-xs sm:text-sm">
-                                <div>
-                                  <p className="font-medium text-slate-900 dark:text-slate-100">
+                              <td className="align-top px-4 sm:px-6 py-4 text-xs sm:text-sm">
+                                <div className="min-w-0 pr-2">
+                                  <p className="font-semibold text-slate-900 truncate dark:text-slate-100" title={log.user?.fullName}>
                                     {log.user?.fullName || 'User'}
                                   </p>
-                                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                                  <p className="text-xs text-slate-500 truncate dark:text-slate-400" title={log.user?.email}>
                                     {log.user?.email || '-'}
                                   </p>
                                 </div>
                               </td>
-                              <td className="px-4 sm:px-6 py-3.5 sm:py-4">
+                              <td className="align-top px-4 sm:px-6 py-4">
                                 {(() => {
                                   const itemType = resolveItemType(log);
                                   const label = formatItemAction(log.action, log.metadata, log);
@@ -957,27 +1083,28 @@ function ActivityLogPage() {
                                   const icon = getActionIcon(log.action, itemType, log.metadata?.fieldName);
                                   return (
                                     <span
-                                      className={`inline-flex items-center gap-1.5 sm:gap-2 rounded-full px-2.5 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-xs font-semibold ${badgeClass}`}
+                                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs font-semibold ${badgeClass}`}
                                     >
                                       {icon}
-                                      {label}
+                                      <span>{label}</span>
                                     </span>
                                   );
                                 })()}
                               </td>
-                              <td className="px-4 sm:px-6 py-3.5 sm:py-4 text-xs sm:text-sm text-slate-700 dark:text-slate-300">
+                              <td className="align-top px-4 sm:px-6 py-4 text-xs sm:text-sm">
                                 {(() => {
                                   const itemType = resolveItemType(log);
                                   const typeBadge = getItemTypeBadge(itemType);
                                   const fieldLabel = log.metadata?.fieldName ? resolveFieldLabel(log.metadata.fieldName, itemType) : null;
                                   return (
-                                    <>
-                                      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                                        <p className="font-semibold text-slate-900 dark:text-slate-100">
+                                    <div className="flex flex-col gap-1.5 min-w-0">
+                                      {/* Row 1: Target Name + Item Type badge + Field badge */}
+                                      <div className="flex flex-wrap items-center gap-1.5">
+                                        <span className="font-semibold text-slate-900 dark:text-slate-100 text-sm break-words">
                                           {log.metadata?.name || log.targetId || '-'}
-                                        </p>
+                                        </span>
                                         {typeBadge && (
-                                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shadow-2xs ${typeBadge.className}`}>
+                                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shadow-2xs shrink-0 ${typeBadge.className}`}>
                                             {typeBadge.label}
                                           </span>
                                         )}
@@ -986,43 +1113,59 @@ function ActivityLogPage() {
                                             Field: {fieldLabel}
                                           </span>
                                         )}
-                                        {log.metadata?.login && (
-                                          <span className="text-xs text-slate-500 dark:text-slate-400">
-                                            ({log.metadata.login})
-                                          </span>
-                                        )}
-                                        {log.metadata?.domain && (
-                                          <span className="text-[11px] font-mono text-indigo-600 dark:text-indigo-400">
-                                            on {log.metadata.domain}
-                                          </span>
-                                        )}
+                                      </div>
+
+                                      {/* Row 2: Account Login & Website Domain (badges) */}
+                                      {(log.metadata?.login || log.metadata?.domain) && (
+                                        <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                                          {log.metadata?.login && (
+                                            <span className="text-slate-600 dark:text-slate-300 font-mono text-[11px] bg-slate-100 dark:bg-slate-700/60 px-1.5 py-0.5 rounded border border-slate-200/50 dark:border-slate-600/50">
+                                              {log.metadata.login}
+                                            </span>
+                                          )}
+                                          {log.metadata?.domain && (
+                                            <span className="inline-flex items-center gap-1 text-[11px] font-mono text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded-md border border-indigo-100 dark:border-indigo-900/40">
+                                              <Globe size={11} className="shrink-0 text-indigo-500 dark:text-indigo-400" />
+                                              <span>{log.metadata.domain}</span>
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
+
+                                      {/* Row 3: Move folder info */}
+                                      {log.metadata?.moved && log.metadata?.fromFolderName && log.metadata?.toFolderName && (
+                                        <div className="text-[11px] font-medium text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                                          <span>Moved:</span>
+                                          <span className="line-through opacity-70">{log.metadata.fromFolderName}</span>
+                                          <span>→</span>
+                                          <span className="font-semibold">{log.metadata.toFolderName}</span>
+                                        </div>
+                                      )}
+
+                                      {/* Row 4: Origin Pills (Extension, Vault Scope) and Target ID */}
+                                      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                                         {(log.metadata?.clientSource === 'EXTENSION' || log.action === 'AUTOFILL_PASSWORD') && (
-                                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 shrink-0 dark:bg-violet-900/30 dark:text-violet-300">
+                                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-200/60 shrink-0 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-800/40">
                                             Extension
                                           </span>
                                         )}
-                                        {log.metadata?.moved && log.metadata?.fromFolderName && log.metadata?.toFolderName && (
-                                          <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400 block w-full">
-                                            Moved: {log.metadata.fromFolderName} → {log.metadata.toFolderName}
-                                          </span>
-                                        )}
                                         {log.metadata?.personalVault && (
-                                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-teal-50 text-teal-700 shrink-0 dark:bg-teal-900/20 dark:text-teal-400">
+                                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200/60 shrink-0 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-800/40">
                                             Personal Vault
                                           </span>
                                         )}
                                         {log.metadata?.vaultType === 'COMPANY' && (
-                                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 shrink-0 dark:bg-amber-900/20 dark:text-amber-400">
+                                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200/60 shrink-0 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800/40">
                                             Company Vault
                                           </span>
                                         )}
+                                        {log.metadata?.name && log.targetId && (
+                                          <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
+                                            {log.targetId}
+                                          </span>
+                                        )}
                                       </div>
-                                      {log.metadata?.name && log.targetId && (
-                                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                                          {log.targetId}
-                                        </p>
-                                      )}
-                                    </>
+                                    </div>
                                   );
                                 })()}
                               </td>
@@ -1044,14 +1187,14 @@ function ActivityLogPage() {
 
                 {filteredLogs.length > 0 && (
                   <div className="flex flex-col gap-3 sm:gap-4 border-t border-slate-200 px-4 sm:px-6 py-3.5 sm:py-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700">
-                    <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+                    <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 text-center sm:text-left">
                       Showing {startItem} - {endItem} of {filteredLogs.length}
                     </p>
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex flex-wrap items-center justify-center sm:justify-end gap-1.5 sm:gap-2">
                       <button
                         onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
                         disabled={currentPage === 1}
-                        className="rounded-xl border border-slate-300 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm disabled:opacity-50 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                        className="h-8 sm:h-9 md:h-10 rounded-lg sm:rounded-xl border border-slate-300 px-3 sm:px-4 text-xs sm:text-sm font-medium disabled:opacity-40 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700 transition"
                       >
                         Previous
                       </button>
@@ -1061,7 +1204,7 @@ function ActivityLogPage() {
                           setCurrentPage((p) => Math.min(p + 1, totalPages))
                         }
                         disabled={currentPage === totalPages}
-                        className="rounded-xl border border-slate-300 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm disabled:opacity-50 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                        className="h-8 sm:h-9 md:h-10 rounded-lg sm:rounded-xl border border-slate-300 px-3 sm:px-4 text-xs sm:text-sm font-medium disabled:opacity-40 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700 transition"
                       >
                         Next
                       </button>
@@ -1208,16 +1351,16 @@ function ActivityLogPage() {
 
                 {filteredLogin.length > PAGE_SIZE && (
                   <div className="flex flex-col gap-3 sm:gap-4 border-t border-slate-200 px-4 sm:px-6 py-3.5 sm:py-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700">
-                    <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+                    <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 text-center sm:text-left">
                       Page {currentPage} of {loginTotalPages}
                     </p>
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex flex-wrap items-center justify-center sm:justify-end gap-1.5 sm:gap-2">
                       <button
                         onClick={() =>
                           setCurrentPage((p) => Math.max(p - 1, 1))
                         }
                         disabled={currentPage === 1}
-                        className="rounded-xl border border-slate-300 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm disabled:opacity-50 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                        className="h-8 sm:h-9 md:h-10 rounded-lg sm:rounded-xl border border-slate-300 px-3 sm:px-4 text-xs sm:text-sm font-medium disabled:opacity-40 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700 transition"
                       >
                         Previous
                       </button>
@@ -1229,7 +1372,7 @@ function ActivityLogPage() {
                           )
                         }
                         disabled={currentPage === loginTotalPages}
-                        className="rounded-xl border border-slate-300 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm disabled:opacity-50 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                        className="h-8 sm:h-9 md:h-10 rounded-lg sm:rounded-xl border border-slate-300 px-3 sm:px-4 text-xs sm:text-sm font-medium disabled:opacity-40 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700 transition"
                       >
                         Next
                       </button>
@@ -1374,14 +1517,14 @@ function ActivityLogPage() {
 
             {filteredUnreadItems.length > PAGE_SIZE && (
               <div className="flex flex-col gap-3 sm:gap-4 border-t border-slate-200 px-4 sm:px-6 py-3.5 sm:py-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700">
-                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 text-center sm:text-left">
                   Page {currentPage} of {unreadTotalPages} · {filteredUnreadItems.length} total
                 </p>
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center justify-center sm:justify-end gap-1.5 sm:gap-2">
                   <button
                     onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
                     disabled={currentPage === 1}
-                    className="rounded-xl border border-slate-300 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm disabled:opacity-50 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                    className="h-8 sm:h-9 md:h-10 rounded-lg sm:rounded-xl border border-slate-300 px-3 sm:px-4 text-xs sm:text-sm font-medium disabled:opacity-40 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700 transition"
                   >
                     Previous
                   </button>
@@ -1391,7 +1534,7 @@ function ActivityLogPage() {
                       setCurrentPage((p) => Math.min(p + 1, unreadTotalPages))
                     }
                     disabled={currentPage === unreadTotalPages}
-                    className="rounded-xl border border-slate-300 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm disabled:opacity-50 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                    className="h-8 sm:h-9 md:h-10 rounded-lg sm:rounded-xl border border-slate-300 px-3 sm:px-4 text-xs sm:text-sm font-medium disabled:opacity-40 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700 transition"
                   >
                     Next
                   </button>
