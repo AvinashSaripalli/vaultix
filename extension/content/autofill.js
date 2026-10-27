@@ -65,19 +65,139 @@
     );
   }
 
+  function getFieldLabelText(el) {
+    if (!el) return '';
+    try {
+      if (el.id) {
+        const lbl = document.querySelector(`label[for="${CSS.escape(el.id)}"]`);
+        if (lbl) return (lbl.textContent || '').trim();
+      }
+      const parentLabel = el.closest('label');
+      if (parentLabel) return (parentLabel.textContent || '').trim();
+
+      const ariaId = el.getAttribute('aria-labelledby');
+      if (ariaId) {
+        const ariaEl = document.getElementById(ariaId);
+        if (ariaEl) return (ariaEl.textContent || '').trim();
+      }
+
+      // Check preceding siblings in same row or container
+      let prev = el.previousElementSibling;
+      while (prev) {
+        if (/label|span|div|p|b|strong/i.test(prev.tagName)) {
+          const txt = (prev.textContent || '').trim();
+          if (txt) return txt;
+        }
+        prev = prev.previousElementSibling;
+      }
+
+      // Check parent's previous sibling
+      const parent = el.parentElement;
+      if (parent && parent.previousElementSibling) {
+        const txt = (parent.previousElementSibling.textContent || '').trim();
+        if (txt) return txt;
+      }
+    } catch {
+      /* ignore DOM query errors */
+    }
+    return '';
+  }
+
+  function isCaptchaOrOtpField(el) {
+    if (!el || el.tagName !== 'INPUT') return false;
+
+    const ac = (el.getAttribute('autocomplete') || '').toLowerCase();
+    if (ac === 'one-time-code') return true;
+
+    const type = (el.type || '').toLowerCase();
+    if (type === 'hidden' || type === 'submit' || type === 'button' || type === 'checkbox' || type === 'radio') return true;
+
+    const idName = `${el.id} ${el.name} ${el.placeholder || ''} ${el.getAttribute('aria-label') || ''} ${el.className || ''}`.toLowerCase();
+    
+    // Captcha keywords (including common variations and gov portals like txtCaptcha)
+    if (/captcha|cpatcha|captchacode|captcha_code|txtcaptcha|captchatext|captchainput|usercaptcha|imgcode|imagecode|mathcaptcha/i.test(idName)) {
+      return true;
+    }
+
+    // OTP / Security challenge keywords
+    if (/\b(otp|totp|2fa|mfa|passcode|verification_code|verificationcode|verify_code|security_code|securitycode|challenge)\b/i.test(idName)) {
+      return true;
+    }
+
+    // Check associated label or surrounding text
+    const labelText = getFieldLabelText(el).toLowerCase();
+    if (/captcha|cpatcha|security code|verification code|type the characters|enter code shown|enter the characters/i.test(labelText)) {
+      return true;
+    }
+
+    // Check DOM proximity to a Captcha image, canvas, or refresh control
+    try {
+      const container = el.closest('tr, .form-group, .row, .col, div, fieldset, li') || el.parentElement;
+      if (container) {
+        const hasCaptchaImg = container.querySelector(
+          'img[src*="captcha" i], img[id*="captcha" i], img[class*="captcha" i], img[alt*="captcha" i], canvas[id*="captcha" i], canvas[class*="captcha" i]'
+        );
+        if (hasCaptchaImg) return true;
+
+        const prevSibling = container.previousElementSibling || el.previousElementSibling;
+        if (prevSibling && prevSibling.querySelector) {
+          const siblingHasImg = prevSibling.querySelector(
+            'img[src*="captcha" i], img[id*="captcha" i], img[class*="captcha" i], canvas[id*="captcha" i]'
+          );
+          if (siblingHasImg) return true;
+        }
+      }
+    } catch {
+      /* ignore DOM query errors */
+    }
+
+    return false;
+  }
+
+  function isUsernameField(el) {
+    if (!el || el.tagName !== 'INPUT' || !isVisible(el)) return false;
+    if (isCaptchaOrOtpField(el)) return false;
+
+    const type = (el.type || '').toLowerCase();
+    if (type === 'password' || type === 'hidden' || type === 'submit' || type === 'checkbox' || type === 'radio') return false;
+    if (type === 'email' || type === 'tel') return true;
+    if (type !== 'text' && type !== '') return false;
+
+    const ac = (el.getAttribute('autocomplete') || '').toLowerCase();
+    if (ac.includes('username') || ac.includes('email') || ac.includes('login')) return true;
+
+    const idName = `${el.id} ${el.name} ${el.placeholder || ''} ${el.getAttribute('aria-label') || ''}`.toLowerCase();
+    if (/user|login|email|account|customer|custid|netbanking|userid|member|fldlogin/i.test(idName)) return true;
+
+    const labelText = getFieldLabelText(el).toLowerCase();
+    if (/user|user\s*name|login|email|account|customer|cust\s*id|netbanking|user\s*id/i.test(labelText)) return true;
+
+    return false;
+  }
+
   function isCredField(el) {
     if (!el || el.tagName !== 'INPUT' || !isVisible(el)) return false;
+    if (isCaptchaOrOtpField(el)) return false;
+
     const type = (el.type || '').toLowerCase();
     if (type === 'password' || type === 'email' || type === 'tel') return true;
     if (type !== 'text' && type !== '') return false;
 
-    const form = el.form || el.closest('form');
-    if (form && form.querySelector('input[type="password"]')) return true;
+    if (isUsernameField(el)) return true;
 
     const ac = (el.getAttribute('autocomplete') || '').toLowerCase();
     const nm = `${el.name} ${el.id} ${el.placeholder || ''}`.toLowerCase();
-    if (ac.includes('username') || ac.includes('email') || ac.includes('login') || ac.includes('cc-number')) return true;
-    if (/user|login|email|account|customer|custid|netbanking|fldlogin|card/i.test(nm)) return true;
+    if (ac.includes('cc-number') || /card|cc-number/i.test(nm)) return true;
+
+    // If it precedes a password field in the same form or modal, it's a credential field (unless it's a search field)
+    const form = el.form || el.closest('form, [role="dialog"], .modal') || null;
+    const pw = form ? findPasswordInput(form) : findPasswordInput();
+    if (pw && el !== pw && (el.compareDocumentPosition(pw) & Node.DOCUMENT_POSITION_FOLLOWING)) {
+      if (!/search|query|find|filter/i.test(nm)) {
+        return true;
+      }
+    }
+
     return false;
   }
 
@@ -90,20 +210,32 @@
   }
 
   function findUsernameInput(pwField, within) {
-    const scope = within || document;
+    const scope = within || (pwField ? pwField.closest('form, [role="dialog"], .modal') : null) || document;
     const inputs = [
       ...scope.querySelectorAll(
         'input[type="text"], input[type="email"], input[type="tel"], input:not([type])'
       ),
-    ].filter(isVisible);
+    ].filter((el) => isVisible(el) && !isCaptchaOrOtpField(el));
 
-    let best = null;
-    for (const el of inputs) {
-      if (!pwField || (el.compareDocumentPosition(pwField) & Node.DOCUMENT_POSITION_FOLLOWING)) {
-        best = el;
+    if (!inputs.length) return null;
+
+    // 1. Explicit username matching
+    const explicit = inputs.find(isUsernameField);
+    if (explicit) return explicit;
+
+    // 2. Closest input preceding pwField
+    if (pwField) {
+      let preceding = null;
+      for (const el of inputs) {
+        if (el.compareDocumentPosition(pwField) & Node.DOCUMENT_POSITION_FOLLOWING) {
+          preceding = el;
+        }
       }
+      if (preceding) return preceding;
     }
-    return best;
+
+    // 3. Fallback: first visible non-captcha text input
+    return inputs[0] || null;
   }
 
   // ─── Filling ──────────────────────────────────────────────────────────────
@@ -120,7 +252,7 @@
 
   function fillCredentials(username, password, extra = {}) {
     const anchor = document.contains(activeField) ? activeField : null;
-    const form = anchor?.form || anchor?.closest?.('form') || null;
+    const form = anchor?.form || anchor?.closest?.('form, [role="dialog"], .modal') || null;
 
     // 1. Support Credit Card Autofill if cardData is passed
     if (extra?.cardData) {
@@ -156,15 +288,14 @@
     let pwField = form ? findPasswordInput(form) : null;
     if (!pwField) pwField = findPasswordInput();
 
+    // Determine target username field
+    // If anchor is a legitimate username field (and NOT captcha or password), use it;
+    // otherwise locate the real username field relative to pwField / form
     let userField = null;
-    if (anchor && anchor.type !== 'password' && isCredField(anchor)) {
-      userField = anchor;
-    } else if (pwField) {
-      userField = findUsernameInput(pwField, form);
-    } else if (anchor) {
+    if (anchor && anchor.type !== 'password' && !isCaptchaOrOtpField(anchor) && isUsernameField(anchor)) {
       userField = anchor;
     } else {
-      userField = findUsernameInput(null, form);
+      userField = findUsernameInput(pwField, form) || findUsernameInput(pwField, document);
     }
 
     let didFill = false;
@@ -178,7 +309,6 @@
     // Fill Primary Password on Page 2 or Unified Form
     if (pwField && password) {
       setNativeValue(pwField, password);
-      pwField.focus();
       didFill = true;
     }
 
@@ -193,6 +323,18 @@
       }
     }
 
+    // Smart Focus Handling:
+    // If there is an unfilled captcha field on the form, auto-focus it so user can type immediately
+    const scope = form || document;
+    const captchaField = [...scope.querySelectorAll('input')].find(
+      (el) => isVisible(el) && isCaptchaOrOtpField(el)
+    );
+    if (captchaField && !captchaField.value) {
+      captchaField.focus();
+    } else if (pwField && !password) {
+      pwField.focus();
+    }
+
     closeMenu();
     removeBadge();
     return didFill;
@@ -201,7 +343,14 @@
   // ─── Events ───────────────────────────────────────────────────────────────
   function onFocusIn(e) {
     const el = e.target;
-    if (!isCredField(el)) return;
+    if (!isCredField(el)) {
+      // Clear activeField if user focused a non-credential field (e.g. captcha)
+      if (activeField && activeField !== el) {
+        activeField = null;
+        removeBadge();
+      }
+      return;
+    }
     activeField = el;
     if (hideTimer) {
       clearTimeout(hideTimer);
