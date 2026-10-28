@@ -75,12 +75,10 @@ export const TYPE_FIELDS = {
     { key: 'pin', label: 'Card PIN (optional)', placeholder: '4 or 6 digit PIN', input: 'password', copy: true, masked: true },
   ],
   BANK_ACCOUNT: [
-    { key: 'accountHolder', label: 'Account Holder Name', placeholder: 'Full name or company name', input: 'text', required: true },
-    { key: 'accountNumber', label: 'Account Number', placeholder: 'Enter account number', input: 'text', copy: true, masked: true, required: true },
-    { key: 'routingNumber', label: 'IFSC / Routing Code', placeholder: 'e.g. HDFC0001234', input: 'text', copy: true, required: true },
-    { key: 'customerId', label: 'Customer ID / Username', placeholder: 'NetBanking login ID (optional)', input: 'text', copy: true },
+    { key: 'customerId', label: 'Customer ID / Username', placeholder: 'NetBanking login ID / User ID', input: 'text', copy: true },
+    { key: 'accountNumber', label: 'Account Number (optional)', placeholder: 'Enter account number (optional)', input: 'text', copy: true, masked: true },
     { key: 'password', label: 'NetBanking Password', placeholder: 'Login password (optional)', input: 'password', copy: true, masked: true, canGenerate: true },
-    { key: 'transactionPassword', label: 'Transaction Password', placeholder: 'Profile / transfer password (optional)', input: 'password', copy: true, masked: true, canGenerate: true },
+    { key: 'transactionPassword', label: 'Transaction Password (optional)', placeholder: 'Profile / payment approval password (optional)', input: 'password', copy: true, masked: true, canGenerate: true },
     { key: 'url', label: 'NetBanking URL (optional)', placeholder: 'https://netbanking.hdfcbank.com', input: 'text', copy: true, fullWidth: true },
   ],
   IDENTITY: [

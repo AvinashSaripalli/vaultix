@@ -482,7 +482,17 @@ function PersonalAccountCard({
     );
   };
 
-  const typeFields = TYPE_FIELDS[item.type] || [];
+  const typeFields = (() => {
+    const base = [...(TYPE_FIELDS[item.type] || [])];
+    const raw = decryptedFields || {};
+    if (raw.accountHolder && !base.some((f) => f.key === 'accountHolder')) {
+      base.push({ key: 'accountHolder', label: 'Account Holder Name', copy: true });
+    }
+    if (raw.routingNumber && !base.some((f) => f.key === 'routingNumber')) {
+      base.push({ key: 'routingNumber', label: 'IFSC / Routing Code', copy: true });
+    }
+    return base;
+  })();
   const hasLogin = item.type === 'LOGIN';
 
   return (

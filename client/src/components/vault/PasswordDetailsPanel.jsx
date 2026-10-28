@@ -556,7 +556,16 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
           const tagNames = getTagNames(item);
           const isLoginItem = !item.type || item.type === 'LOGIN';
           const decryptedFields = decryptedFieldsMap[item.id] || {};
-          const typeFields = TYPE_FIELDS[item.type] || [];
+          const typeFields = (() => {
+            const base = [...(TYPE_FIELDS[item.type] || [])];
+            if (decryptedFields.accountHolder && !base.some((f) => f.key === 'accountHolder')) {
+              base.push({ key: 'accountHolder', label: 'Account Holder Name', copy: true });
+            }
+            if (decryptedFields.routingNumber && !base.some((f) => f.key === 'routingNumber')) {
+              base.push({ key: 'routingNumber', label: 'IFSC / Routing Code', copy: true });
+            }
+            return base;
+          })();
           // The card network is auto-detected from the card number, so derive
           // it when the stored data doesn't include it explicitly.
           const displayFields = (() => {

@@ -162,7 +162,16 @@ function ViewMyVaultPasswordModal({ open, password, onClose }) {
 
   const itemType = password.type || 'LOGIN';
   const typeMeta = getItemTypeMeta(itemType);
-  const typeFieldDefs = TYPE_FIELDS[itemType] || [];
+  const typeFieldDefs = (() => {
+    const base = [...(TYPE_FIELDS[itemType] || [])];
+    if (decryptedFields?.accountHolder && !base.some((f) => f.key === 'accountHolder')) {
+      base.push({ key: 'accountHolder', label: 'Account Holder Name', copy: true });
+    }
+    if (decryptedFields?.routingNumber && !base.some((f) => f.key === 'routingNumber')) {
+      base.push({ key: 'routingNumber', label: 'IFSC / Routing Code', copy: true });
+    }
+    return base;
+  })();
   const customFields = parseCustomFields(decryptedFields?.[CUSTOM_FIELDS_KEY]);
 
   const displayPassword = decryptedPassword || '';

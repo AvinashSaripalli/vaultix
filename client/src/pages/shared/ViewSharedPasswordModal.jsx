@@ -21,8 +21,17 @@ function ViewSharedPasswordModal({ open, item, decryptedData, onClose }) {
   const password = item.password;
   const itemType = password?.type || 'LOGIN';
   const typeMeta = getItemTypeMeta(itemType);
-  const typeFieldDefs = TYPE_FIELDS[itemType] || [];
   const fieldsObj = decryptedData?.fields || {};
+  const typeFieldDefs = (() => {
+    const base = [...(TYPE_FIELDS[itemType] || [])];
+    if (fieldsObj?.accountHolder && !base.some((f) => f.key === 'accountHolder')) {
+      base.push({ key: 'accountHolder', label: 'Account Holder Name', copy: true });
+    }
+    if (fieldsObj?.routingNumber && !base.some((f) => f.key === 'routingNumber')) {
+      base.push({ key: 'routingNumber', label: 'IFSC / Routing Code', copy: true });
+    }
+    return base;
+  })();
   const customFields = parseCustomFields(fieldsObj?.[CUSTOM_FIELDS_KEY]);
 
   const displayPassword = decryptedData?.password || '';
