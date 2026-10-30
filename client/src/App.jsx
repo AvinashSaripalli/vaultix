@@ -16,7 +16,6 @@ import useInactivityLogout, { touchActivity } from './hooks/useInactivityLogout'
 import useKeyboardShortcuts from './hooks/useKeyboardShortcuts';
 import useLockVault from './hooks/useLockVault';
 import SessionWarningModal from './components/security/SessionWarningModal';
-import BitrixSsoCallbackPage from './pages/auth/BitrixSsoCallbackPage';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
@@ -125,7 +124,7 @@ function App() {
     }
   }, [mode]);
 
-  const isMasterPage = ['/enter-master-password', '/set-master-password', '/login', '/register', '/verify-email', '/forgot-password', '/reset-password', '/forgot-master-password', '/sso/bitrix'].includes(location.pathname);
+  const isMasterPage = ['/enter-master-password', '/set-master-password', '/login', '/register', '/verify-email', '/forgot-password', '/reset-password', '/forgot-master-password'].includes(location.pathname);
 
   useEffect(() => {
     if (!initDone || !token || !isMasterVerified || isMasterPage || keysLoading) return;
@@ -192,7 +191,6 @@ function App() {
         onLock={() => lockVault()}
       />
       <Routes>
-      <Route path="/sso/bitrix" element={<BitrixSsoCallbackPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />

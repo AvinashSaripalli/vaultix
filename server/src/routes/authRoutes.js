@@ -12,7 +12,6 @@ const {
 
 router.post('/register', authLimiter, authController.register);
 router.post('/login', authLimiter, authController.login);
-router.post('/bitrix/sso', authLimiter, authController.bitrixSso);
 router.post('/refresh', refreshLimiter, authController.refresh);
 router.post('/logout', authController.logout);
 router.post('/forgot-password', authLimiter, authController.requestPasswordReset);
