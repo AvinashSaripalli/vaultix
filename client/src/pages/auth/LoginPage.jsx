@@ -184,7 +184,8 @@ function LoginPage() {
           {error && <ErrorBox message={error} />}
 
           {!requires2FA ? (
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <>
+              <form onSubmit={handleSubmit} className="space-y-4">
               <Input
                 type="email"
                 placeholder="Email address"
@@ -233,7 +234,28 @@ function LoginPage() {
                 {loading ? 'Logging in...' : 'Login'}
               </button>
             </form>
-          ) : (
+
+            <div className="relative flex items-center gap-3 my-5">
+              <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">or</span>
+              <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                const bitrixPortalUrl = import.meta.env.VITE_BITRIX_PORTAL_URL || 'https://karnsphere.com';
+                window.location.href = `${bitrixPortalUrl}/local/modules/kn.vaultix/vaultix_frame.php?redirect=1`;
+              }}
+              className="w-full flex items-center justify-center gap-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 py-3.5 px-4 font-semibold text-slate-700 dark:text-slate-200 transition-all hover:bg-slate-50 dark:hover:bg-slate-700 hover:shadow-sm"
+            >
+              <span className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-[#00aeef] text-white font-extrabold text-[11px] shadow-sm">
+                B24
+              </span>
+              <span>Sign in with Bitrix24</span>
+            </button>
+          </>
+        ) : (
             <div className="space-y-4">
               {/* 2FA method tabs */}
               <div className="flex gap-2 rounded-xl bg-slate-100 dark:bg-slate-700 p-1">

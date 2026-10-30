@@ -44,7 +44,7 @@ app.use(
       directives: {
         // The API only returns JSON, so forbid loading any content.
         defaultSrc: ["'none'"],
-        frameAncestors: ["'self'", "https://www.karnsphere.com"],
+        frameAncestors: ["'self'", "https://www.karnsphere.com", "https://karnsphere.com"],
       },
     },
     crossOriginEmbedderPolicy: false,
