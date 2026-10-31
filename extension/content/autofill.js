@@ -2,22 +2,37 @@
   if (window.__vaultixLoaded) return;
   window.__vaultixLoaded = true;
 
-  let badge = null;
-  let menu = null;
+  // ─── State ───────────────────────────────────────────────────────────────
   let activeField = null;
+  let currentCreds = [];
+  let isVaultUnlocked = false;
+  let overlayHost = null;
+  let overlayShadow = null;
+  let inFieldIcon = null;
+  let inPageDropdown = null;
   let hideTimer = null;
   let autoOpenedFor = null;
   let suppressClickClose = false;
   let lastTypedUsername = '';
   let saveBannerHost = null;
+  let highlightedIndex = -1;
 
+  // Official Vaultix Brand SVG (Shield with Keyhole / Lock)
+  const VAULTIX_SVG = `
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2L3 6V11C3 16.55 6.84 21.74 12 23C17.16 21.74 21 16.55 21 11V6L12 2Z" fill="#4F46E5"/>
+      <path d="M12 8C10.9 8 10 8.9 10 10C10 10.74 10.4 11.38 11 11.72V15C11 15.55 11.45 16 12 16C12.55 16 13 15.55 13 15V11.72C13.6 11.38 14 10.74 14 10C14 8.9 13.1 8 12 8Z" fill="#FFFFFF"/>
+    </svg>
+  `;
+
+  // ─── Global Event Listeners ──────────────────────────────────────────────
   document.addEventListener('focusin', onFocusIn, true);
   document.addEventListener('focusout', onFocusOut, true);
   document.addEventListener('click', onDocClick, true);
   document.addEventListener('input', onInputTrack, true);
   document.addEventListener('submit', onFormSubmit, true);
-  window.addEventListener('scroll', reposition, true);
-  window.addEventListener('resize', reposition);
+  window.addEventListener('scroll', repositionOverlay, true);
+  window.addEventListener('resize', repositionOverlay);
   document.addEventListener('keydown', onKeydown, true);
 
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
@@ -36,24 +51,245 @@
     setTimeout(checkPendingLoginBanner, 600);
   }
 
-  // ─── Credential source (host-filtered, from the background worker) ────────
-  async function getCachedCreds() {
+  // ─── Shadow DOM Overlay Root Setup ──────────────────────────────────────
+  function ensureOverlayRoot() {
+    if (overlayHost && document.contains(overlayHost)) return overlayShadow;
+    overlayHost = document.createElement('div');
+    overlayHost.id = 'vaultix-overlay-root';
+    Object.assign(overlayHost.style, {
+      position: 'absolute',
+      top: '0',
+      left: '0',
+      width: '100%',
+      height: '0',
+      pointerEvents: 'none',
+      zIndex: '2147483646',
+      margin: '0',
+      padding: '0',
+      border: 'none',
+    });
+    overlayShadow = overlayHost.attachShadow({ mode: 'closed' });
+
+    const style = document.createElement('style');
+    style.textContent = `
+      * { box-sizing: border-box; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+      
+      /* In-Field Brand Icon */
+      .vaultix-field-icon {
+        pointer-events: auto;
+        position: absolute;
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        background: transparent;
+        transition: transform 0.15s ease, background-color 0.15s ease;
+        user-select: none;
+      }
+      .vaultix-field-icon:hover {
+        transform: scale(1.1);
+        background: rgba(79, 70, 229, 0.12);
+      }
+      .vaultix-field-icon svg {
+        filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));
+      }
+
+      /* In-Page Dropdown Menu */
+      .vaultix-dropdown {
+        pointer-events: auto;
+        position: absolute;
+        width: 310px;
+        max-height: 320px;
+        background: #0f172a;
+        color: #f8fafc;
+        border: 1px solid #334155;
+        border-radius: 12px;
+        box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(79, 70, 229, 0.3);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        font-size: 13px;
+        animation: fadeIn 0.14s ease-out;
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-4px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .dropdown-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 9px 12px;
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        border-bottom: 1px solid #334155;
+      }
+      .brand-title {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-weight: 700;
+        font-size: 13px;
+        color: #f8fafc;
+      }
+      .site-badge {
+        font-size: 10.5px;
+        font-weight: 500;
+        color: #94a3b8;
+        background: #1e293b;
+        padding: 2px 6px;
+        border-radius: 5px;
+        border: 1px solid #334155;
+      }
+
+      .items-list {
+        overflow-y: auto;
+        padding: 4px;
+        flex: 1;
+      }
+      .account-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 10px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background-color 0.12s ease;
+      }
+      .account-row:hover, .account-row.highlighted {
+        background: #1e293b;
+      }
+      .account-avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 7px;
+        background: #4f46e5;
+        color: #fff;
+        font-weight: 700;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .account-info {
+        flex: 1;
+        min-width: 0;
+      }
+      .account-name {
+        font-weight: 600;
+        color: #f1f5f9;
+        font-size: 12.5px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .account-login {
+        font-size: 11px;
+        color: #94a3b8;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-top: 1px;
+      }
+      .account-vault {
+        font-size: 10px;
+        color: #818cf8;
+        font-weight: 500;
+      }
+
+      .fill-badge {
+        font-size: 11px;
+        font-weight: 600;
+        background: #4f46e5;
+        color: #fff;
+        padding: 3px 8px;
+        border-radius: 6px;
+        opacity: 0;
+        transition: opacity 0.12s ease;
+      }
+      .account-row:hover .fill-badge, .account-row.highlighted .fill-badge {
+        opacity: 1;
+      }
+
+      /* Locked / Empty states */
+      .notice-box {
+        padding: 16px 14px;
+        text-align: center;
+        color: #94a3b8;
+      }
+      .notice-box .notice-title {
+        color: #f1f5f9;
+        font-weight: 600;
+        margin-bottom: 4px;
+        font-size: 13px;
+      }
+      .notice-btn {
+        margin-top: 10px;
+        padding: 7px 12px;
+        border-radius: 6px;
+        border: none;
+        background: #4f46e5;
+        color: #fff;
+        font-weight: 600;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .notice-btn:hover { background: #4338ca; }
+
+      /* Footer Shortcuts */
+      .dropdown-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 7px 10px;
+        background: #0b1222;
+        border-top: 1px solid #1e293b;
+        font-size: 11px;
+      }
+      .footer-action {
+        background: none;
+        border: none;
+        color: #818cf8;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+        padding: 2px 4px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .footer-action:hover { color: #a5b4fc; text-decoration: underline; }
+    `;
+    overlayShadow.appendChild(style);
+    document.documentElement.appendChild(overlayHost);
+    return overlayShadow;
+  }
+
+  // ─── Fetch Cached Credentials ─────────────────────────────────────────────
+  async function fetchCachedCreds() {
     return new Promise((resolve) => {
       try {
         chrome.runtime.sendMessage({ type: 'VAULTIX_GET_CREDS' }, (resp) => {
-          if (chrome.runtime.lastError || !resp || !Array.isArray(resp.creds)) {
-            resolve([]);
+          if (chrome.runtime.lastError || !resp) {
+            resolve({ creds: [], unlocked: false });
             return;
           }
-          resolve(resp.creds);
+          resolve({
+            creds: Array.isArray(resp.creds) ? resp.creds : [],
+            unlocked: Boolean(resp.unlocked),
+          });
         });
       } catch {
-        resolve([]);
+        resolve({ creds: [], unlocked: false });
       }
     });
   }
 
-  // ─── Field detection ──────────────────────────────────────────────────────
+  // ─── Field Detection ──────────────────────────────────────────────────────
   function isVisible(el) {
     if (!el || !el.getClientRects().length) return false;
     const style = window.getComputedStyle(el);
@@ -81,7 +317,6 @@
         if (ariaEl) return (ariaEl.textContent || '').trim();
       }
 
-      // Check preceding siblings in same row or container
       let prev = el.previousElementSibling;
       while (prev) {
         if (/label|span|div|p|b|strong/i.test(prev.tagName)) {
@@ -89,13 +324,6 @@
           if (txt) return txt;
         }
         prev = prev.previousElementSibling;
-      }
-
-      // Check parent's previous sibling
-      const parent = el.parentElement;
-      if (parent && parent.previousElementSibling) {
-        const txt = (parent.previousElementSibling.textContent || '').trim();
-        if (txt) return txt;
       }
     } catch {
       /* ignore DOM query errors */
@@ -110,47 +338,32 @@
     if (ac === 'one-time-code') return true;
 
     const type = (el.type || '').toLowerCase();
-    if (type === 'hidden' || type === 'submit' || type === 'button' || type === 'checkbox' || type === 'radio') return true;
+    if (['hidden', 'submit', 'button', 'checkbox', 'radio'].includes(type)) return true;
 
     const idName = `${el.id} ${el.name} ${el.placeholder || ''} ${el.getAttribute('aria-label') || ''} ${el.className || ''}`.toLowerCase();
-    
-    // Captcha keywords (including common variations and gov portals like txtCaptcha)
     if (/captcha|cpatcha|captchacode|captcha_code|txtcaptcha|captchatext|captchainput|usercaptcha|imgcode|imagecode|mathcaptcha/i.test(idName)) {
       return true;
     }
-
-    // OTP / Security challenge keywords
     if (/\b(otp|totp|2fa|mfa|passcode|verification_code|verificationcode|verify_code|security_code|securitycode|challenge)\b/i.test(idName)) {
       return true;
     }
 
-    // Check associated label or surrounding text
     const labelText = getFieldLabelText(el).toLowerCase();
-    if (/captcha|cpatcha|security code|verification code|type the characters|enter code shown|enter the characters/i.test(labelText)) {
+    if (/captcha|cpatcha|security code|verification code|type the characters|enter code shown/i.test(labelText)) {
       return true;
     }
 
-    // Check DOM proximity to a Captcha image, canvas, or refresh control
     try {
       const container = el.closest('tr, .form-group, .row, .col, div, fieldset, li') || el.parentElement;
       if (container) {
         const hasCaptchaImg = container.querySelector(
-          'img[src*="captcha" i], img[id*="captcha" i], img[class*="captcha" i], img[alt*="captcha" i], canvas[id*="captcha" i], canvas[class*="captcha" i]'
+          'img[src*="captcha" i], img[id*="captcha" i], img[class*="captcha" i], canvas[id*="captcha" i]'
         );
         if (hasCaptchaImg) return true;
-
-        const prevSibling = container.previousElementSibling || el.previousElementSibling;
-        if (prevSibling && prevSibling.querySelector) {
-          const siblingHasImg = prevSibling.querySelector(
-            'img[src*="captcha" i], img[id*="captcha" i], img[class*="captcha" i], canvas[id*="captcha" i]'
-          );
-          if (siblingHasImg) return true;
-        }
       }
     } catch {
-      /* ignore DOM query errors */
+      /* ignore */
     }
-
     return false;
   }
 
@@ -159,7 +372,7 @@
     if (isCaptchaOrOtpField(el)) return false;
 
     const type = (el.type || '').toLowerCase();
-    if (type === 'password' || type === 'hidden' || type === 'submit' || type === 'checkbox' || type === 'radio') return false;
+    if (['password', 'hidden', 'submit', 'checkbox', 'radio'].includes(type)) return false;
     if (type === 'email' || type === 'tel') return true;
     if (type !== 'text' && type !== '') return false;
 
@@ -189,7 +402,6 @@
     const nm = `${el.name} ${el.id} ${el.placeholder || ''}`.toLowerCase();
     if (ac.includes('cc-number') || /card|cc-number/i.test(nm)) return true;
 
-    // If it precedes a password field in the same form or modal, it's a credential field (unless it's a search field)
     const form = el.form || el.closest('form, [role="dialog"], .modal') || null;
     const pw = form ? findPasswordInput(form) : findPasswordInput();
     if (pw && el !== pw && (el.compareDocumentPosition(pw) & Node.DOCUMENT_POSITION_FOLLOWING)) {
@@ -197,15 +409,12 @@
         return true;
       }
     }
-
     return false;
   }
 
   function findPasswordInput(within) {
     const scope = within || document;
-    const candidates = [...scope.querySelectorAll('input[type="password"]')].filter(
-      isVisible
-    );
+    const candidates = [...scope.querySelectorAll('input[type="password"]')].filter(isVisible);
     return candidates[0] || null;
   }
 
@@ -218,12 +427,9 @@
     ].filter((el) => isVisible(el) && !isCaptchaOrOtpField(el));
 
     if (!inputs.length) return null;
-
-    // 1. Explicit username matching
     const explicit = inputs.find(isUsernameField);
     if (explicit) return explicit;
 
-    // 2. Closest input preceding pwField
     if (pwField) {
       let preceding = null;
       for (const el of inputs) {
@@ -233,12 +439,10 @@
       }
       if (preceding) return preceding;
     }
-
-    // 3. Fallback: first visible non-captcha text input
     return inputs[0] || null;
   }
 
-  // ─── Filling ──────────────────────────────────────────────────────────────
+  // ─── Autofill Execution ──────────────────────────────────────────────────
   function setNativeValue(el, value) {
     const proto =
       el instanceof HTMLTextAreaElement
@@ -254,7 +458,7 @@
     const anchor = document.contains(activeField) ? activeField : null;
     const form = anchor?.form || anchor?.closest?.('form, [role="dialog"], .modal') || null;
 
-    // 1. Support Credit Card Autofill if cardData is passed
+    // Credit Card Autofill support
     if (extra?.cardData) {
       let filledAny = false;
       const { cardNumber, cardholderName, expiry, cvv } = extra.cardData;
@@ -278,19 +482,15 @@
         }
       }
       if (filledAny) {
-        closeMenu();
-        removeBadge();
+        closeDropdown();
+        removeFieldIcon();
         return true;
       }
     }
 
-    // 2. Standard Login, Bank Account Customer ID, or Password
     let pwField = form ? findPasswordInput(form) : null;
     if (!pwField) pwField = findPasswordInput();
 
-    // Determine target username field
-    // If anchor is a legitimate username field (and NOT captcha or password), use it;
-    // otherwise locate the real username field relative to pwField / form
     let userField = null;
     if (anchor && anchor.type !== 'password' && !isCaptchaOrOtpField(anchor) && isUsernameField(anchor)) {
       userField = anchor;
@@ -299,20 +499,16 @@
     }
 
     let didFill = false;
-
-    // Fill Username / Customer ID on Page 1 or Unified Form
     if (userField && username) {
       setNativeValue(userField, username);
       didFill = true;
     }
-
-    // Fill Primary Password on Page 2 or Unified Form
     if (pwField && password) {
       setNativeValue(pwField, password);
       didFill = true;
     }
 
-    // Fill Transaction Password if requested and present
+    // Fill Transaction Password if provided
     if (extra?.transactionPassword) {
       const scope = form || document;
       const pwCandidates = [...scope.querySelectorAll('input[type="password"]')].filter(isVisible);
@@ -323,8 +519,7 @@
       }
     }
 
-    // Smart Focus Handling:
-    // If there is an unfilled captcha field on the form, auto-focus it so user can type immediately
+    // Smart Focus: focus unfilled captcha if present
     const scope = form || document;
     const captchaField = [...scope.querySelectorAll('input')].find(
       (el) => isVisible(el) && isCaptchaOrOtpField(el)
@@ -335,8 +530,8 @@
       pwField.focus();
     }
 
-    closeMenu();
-    removeBadge();
+    closeDropdown();
+    removeFieldIcon();
     return didFill;
   }
 
@@ -344,10 +539,10 @@
   function onFocusIn(e) {
     const el = e.target;
     if (!isCredField(el)) {
-      // Clear activeField if user focused a non-credential field (e.g. captcha)
       if (activeField && activeField !== el) {
         activeField = null;
-        removeBadge();
+        removeFieldIcon();
+        closeDropdown();
       }
       return;
     }
@@ -356,27 +551,21 @@
       clearTimeout(hideTimer);
       hideTimer = null;
     }
-    setTimeout(() => showBadgeAndMenu(el), 80);
+    setTimeout(() => renderInFieldIconAndDropdown(el), 60);
   }
 
   function onFocusOut(e) {
     if (e.target !== activeField) return;
     hideTimer = setTimeout(() => {
-      if (menu && menu.matches(':hover')) return;
-      removeBadge();
-    }, 180);
+      removeFieldIcon();
+      closeDropdown();
+    }, 220);
   }
 
   function onDocClick(e) {
-    // Check if user clicked a login/submit button while a password field has a value
     checkSubmitButtonClick(e.target);
-
     if (e.target === activeField) return;
-    if (badge && (badge === e.target || badge.contains(e.target))) {
-      suppressClickClose = true;
-      return;
-    }
-    if (menu && (menu === e.target || menu.contains(e.target))) {
+    if (overlayHost && overlayHost.contains(e.target)) {
       suppressClickClose = true;
       return;
     }
@@ -384,11 +573,36 @@
       suppressClickClose = false;
       return;
     }
-    closeMenu();
+    closeDropdown();
   }
 
   function onKeydown(e) {
-    if (e.key === 'Escape') closeMenu();
+    if (e.key === 'Escape') {
+      closeDropdown();
+      return;
+    }
+
+    if (inPageDropdown && currentCreds.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        highlightedIndex = (highlightedIndex + 1) % currentCreds.length;
+        updateHighlightedRow();
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        highlightedIndex = (highlightedIndex - 1 + currentCreds.length) % currentCreds.length;
+        updateHighlightedRow();
+        return;
+      }
+      if (e.key === 'Enter' && highlightedIndex >= 0) {
+        e.preventDefault();
+        const cred = currentCreds[highlightedIndex];
+        if (cred) fillAndLog(cred);
+        return;
+      }
+    }
+
     if (e.key === 'Enter') {
       const el = e.target;
       if (el && el.tagName === 'INPUT') {
@@ -426,15 +640,11 @@
       btn.getAttribute('value') ||
       btn.getAttribute('aria-label') ||
       ''
-    )
-      .trim()
-      .toLowerCase();
+    ).trim().toLowerCase();
 
     const isLikelySubmit =
       type === 'submit' ||
-      /log\s*in|sign\s*in|continue|submit|next|sign\s*up|register|create|verify|unlock|enter/i.test(
-        label
-      );
+      /log\s*in|sign\s*in|continue|submit|next|sign\s*up|register|create|verify|unlock|enter|save|change\s*password|update\s*password|join/i.test(label);
 
     if (!isLikelySubmit) return;
     const form = btn.closest('form') || document;
@@ -450,23 +660,77 @@
     return first.charAt(0).toUpperCase() + first.slice(1);
   }
 
-  function captureLoginFromScope(scope) {
-    const pwField = findPasswordInput(scope) || findPasswordInput(document);
-    if (!pwField || !pwField.value) return;
+  // ─── Intelligent Password & Username Detection (Login, Register, Update) ──
+  function detectFormCredentialFields(scope) {
+    const pwFields = [...(scope || document).querySelectorAll('input[type="password"]')].filter(isVisible);
+    if (!pwFields.length) return null;
 
-    const password = pwField.value;
+    // 1. Check for Change Password (Old + New + Confirm)
+    const oldField = pwFields.find(p => {
+      const nm = `${p.name} ${p.id} ${p.placeholder || ''} ${p.getAttribute('autocomplete') || ''}`.toLowerCase();
+      return /current|old|previous|existing/i.test(nm);
+    });
+
+    const newField = pwFields.find(p => {
+      if (p === oldField) return false;
+      const nm = `${p.name} ${p.id} ${p.placeholder || ''} ${p.getAttribute('autocomplete') || ''}`.toLowerCase();
+      return /new|create|choose|set/i.test(nm) || p.getAttribute('autocomplete') === 'new-password';
+    });
+
+    const confirmField = pwFields.find(p => {
+      if (p === oldField || p === newField) return false;
+      const nm = `${p.name} ${p.id} ${p.placeholder || ''}`.toLowerCase();
+      return /confirm|repeat|verify|retype|re-enter/i.test(nm);
+    });
+
+    if (oldField && newField) {
+      return {
+        isChangePassword: true,
+        isRegistration: false,
+        password: newField.value,
+        pwField: newField,
+      };
+    }
+
+    // 2. Check for Registration Form (New password + Confirm or Register URL)
+    const isRegisterUrl = /register|signup|sign-up|join|create-account|new-user/i.test(location.href);
+    const hasNewPwAttr = pwFields.some(p => p.getAttribute('autocomplete') === 'new-password');
+    const hasConfirm = !!confirmField;
+
+    if (isRegisterUrl || hasNewPwAttr || (hasConfirm && pwFields.length >= 2)) {
+      const targetPw = newField || pwFields.find(p => p !== confirmField) || pwFields[0];
+      return {
+        isChangePassword: false,
+        isRegistration: true,
+        password: targetPw ? targetPw.value : '',
+        pwField: targetPw,
+      };
+    }
+
+    // 3. Standard Login Form
+    return {
+      isChangePassword: false,
+      isRegistration: false,
+      password: pwFields[0].value,
+      pwField: pwFields[0],
+    };
+  }
+
+  function captureLoginFromScope(scope) {
+    const detection = detectFormCredentialFields(scope);
+    if (!detection || !detection.password) return;
+
+    const password = detection.password;
     let username = '';
 
-    const userField =
-      findUsernameInput(pwField, scope) || findUsernameInput(pwField, document);
+    const userField = findUsernameInput(detection.pwField, scope) || findUsernameInput(detection.pwField, document);
     if (userField && userField.value && userField.value.trim()) {
       username = userField.value.trim();
     } else if (lastTypedUsername) {
       username = lastTypedUsername;
     } else {
-      // Fallback for 2-step login pages that show the email as plain text on the password step
       const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
-      const formContainer = pwField.closest('form, main, [role="main"], body') || document.body;
+      const formContainer = detection.pwField.closest('form, main, [role="main"], body') || document.body;
       const textMatch = (formContainer?.innerText || '').match(emailRegex);
       if (textMatch) username = textMatch[0];
     }
@@ -485,12 +749,12 @@
           title: cleanSiteName(),
           username,
           password,
+          isRegistration: detection.isRegistration,
           isVaultixOwnApp,
         },
         (resp) => {
           void chrome.runtime.lastError;
           if (resp && resp.ok && (resp.status === 'NEW' || resp.status === 'UPDATE')) {
-            // Watch for successful login on SPA or modal transitions without showing banner on the login form
             watchForSpaLoginSuccess();
           }
         }
@@ -510,9 +774,8 @@
       const urlChanged = location.href !== initialUrl;
       const pwField = findPasswordInput(document);
 
-      // Successful login condition for SPA:
-      // Either user navigated to another URL (e.g. /dashboard) OR the password field was removed from the DOM
-      if (urlChanged || !pwField) {
+      // Trigger condition: URL changed OR password field removed from DOM OR user registered
+      if (urlChanged || !pwField || checks >= 6) {
         clearInterval(spaLoginWatcher);
         spaLoginWatcher = null;
         setTimeout(() => {
@@ -521,209 +784,293 @@
         return;
       }
 
-      // Max wait ~12 seconds (35 checks * 350ms = 12.2s). If user is still sitting on the login form, do not prompt.
-      if (checks >= 35) {
+      if (checks >= 25) {
         clearInterval(spaLoginWatcher);
         spaLoginWatcher = null;
       }
-    }, 350);
+    }, 400);
   }
 
-  function removeBadge() {
-    badge?.remove();
-    badge = null;
-    if (menu) {
-      menu.style.display = 'none';
-      menu.remove();
-      menu = null;
+  // ─── In-Page Autofill Overlay (In-Field Icon + Dropdown) ───────────────────
+  function removeFieldIcon() {
+    if (inFieldIcon) {
+      inFieldIcon.remove();
+      inFieldIcon = null;
     }
   }
 
-  function closeMenu() {
-    menu?.remove();
-    menu = null;
+  function closeDropdown() {
+    if (inPageDropdown) {
+      inPageDropdown.remove();
+      inPageDropdown = null;
+      highlightedIndex = -1;
+    }
   }
 
-  // ─── Positioning ──────────────────────────────────────────────────────────
-  function reposition() {
-    if (!badge || !activeField || !document.contains(activeField)) {
-      if (activeField && !document.contains(activeField)) removeBadge();
+  function repositionOverlay() {
+    if (!activeField || !document.contains(activeField)) {
+      removeFieldIcon();
+      closeDropdown();
       return;
     }
-    positionBadge();
-    if (menu) positionMenu();
+    positionInFieldIcon();
+    if (inPageDropdown) positionDropdown();
   }
 
-  function positionBadge() {
+  function positionInFieldIcon() {
+    if (!inFieldIcon || !activeField) return;
     const r = activeField.getBoundingClientRect();
-    badge.style.top = `${r.top + window.scrollY + (r.height - 22) / 2}px`;
-    badge.style.left = `${r.right + window.scrollX - 26}px`;
+    const iconSize = 22;
+    inFieldIcon.style.top = `${r.top + window.scrollY + (r.height - iconSize) / 2}px`;
+    inFieldIcon.style.left = `${r.right + window.scrollX - iconSize - 7}px`;
   }
 
-  function positionMenu() {
+  function positionDropdown() {
+    if (!inPageDropdown || !activeField) return;
     const r = activeField.getBoundingClientRect();
-    const menuRect = menu.getBoundingClientRect();
+    const dropdownRect = inPageDropdown.getBoundingClientRect();
     const menuTop = r.bottom + window.scrollY + 6;
     const viewportBottom = window.scrollY + window.innerHeight - 12;
+
     const top =
-      menuTop + menuRect.height > viewportBottom
-        ? r.top + window.scrollY - menuRect.height - 6
+      menuTop + dropdownRect.height > viewportBottom
+        ? r.top + window.scrollY - dropdownRect.height - 6
         : menuTop;
-    const left = Math.max(8, r.right + window.scrollX - 280);
-    menu.style.top = `${Math.max(8, top)}px`;
-    menu.style.left = `${left}px`;
+
+    const left = Math.max(8, Math.min(r.left + window.scrollX, window.scrollX + window.innerWidth - 320));
+    inPageDropdown.style.top = `${Math.max(8, top)}px`;
+    inPageDropdown.style.left = `${left}px`;
   }
 
-  // ─── Badge + menu ─────────────────────────────────────────────────────────
-  async function showBadgeAndMenu(fieldEl) {
+  async function renderInFieldIconAndDropdown(fieldEl) {
     if (fieldEl !== activeField) return;
-    const creds = await getCachedCreds();
+    const { creds, unlocked } = await fetchCachedCreds();
     if (fieldEl !== activeField) return;
-    if (!creds.length) return;
 
-    if (!badge) {
-      badge = document.createElement('div');
-      badge.textContent = '🔑';
-      badge.title = 'Vaultix — using ' + creds.length + ' saved login(s)';
-      Object.assign(badge.style, {
-        position: 'absolute',
-        zIndex: '2147483646',
-        width: '22px',
-        height: '22px',
-        borderRadius: '50%',
-        background: '#4f46e5',
-        color: '#fff',
-        fontSize: '12px',
-        lineHeight: '22px',
-        textAlign: 'center',
-        cursor: 'pointer',
-        boxShadow: '0 1px 4px rgba(0,0,0,.4)',
-        userSelect: 'none',
-      });
-      document.documentElement.appendChild(badge);
-      positionBadge();
-      badge.addEventListener('mousedown', (e) => e.preventDefault());
-      badge.addEventListener('click', (e) => {
+    currentCreds = creds;
+    isVaultUnlocked = unlocked;
+
+    const shadow = ensureOverlayRoot();
+
+    // 1. Create In-Field Icon Badge
+    if (!inFieldIcon) {
+      inFieldIcon = document.createElement('div');
+      inFieldIcon.className = 'vaultix-field-icon';
+      inFieldIcon.innerHTML = VAULTIX_SVG;
+      inFieldIcon.title = unlocked
+        ? `Vaultix Autofill — ${creds.length} login(s) available`
+        : 'Vaultix — Click to unlock';
+
+      inFieldIcon.addEventListener('mousedown', (e) => e.preventDefault());
+      inFieldIcon.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (menu) {
-          closeMenu();
+        if (inPageDropdown) {
+          closeDropdown();
         } else {
-          openMenu(creds);
+          openDropdown(creds, unlocked);
         }
       });
+
+      shadow.appendChild(inFieldIcon);
+      positionInFieldIcon();
     }
 
-    // Auto-open the picker when a credential field is focused (like other
-    // password managers), but not twice for the same field.
-    if (autoOpenedFor !== fieldEl) {
+    // Auto-open on focus if matching credentials exist
+    if (autoOpenedFor !== fieldEl && creds.length > 0 && unlocked) {
       autoOpenedFor = fieldEl;
-      openMenu(creds);
+      openDropdown(creds, unlocked);
     }
   }
 
-  function openMenu(creds) {
-    closeMenu();
+  function openDropdown(creds, unlocked) {
+    closeDropdown();
+    const shadow = ensureOverlayRoot();
 
-    const ordered = creds.slice(0, 30);
+    inPageDropdown = document.createElement('div');
+    inPageDropdown.className = 'vaultix-dropdown';
 
-    menu = document.createElement('div');
-    Object.assign(menu.style, {
-      position: 'absolute',
-      zIndex: '2147483647',
-      width: '280px',
-      maxHeight: '240px',
-      overflowY: 'auto',
-      background: '#1e293b',
-      border: '1px solid #334155',
-      borderRadius: '10px',
-      boxShadow: '0 8px 24px rgba(0,0,0,.45)',
-      fontFamily: 'system-ui, sans-serif',
-      fontSize: '13px',
-      color: '#e2e8f0',
-      padding: '4px',
-    });
+    const header = document.createElement('div');
+    header.className = 'dropdown-header';
+    header.innerHTML = `
+      <div class="brand-title">
+        ${VAULTIX_SVG}
+        <span>Vaultix</span>
+      </div>
+      <div class="site-badge">${cleanSiteName()}</div>
+    `;
+    inPageDropdown.appendChild(header);
 
-    const head = document.createElement('div');
-    head.textContent = 'Vaultix — ' + (activeField?.tagName === 'INPUT' ? 'Choose an account' : 'Vaultix');
-    Object.assign(head.style, {
-      padding: '6px 10px',
-      fontWeight: '700',
-      color: '#818cf8',
-      borderBottom: '1px solid #334155',
-      marginBottom: '4px',
-    });
-    menu.appendChild(head);
-
-    if (!ordered.length) {
-      const empty = document.createElement('div');
-      empty.textContent =
-        'Nothing for this site. Unlock in the extension popup, or add this item to your vault.';
-      Object.assign(empty.style, { padding: '10px', color: '#94a3b8' });
-      menu.appendChild(empty);
-    }
-
-    for (const cred of ordered) {
-      const row = document.createElement('div');
-      Object.assign(row.style, {
-        padding: '7px 10px',
-        borderRadius: '7px',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-      });
-      row.addEventListener('mouseenter', () => (row.style.background = '#334155'));
-      row.addEventListener('mouseleave', () => (row.style.background = 'transparent'));
-
-      const dot = document.createElement('span');
-      dot.textContent = '●';
-      dot.title = 'Matches this site';
-      dot.style.color = '#818cf8';
-
-      const textWrap = document.createElement('div');
-      textWrap.style.cssText = 'flex:1;min-width:0;';
-      const nameEl = document.createElement('div');
-      nameEl.textContent = cred.name;
-      nameEl.style.cssText =
-        'font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
-      const loginEl = document.createElement('div');
-      const baseLogin = cred.login || '(no username)';
-      loginEl.textContent = cred.folderName ? `${baseLogin} • 📁 ${cred.folderName}` : baseLogin;
-      loginEl.style.cssText =
-        'font-size:11px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
-      textWrap.append(nameEl, loginEl);
-
-      row.append(dot, textWrap);
-      row.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const filled = fillCredentials(cred.login, cred.password);
-        if (filled) {
-          try {
-            chrome.runtime.sendMessage(
-              {
-                type: 'VAULTIX_LOG',
-                passwordId: cred.id,
-                action: 'autofill',
-                domain: window.location.hostname,
-                url: window.location.href,
-              },
-              () => {
-                void chrome.runtime.lastError;
-              }
-            );
-          } catch {
-            /* logging is best-effort */
-          }
+    // Case A: Vault is Locked
+    if (!unlocked) {
+      const lockBox = document.createElement('div');
+      lockBox.className = 'notice-box';
+      lockBox.innerHTML = `
+        <div class="notice-title">🔒 Vault is Locked</div>
+        <div style="font-size:11.5px;color:#94a3b8;line-height:1.4;">Unlock Vaultix to autofill credentials for this website.</div>
+        <button class="notice-btn" type="button">Unlock Vaultix</button>
+      `;
+      lockBox.querySelector('.notice-btn').addEventListener('click', () => {
+        closeDropdown();
+        try {
+          chrome.runtime.sendMessage({ type: 'VAULTIX_OPEN_POPUP' });
+        } catch {
+          /* ignore */
         }
       });
-      menu.appendChild(row);
+      inPageDropdown.appendChild(lockBox);
+    }
+    // Case B: No Matching Credentials
+    else if (!creds.length) {
+      const emptyBox = document.createElement('div');
+      emptyBox.className = 'notice-box';
+      emptyBox.innerHTML = `
+        <div class="notice-title">No saved logins</div>
+        <div style="font-size:11.5px;color:#94a3b8;line-height:1.4;">No logins saved for ${location.hostname}.</div>
+        <button class="notice-btn" type="button">🔑 Generate Strong Password</button>
+      `;
+      emptyBox.querySelector('.notice-btn').addEventListener('click', () => {
+        applyGeneratedPassword();
+      });
+      inPageDropdown.appendChild(emptyBox);
+    }
+    // Case C: Display Matching Credentials (1-Click Fill)
+    else {
+      const list = document.createElement('div');
+      list.className = 'items-list';
+
+      creds.slice(0, 8).forEach((cred, index) => {
+        const row = document.createElement('div');
+        row.className = 'account-row';
+        row.dataset.index = index;
+
+        const initial = (cred.name || cred.login || 'V').charAt(0).toUpperCase();
+        const folderTag = cred.shared
+          ? `🏢 ${cred.vaultName || 'Company'}`
+          : (cred.folderName ? `📁 ${cred.folderName}` : '🔒 Personal');
+
+        row.innerHTML = `
+          <div class="account-avatar">${initial}</div>
+          <div class="account-info">
+            <div class="account-name">${escapeHtml(cred.name)}</div>
+            <div class="account-login">${escapeHtml(cred.login || '(no username)')}</div>
+            <div class="account-vault">${folderTag}</div>
+          </div>
+          <div class="fill-badge">Fill</div>
+        `;
+
+        row.addEventListener('click', (e) => {
+          e.stopPropagation();
+          fillAndLog(cred);
+        });
+
+        list.appendChild(row);
+      });
+      inPageDropdown.appendChild(list);
     }
 
-    document.documentElement.appendChild(menu);
-    positionMenu();
+    // Footer actions
+    const footer = document.createElement('div');
+    footer.className = 'dropdown-footer';
+    footer.innerHTML = `
+      <button class="footer-action gen-pwd" type="button">🔑 Generate Password</button>
+      <button class="footer-action open-vtx" type="button">Open Vaultix ↗</button>
+    `;
+
+    footer.querySelector('.gen-pwd').addEventListener('click', (e) => {
+      e.stopPropagation();
+      applyGeneratedPassword();
+    });
+
+    footer.querySelector('.open-vtx').addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeDropdown();
+      try {
+        chrome.runtime.sendMessage({ type: 'VAULTIX_OPEN_POPUP' });
+      } catch {
+        /* ignore */
+      }
+    });
+
+    inPageDropdown.appendChild(footer);
+    shadow.appendChild(inPageDropdown);
+    positionDropdown();
   }
 
-  // ─── Top-Right Save / Update Login Banner (Shadow DOM) ───────────────────
+  function updateHighlightedRow() {
+    if (!inPageDropdown) return;
+    const rows = inPageDropdown.querySelectorAll('.account-row');
+    rows.forEach((r, idx) => {
+      if (idx === highlightedIndex) {
+        r.classList.add('highlighted');
+        r.scrollIntoView({ block: 'nearest' });
+      } else {
+        r.classList.remove('highlighted');
+      }
+    });
+  }
+
+  function fillAndLog(cred) {
+    const filled = fillCredentials(cred.login, cred.password);
+    if (filled) {
+      try {
+        chrome.runtime.sendMessage({
+          type: 'VAULTIX_LOG',
+          passwordId: cred.id,
+          action: 'autofill',
+          domain: window.location.hostname,
+          url: window.location.href,
+        });
+      } catch {
+        /* best-effort logging */
+      }
+    }
+  }
+
+  function applyGeneratedPassword() {
+    const pwd = generateSecurePassword(16);
+    const pwInput = findPasswordInput(activeField?.form || document);
+    if (pwInput) {
+      setNativeValue(pwInput, pwd);
+      pwInput.focus();
+    }
+    try {
+      navigator.clipboard.writeText(pwd);
+    } catch {
+      /* ignore */
+    }
+    closeDropdown();
+  }
+
+  function generateSecurePassword(length = 16) {
+    const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const lower = 'abcdefghijkmnopqrstuvwxyz';
+    const digits = '23456789';
+    const symbols = '!@#$%^&*()-_=+';
+    const all = upper + lower + digits + symbols;
+    const array = new Uint32Array(length);
+    crypto.getRandomValues(array);
+    let pwd = [
+      upper[array[0] % upper.length],
+      lower[array[1] % lower.length],
+      digits[array[2] % digits.length],
+      symbols[array[3] % symbols.length],
+    ];
+    for (let i = 4; i < length; i++) {
+      pwd.push(all[array[i] % all.length]);
+    }
+    return pwd.sort(() => crypto.getRandomValues(new Uint32Array(1))[0] - 0.5).join('');
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // ─── Auto-Save & Update Prompts (Shadow DOM Top-Right Banner) ─────────────
   function isTwoFactorPage() {
     const path = (location.pathname || '').toLowerCase();
     const search = (location.search || '').toLowerCase();
@@ -733,56 +1080,30 @@
     const tfaPattern = /(2fa|two[-_]?factor|mfa|otp|verify|verification|challenge|security[-_]?check|checkpoint|authenticator)/i;
     if (tfaPattern.test(combined)) return true;
 
-    // Check for OTP/2FA inputs
     const otpInput = document.querySelector(
-      'input[autocomplete="one-time-code"], input[name*="otp" i], input[name*="code" i], input[name*="token" i], input[name*="2fa" i], input[id*="otp" i], input[id*="2fa" i], input[id*="code" i]'
+      'input[autocomplete="one-time-code"], input[name*="otp" i], input[name*="code" i], input[name*="token" i], input[name*="2fa" i]'
     );
     if (otpInput && isVisible(otpInput)) return true;
-
     return false;
   }
 
   function isLikelyLoginPage(pending) {
+    // If user was registering or changing password, ALWAYS prompt regardless of URL
+    if (pending?.isRegistration || pending?.mode === 'UPDATE') {
+      return false;
+    }
+
     const path = (location.pathname || '').toLowerCase();
     const search = (location.search || '').toLowerCase();
     const combined = path + ' ' + search;
-
     const loginPatterns = /(login|sign[-_]?in|log[-_]?in|auth|authenticate|session|oauth|sso)/i;
 
     let isSameSource = false;
     if (pending?.sourcePath && pending.sourcePath.length > 1) {
       isSameSource = path === pending.sourcePath.toLowerCase();
     }
-
     const hasVisiblePw = !!findPasswordInput(document);
-
-    // If there is an active/visible password input and it's a login URL or the same source login URL,
-    // the user is still on the login form (login hasn't completed or failed).
     return hasVisiblePw && (loginPatterns.test(combined) || isSameSource);
-  }
-
-  let twoFactorWatcher = null;
-  function watchForTwoFactorSuccess() {
-    if (twoFactorWatcher) clearInterval(twoFactorWatcher);
-    const initialUrl = location.href;
-    let checks = 0;
-    twoFactorWatcher = setInterval(() => {
-      checks++;
-      const urlChanged = location.href !== initialUrl;
-      const still2fa = isTwoFactorPage();
-      if (urlChanged || !still2fa) {
-        clearInterval(twoFactorWatcher);
-        twoFactorWatcher = null;
-        setTimeout(() => {
-          if (window === window.top) checkPendingLoginBanner();
-        }, 600);
-        return;
-      }
-      if (checks >= 60) {
-        clearInterval(twoFactorWatcher);
-        twoFactorWatcher = null;
-      }
-    }, 500);
   }
 
   function checkPendingLoginBanner() {
@@ -795,19 +1116,15 @@
             return;
           }
 
-          // 1. If user is currently on a 2FA/MFA challenge, wait until 2FA completes
           if (isTwoFactorPage()) {
             try {
               chrome.runtime.sendMessage({ type: 'VAULTIX_RESET_PROMPTED' });
             } catch {
               /* ignore */
             }
-            watchForTwoFactorSuccess();
             return;
           }
 
-          // 2. If user is still on the login form with visible password input,
-          // login has not succeeded yet (or failed with an error on the login page).
           if (isLikelyLoginPage(resp.pending)) {
             try {
               chrome.runtime.sendMessage({ type: 'VAULTIX_RESET_PROMPTED' });
@@ -817,7 +1134,6 @@
             return;
           }
 
-          // 3. User has successfully logged in (redirected or login modal dismissed)!
           renderSaveBanner(resp);
         }
       );
@@ -844,7 +1160,6 @@
     } = data;
 
     if (!pending || !signedIn) return;
-
     closeSaveBanner();
 
     saveBannerHost = document.createElement('div');
@@ -861,7 +1176,6 @@
     });
 
     const shadow = saveBannerHost.attachShadow({ mode: 'closed' });
-
     const isUpdate = pending.mode === 'UPDATE';
 
     const style = document.createElement('style');
@@ -873,12 +1187,12 @@
         color: #f8fafc;
         border: 1px solid #334155;
         border-radius: 14px;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(79, 70, 229, 0.25);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(79, 70, 229, 0.35);
         overflow: hidden;
         animation: slideIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
       }
       @keyframes slideIn {
-        from { opacity: 0; transform: translateY(-10px) scale(0.98); }
+        from { opacity: 0; transform: translateY(-12px) scale(0.97); }
         to { opacity: 1; transform: translateY(0) scale(1); }
       }
       .header {
@@ -890,16 +1204,14 @@
         border-bottom: 1px solid #1e293b;
       }
       .logo {
-        width: 28px;
-        height: 28px;
+        width: 30px;
+        height: 30px;
         border-radius: 8px;
         background: #4f46e5;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 14px;
         flex-shrink: 0;
-        box-shadow: 0 2px 8px rgba(79, 70, 229, 0.45);
       }
       .title-wrap { flex: 1; min-width: 0; }
       .title {
@@ -957,18 +1269,10 @@
         outline: none;
         transition: border-color 0.15s;
       }
-      optgroup {
-        background: #0f172a;
-        color: #818cf8;
-        font-weight: 700;
-      }
-      option {
-        background: #1e293b;
-        color: #f1f5f9;
-        font-weight: 500;
-      }
+      optgroup { background: #0f172a; color: #818cf8; font-weight: 700; }
+      option { background: #1e293b; color: #f1f5f9; font-weight: 500; }
       input:focus, select:focus { border-color: #6366f1; }
-      .pw-input { padding-right: 48px; }
+      .pw-input { padding-right: 50px; }
       .toggle-btn {
         position: absolute;
         right: 6px;
@@ -1043,7 +1347,6 @@
         font-size: 11px;
         cursor: pointer;
         padding: 0;
-        text-decoration: none;
       }
       .never-link:hover { color: #94a3b8; text-decoration: underline; }
       .success-toast {
@@ -1062,13 +1365,17 @@
       card.addEventListener(evt, (e) => e.stopPropagation());
     }
 
+    const promptTitle = isUpdate
+      ? 'Update password in Vaultix?'
+      : (pending.isRegistration ? 'Save new registration to Vaultix?' : 'Save login to Vaultix?');
+
     const header = document.createElement('div');
     header.className = 'header';
     header.innerHTML = `
-      <div class="logo">🔑</div>
+      <div class="logo">${VAULTIX_SVG}</div>
       <div class="title-wrap">
-        <div class="title">${isUpdate ? 'Update password in Vaultix?' : 'Save login to Vaultix?'}</div>
-        <div class="subtitle">${pending.hostname}</div>
+        <div class="title">${promptTitle}</div>
+        <div class="subtitle">${escapeHtml(pending.hostname)}</div>
       </div>
       <button class="close-btn" title="Dismiss">✕</button>
     `;
@@ -1076,7 +1383,7 @@
     const body = document.createElement('div');
     body.className = 'body';
 
-    // Name Field
+    // Item Name
     const nameField = document.createElement('div');
     nameField.className = 'field';
     nameField.innerHTML = `<label class="label">Item Name</label>`;
@@ -1085,7 +1392,7 @@
     nameInput.value = pending.name || cleanSiteName();
     nameField.appendChild(nameInput);
 
-    // Username Field
+    // Username
     const userField = document.createElement('div');
     userField.className = 'field';
     userField.innerHTML = `<label class="label">Username / Email</label>`;
@@ -1095,7 +1402,7 @@
     userInput.placeholder = 'username or email';
     userField.appendChild(userInput);
 
-    // Password Field
+    // Password
     const pwField = document.createElement('div');
     pwField.className = 'field';
     pwField.innerHTML = `<label class="label">Password</label>`;
@@ -1117,20 +1424,18 @@
     pwWrap.append(pwInput, toggleBtn);
     pwField.appendChild(pwWrap);
 
-    // Vault & Folder Selector Dropdown (Personal Vault + Company Vaults)
+    // Vault & Folder Selector
     const folderField = document.createElement('div');
     folderField.className = 'field';
     folderField.innerHTML = `<label class="label">Vault & Folder</label>`;
     const folderSelect = document.createElement('select');
 
-    // Group 1: Personal Vault
+    // Personal Vault Group
     const personalGroup = document.createElement('optgroup');
-    personalGroup.label = '🔒 Personal Vault (Private to you)';
-
+    personalGroup.label = '🔒 Personal Vault (Private)';
     const existingDefault = folders.find(
       (f) => (f.name || '').trim().toLowerCase() === defaultFolderName.toLowerCase()
     );
-
     const defaultOpt = document.createElement('option');
     defaultOpt.value = `personal:${existingDefault ? existingDefault.id : '__DEFAULT_BROWSER_FOLDER__'}`;
     defaultOpt.textContent = `📁 ${defaultFolderName} (Default)`;
@@ -1158,33 +1463,24 @@
     personalGroup.appendChild(newPersonalOpt);
     folderSelect.appendChild(personalGroup);
 
-    // Group 2: Company Vaults (Shared with team)
+    // Company Vaults Group
     for (const cv of companyVaults) {
       const cvGroup = document.createElement('optgroup');
       cvGroup.label = `🏢 ${cv.name} (Company Vault — Shared)`;
-
       for (const f of cv.folders || []) {
         const opt = document.createElement('option');
         opt.value = `company:${cv.id}:${f.id}`;
         opt.textContent = `🏢 ${f.name}`;
-        const isTarget =
+        if (
           isUpdate &&
           pending.existingVaultType === 'COMPANY' &&
           pending.existingFolderId &&
-          f.id === pending.existingFolderId;
-        if (isTarget) {
+          f.id === pending.existingFolderId
+        ) {
           opt.selected = true;
         }
         cvGroup.appendChild(opt);
       }
-
-      if (cv.canCreateFolder) {
-        const newCvOpt = document.createElement('option');
-        newCvOpt.value = `company:${cv.id}:__NEW_FOLDER__`;
-        newCvOpt.textContent = `＋ Create new folder in ${cv.name}…`;
-        cvGroup.appendChild(newCvOpt);
-      }
-
       if (cvGroup.children.length > 0) {
         folderSelect.appendChild(cvGroup);
       }
@@ -1204,15 +1500,15 @@
 
     folderField.append(folderSelect, newFolderInput);
 
-    // Master password box if vault is currently locked
+    // Locked Vault inline Master Password prompt
     let masterInput = null;
     const lockBox = document.createElement('div');
     lockBox.className = 'lock-box';
     lockBox.style.display = unlocked ? 'none' : 'block';
-    lockBox.innerHTML = `<label class="label">🔒 Vault Locked — Enter Master Password</label>`;
+    lockBox.innerHTML = `<label class="label">🔒 Enter Master Password to Encrypt & Save</label>`;
     masterInput = document.createElement('input');
     masterInput.type = 'password';
-    masterInput.placeholder = 'Master password to encrypt & save';
+    masterInput.placeholder = 'Master password';
     lockBox.appendChild(masterInput);
 
     const errorEl = document.createElement('div');
@@ -1232,7 +1528,6 @@
     saveBtn.textContent = isUpdate ? 'Update Password' : 'Save to Vaultix';
 
     actions.append(notNowBtn, saveBtn);
-
     body.append(nameField, userField, pwField, folderField, lockBox, errorEl, actions);
 
     const footer = document.createElement('div');
@@ -1321,15 +1616,12 @@
               lockBox.style.display = 'block';
               masterInput?.focus();
             }
-            errorEl.textContent =
-              resp?.error || 'Could not save login. Please try again.';
+            errorEl.textContent = resp?.error || 'Could not save login. Please try again.';
             errorEl.style.display = 'block';
             return;
           }
 
-          card.innerHTML = `<div class="success-toast">✓ ${
-            isUpdate ? 'Updated' : 'Saved'
-          } in 📁 "${resp.folderName || defaultFolderName}"</div>`;
+          card.innerHTML = `<div class="success-toast">✓ ${isUpdate ? 'Updated' : 'Saved'} in 📁 "${resp.folderName || defaultFolderName}"</div>`;
           setTimeout(closeSaveBanner, 1600);
         }
       );

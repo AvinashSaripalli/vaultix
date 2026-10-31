@@ -217,6 +217,28 @@ function evaluateAgainstCache(creds, hostname, username, password) {
     };
   }
 
+  // 2b. If username was not typed/detected (e.g. change password page) and there is exactly 1 match for this site
+  if (!normUser && siteMatches.length === 1 && siteMatches[0].password !== password) {
+    const single = siteMatches[0];
+    const isPersonal =
+      !single.shared &&
+      (!single.vaultName ||
+        single.vaultName === 'Personal' ||
+        single.vaultName === 'My Vault');
+    return {
+      status: 'UPDATE',
+      existingId: single.id,
+      existingName: single.name,
+      existingLogin: single.login,
+      existingVaultType: isPersonal ? 'PERSONAL' : 'COMPANY',
+      existingVaultId: single.vaultId || '',
+      existingVaultName: single.vaultName || '',
+      existingFolderId: single.folderId || '',
+      existingFolderName: single.folderName || '',
+      ...suggestion,
+    };
+  }
+
   return { status: 'NEW', ...suggestion };
 }
 
@@ -267,12 +289,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === 'VAULTIX_GET_CREDS') {
     (async () => {
       try {
-        const data = await chrome.storage.session.get('cache');
-        const cache = data.cache;
+        const sess = await chrome.storage.session.get(['cache', 'master']);
+        const cache = sess.cache;
         const maxAge = await lockMs();
+        const unlocked = !!sess.master && (!cache || maxAge === Infinity || Date.now() - cache.ts < maxAge);
 
-        if (!cache || (maxAge !== Infinity && Date.now() - cache.ts >= maxAge)) {
-          sendResponse({ ok: true, creds: [] });
+        if (!unlocked || !cache) {
+          sendResponse({ ok: true, creds: [], unlocked: false });
           return;
         }
 
@@ -285,9 +308,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           (c) => tabHost && hostMatches(tabHost, c.url)
         );
 
-        sendResponse({ ok: true, creds });
+        sendResponse({ ok: true, creds, unlocked: true });
       } catch {
-        sendResponse({ ok: true, creds: [] });
+        sendResponse({ ok: true, creds: [], unlocked: false });
       }
     })();
     return true;
@@ -358,8 +381,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           suggestedFolderId: evalResult.suggestedFolderId || evalResult.existingFolderId || '',
           suggestedFolderName: evalResult.suggestedFolderName || evalResult.existingFolderName || '',
           name: evalResult.existingName || msg.title || cleanSiteTitle(hostname),
-          username,
+          username: username || evalResult.existingLogin || '',
           password,
+          isRegistration: Boolean(msg.isRegistration),
           url: originUrl,
           sourceUrl: msg.sourceUrl || tabUrl || msg.url || '',
           sourcePath,
@@ -536,6 +560,19 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         sendResponse({ ok: false });
       }
     })();
+    return true;
+  }
+
+  // 4b. Open extension popup if requested from content overlay
+  if (msg.type === 'VAULTIX_OPEN_POPUP') {
+    try {
+      if (chrome.action?.openPopup) {
+        chrome.action.openPopup().catch(() => {});
+      }
+    } catch {
+      /* ignore */
+    }
+    sendResponse({ ok: true });
     return true;
   }
 
