@@ -15,6 +15,7 @@ import { restoreEncryptedSession } from './utils/secureSession';
 import useInactivityLogout, { touchActivity } from './hooks/useInactivityLogout';
 import useKeyboardShortcuts from './hooks/useKeyboardShortcuts';
 import useLockVault from './hooks/useLockVault';
+import useAutoKeySync from './hooks/useAutoKeySync';
 import SessionWarningModal from './components/security/SessionWarningModal';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
@@ -63,6 +64,7 @@ function App() {
 
   useInactivityLogout();
   useKeyboardShortcuts();
+  useAutoKeySync();
 
   useEffect(() => {
     (async () => {

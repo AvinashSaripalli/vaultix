@@ -1640,6 +1640,7 @@ const getItemsNeedingWrapping = async (req, res) => {
           name: pw.name,
           folderId: pw.folderId,
           missingUserIds,
+          myWrappedKey,
         });
       }
     }
