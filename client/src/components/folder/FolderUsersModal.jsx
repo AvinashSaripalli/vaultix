@@ -94,36 +94,65 @@ function FolderUsersModal({ open, onClose, folderId, folderName, onSaved }) {
         const currentPermissions = folder?.permissions || [];
         const folderOwner = folder?.vault?.owner || null;
         const deptMembers = folder?.departmentMembers || [];
+        const workspaceAdmins = folder?.workspaceAdmins || [];
 
-        const finalMembers = folderOwner
-          ? [
-              {
-                id: `owner-${folderOwner.id}`,
-                userId: folderOwner.id,
-                user: folderOwner,
-                accessLevel: 'ADMINISTRATOR',
-                isOwner: true,
-              },
-              ...currentPermissions.filter(
-                (item) =>
-                  item.userId !== folderOwner.id &&
-                  item.user?.id !== folderOwner.id
-              ),
-              ...deptMembers
-                .filter(
-                  (dm) =>
-                    dm.user?.id !== folderOwner.id &&
-                    !currentPermissions.some(
-                      (p) => p.userId === dm.user?.id || p.user?.id === dm.user?.id
-                    )
+        // Build list of workspace admins who are not the owner
+        const adminMembers = workspaceAdmins
+          .filter(
+            (admin) =>
+              admin.id !== folderOwner?.id &&
+              !currentPermissions.some(
+                (p) => p.userId === admin.id || p.user?.id === admin.id
+              )
+          )
+          .map((admin) => ({
+            id: `admin-${admin.id}`,
+            userId: admin.id,
+            user: admin,
+            accessLevel: 'ADMINISTRATOR',
+            isAdminRole: true,
+            isOwner: false,
+          }));
+
+        const finalMembers = [
+          ...(folderOwner
+            ? [
+                {
+                  id: `owner-${folderOwner.id}`,
+                  userId: folderOwner.id,
+                  user: folderOwner,
+                  accessLevel: 'ADMINISTRATOR',
+                  isOwner: true,
+                },
+              ]
+            : []),
+          ...adminMembers,
+          ...currentPermissions
+            .filter(
+              (item) =>
+                item.userId !== folderOwner?.id &&
+                item.user?.id !== folderOwner?.id &&
+                !adminMembers.some((a) => a.userId === (item.userId || item.user?.id))
+            )
+            .map((item) => {
+              const isAdmin = workspaceAdmins.some((a) => a.id === (item.userId || item.user?.id));
+              return isAdmin ? { ...item, isAdminRole: true } : item;
+            }),
+          ...deptMembers
+            .filter(
+              (dm) =>
+                dm.user?.id !== folderOwner?.id &&
+                !adminMembers.some((a) => a.userId === dm.user?.id) &&
+                !currentPermissions.some(
+                  (p) => p.userId === dm.user?.id || p.user?.id === dm.user?.id
                 )
-                .map((dm) => ({
-                  ...dm,
-                  id: `dept-${dm.user?.id}`,
-                  userId: dm.user?.id,
-                })),
-            ]
-          : [...currentPermissions, ...deptMembers];
+            )
+            .map((dm) => ({
+              ...dm,
+              id: `dept-${dm.user?.id}`,
+              userId: dm.user?.id,
+            })),
+        ];
 
         setMembers(finalMembers);
         setChangedMembers({});
@@ -149,7 +178,7 @@ function FolderUsersModal({ open, onClose, folderId, folderName, onSaved }) {
   const handleAccessChange = (permissionId, newAccess) => {
     if (!canManageMembers) return;
     const member = members.find((item) => item.id === permissionId);
-    if (member?.isOwner) return;
+    if (member?.isOwner || member?.isAdminRole) return;
     setChangedMembers((prev) => ({
       ...prev,
       [permissionId]: { ...prev[permissionId], accessLevel: newAccess, member },
@@ -164,7 +193,7 @@ function FolderUsersModal({ open, onClose, folderId, folderName, onSaved }) {
   const handleRemoveMember = (permissionId) => {
     if (!canManageMembers) return;
     const member = members.find((item) => item.id === permissionId);
-    if (member?.isOwner) return;
+    if (member?.isOwner || member?.isAdminRole) return;
     setChangedMembers((prev) => ({
       ...prev,
       [permissionId]: { ...prev[permissionId], remove: true, member },
@@ -179,7 +208,7 @@ function FolderUsersModal({ open, onClose, folderId, folderName, onSaved }) {
       setError('');
       const updates = Object.entries(changedMembers);
       for (const [permissionId, change] of updates) {
-        if (permissionId.startsWith('owner-')) continue;
+        if (permissionId.startsWith('owner-') || permissionId.startsWith('admin-')) continue;
         const member = change.member;
         if (change.remove) {
           if (member?.viaDepartment && member?.user?.id) {
@@ -305,7 +334,12 @@ function FolderUsersModal({ open, onClose, folderId, folderName, onSaved }) {
                             <span className="truncate">{item.user?.fullName || 'Unknown user'}</span>
                             {item.isOwner && (
                               <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 font-semibold shrink-0">
-                                Super Admin
+                                Vault Owner
+                              </span>
+                            )}
+                            {item.isAdminRole && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 font-semibold shrink-0">
+                                {item.user?.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Admin'}
                               </span>
                             )}
                             {item.viaDepartment && (
@@ -325,6 +359,14 @@ function FolderUsersModal({ open, onClose, folderId, folderName, onSaved }) {
                           <div className="h-8 px-3 rounded-lg border border-indigo-200 bg-indigo-50 dark:border-indigo-800 dark:bg-indigo-900/20 flex items-center gap-1.5 text-xs font-semibold text-indigo-700 dark:text-indigo-400">
                             <Crown size={13} />
                             <span>Administrator</span>
+                          </div>
+                        ) : item.isAdminRole ? (
+                          <div className="h-8 px-2.5 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20 flex items-center gap-1.5 text-xs font-semibold text-amber-700 dark:text-amber-400" title="Workspace Administrator: full privileges over all company folders">
+                            <Crown size={13} />
+                            <span>Administrator</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-200/70 dark:bg-amber-800/50 text-amber-900 dark:text-amber-200 font-bold ml-1">
+                              Admin Role
+                            </span>
                           </div>
                         ) : canManageMembers ? (
                           <div className="relative flex-1 sm:flex-initial">
@@ -348,7 +390,7 @@ function FolderUsersModal({ open, onClose, folderId, folderName, onSaved }) {
                           </div>
                         )}
 
-                        {canManageMembers && !item.isOwner && (
+                        {canManageMembers && !item.isOwner && !item.isAdminRole && (
                           <button
                             onClick={() => handleRemoveMember(item.id)}
                             className="w-8 h-8 rounded-lg border border-red-200 dark:border-red-800 bg-white dark:bg-slate-800 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center justify-center shrink-0"

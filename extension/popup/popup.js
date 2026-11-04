@@ -626,10 +626,16 @@ async function loadCreds(force) {
       }
     };
 
+    let unSyncedCount = 0;
     for (const entry of byId.values()) {
       let password = '';
       let totpSecret = null;
       let decryptedFields = {};
+
+      const isCompanyItem = entry.vaultName && entry.vaultName !== 'Personal' && entry.vaultName !== 'My Vault';
+      if (isCompanyItem && !entry.myWrappedKey && !entry.shareKey) {
+        unSyncedCount++;
+      }
 
       try {
         // Key-wrapped item (company vault / shared with me).
@@ -739,7 +745,7 @@ async function loadCreds(force) {
     const now = Date.now();
     lockAt = lockMs === Infinity ? Infinity : now + lockMs;
     await chrome.storage.session.set({
-      cache: { ts: now, creds, folders: personalFolders },
+      cache: { ts: now, creds, folders: personalFolders, unSyncedCount },
     });
     startLockTimer();
 
@@ -897,7 +903,36 @@ function showList() {
   }
 
   renderPendingSaveCard();
+  renderSyncWarningCard();
   renderList();
+}
+
+async function renderSyncWarningCard() {
+  const cardEl = $('syncWarningCard');
+  if (!cardEl) return;
+
+  try {
+    const sess = await chrome.storage.session.get('cache');
+    const count = sess?.cache?.unSyncedCount || 0;
+
+    if (count > 0) {
+      cardEl.style.display = 'block';
+      cardEl.innerHTML = `
+        <div style="display:flex;align-items:center;gap:6px;font-weight:600;margin-bottom:3px;color:#fbbf24;">
+          <span style="font-size:13px;">⚠️</span>
+          <span>${count} company item${count > 1 ? 's' : ''} awaiting key sync</span>
+        </div>
+        <div style="font-size:11px;color:#fde68a;line-height:1.35;">
+          Have a vault administrator log in to the web vault (or click "Sync Keys") to synchronize encryption keys for your account.
+        </div>
+      `;
+    } else {
+      cardEl.style.display = 'none';
+      cardEl.innerHTML = '';
+    }
+  } catch {
+    cardEl.style.display = 'none';
+  }
 }
 
 function renderPendingSaveCard() {

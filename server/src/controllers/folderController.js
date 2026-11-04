@@ -458,7 +458,21 @@ const getFolderById = async (req, res) => {
 
     const departmentMembers = await getFolderDepartmentMembers(folder.id);
 
-    res.json({ ...folderData, myWrappedKey, departmentMembers });
+    const workspaceAdmins = await prisma.user.findMany({
+      where: {
+        role: { in: ['SUPER_ADMIN', 'ADMIN'] },
+        isActive: true,
+      },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        role: true,
+      },
+      orderBy: { fullName: 'asc' },
+    });
+
+    res.json({ ...folderData, myWrappedKey, departmentMembers, workspaceAdmins });
   } catch (error) {
     console.error('Get folder by id error:', error);
     res.status(500).json({ message: 'Server error' });

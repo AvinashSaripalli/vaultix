@@ -15,7 +15,7 @@ import FolderMembersSummary from '../../components/folder/FolderMembersSummary';
 import FolderUsersModal from '../../components/folder/FolderUsersModal';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import { safeDecryptText, unwrapItemKey, decryptTextWithAesKey, decryptPrivateKey, encryptTextWithAesKey, encryptValueWithAesKey, generateItemAesKey, encryptFieldsWithAesKey, wrapItemKey, isEncryptedFormat } from '../../utils/crypto';
-import { getWrapRecipients, wrapItemKeysForUsers } from '../../utils/keyWrapping';
+import { getWrapRecipients, wrapItemKeysForUsers, clearKeyWrappingCaches } from '../../utils/keyWrapping';
 import { ITEM_TYPES, serializeCustomFields, CUSTOM_FIELDS_KEY } from '../../utils/itemTypes';
 
 const TYPE_MAP = Object.fromEntries(ITEM_TYPES.map((item) => [item.value, true]));
@@ -382,6 +382,8 @@ function VaultPage() {
           }, {
             headers: { Authorization: `Bearer ${token}` },
           });
+          showToast(`Synchronized encryption keys for ${updates.length} items with team`, 'success');
+          dispatch(fetchPasswordsByVault(selectedVault.id));
         } catch {
           // best-effort
         }
@@ -397,6 +399,77 @@ function VaultPage() {
       isHealingRef.current = false;
     };
   }, [passwords, selectedVault?.id, sessionRsaPrivateKey, sessionRsaPublicKey, sessionMasterPassword, user, token]);
+
+  const [isSyncingKeys, setIsSyncingKeys] = useState(false);
+
+  const handleSyncEncryptionKeys = async () => {
+    if (!selectedVault?.id) return;
+    if (!sessionRsaPrivateKey) {
+      showToast('Please unlock your vault with your Master Password to sync encryption keys.', 'warning');
+      return;
+    }
+
+    try {
+      setIsSyncingKeys(true);
+      clearKeyWrappingCaches();
+      healedItemIdsRef.current.clear();
+
+      const res = await api.get(`/passwords/vault/${selectedVault.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const allVaultPasswords = res.data || [];
+      const withMyKey = allVaultPasswords.filter((p) => p.myWrappedKey);
+
+      if (withMyKey.length === 0) {
+        showToast('No items with your active decryption keys found in this vault.', 'info');
+        return;
+      }
+
+      const updates = [];
+      let totalMissing = 0;
+      let missingPublicKeys = 0;
+
+      for (const item of withMyKey) {
+        try {
+          const recipientIds = await getWrapRecipients(item.folderId, user?.id);
+          const have = new Set(item.wrappedUserIds || [user?.id]);
+          const missing = recipientIds.filter((uid) => !have.has(uid));
+
+          if (missing.length === 0) continue;
+          totalMissing += missing.length;
+
+          const aesKeyJwk = await unwrapItemKey(item.myWrappedKey, sessionRsaPrivateKey);
+          const additions = await wrapItemKeysForUsers(aesKeyJwk, missing);
+
+          if (Object.keys(additions).length > 0) {
+            updates.push({ id: item.id, wrappedKeys: additions });
+          } else {
+            missingPublicKeys += missing.length;
+          }
+        } catch {
+          // skip items that fail to unwrap
+        }
+      }
+
+      if (updates.length > 0) {
+        await api.post(
+          '/passwords/batch-wrap',
+          { wrappedPasswords: updates },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        showToast(`Successfully synchronized encryption keys for ${updates.length} items with authorized team members!`, 'success');
+        dispatch(fetchPasswordsByVault(selectedVault.id));
+      } else if (missingPublicKeys > 0) {
+        showToast('Some team members or administrators have not set up their Master Password yet (public key not found).', 'warning');
+      } else {
+        showToast('All credentials in this vault are already fully synchronized with all authorized team members.', 'success');
+      }
+    } catch (err) {
+      showToast(err.response?.data?.message || err.message || 'Failed to sync keys', 'error');
+    } finally {
+      setIsSyncingKeys(false);
+    }
+  };
 
   const folderPasswords = useMemo(() => {
     if (!selectedFolder?.id) return [];
@@ -933,6 +1006,19 @@ function VaultPage() {
                       </button>
                     )}
 
+                    {isAdminUser && (
+                      <button
+                        type="button"
+                        onClick={handleSyncEncryptionKeys}
+                        disabled={isSyncingKeys}
+                        className="h-9 sm:h-10 inline-flex items-center justify-center gap-1.5 px-3.5 sm:px-4 rounded-xl border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-900/50 text-xs sm:text-sm font-semibold transition shadow-sm disabled:opacity-60"
+                        title="Synchronize Zero-Knowledge encryption keys for newly promoted administrators or team members"
+                      >
+                        <RotateCcw size={14} className={isSyncingKeys ? 'animate-spin text-indigo-600' : 'text-indigo-600 dark:text-indigo-400'} />
+                        <span className="hidden sm:inline">{isSyncingKeys ? 'Syncing...' : 'Sync Keys'}</span>
+                      </button>
+                    )}
+
                 {(selectedFolder ? canAddPassword : (isAdminUser || folders.length > 0)) && (
                   <button
                     onClick={() => {
@@ -995,6 +1081,20 @@ function VaultPage() {
                       >
                         <Users size={16} className="text-slate-500 dark:text-slate-400" />
                         Manage Members
+                      </button>
+                    )}
+
+                    {isAdminUser && (
+                      <button
+                        onClick={() => {
+                          setMenuOpen(false);
+                          handleSyncEncryptionKeys();
+                        }}
+                        disabled={isSyncingKeys}
+                        className="flex items-center gap-3 w-full px-4 py-2 text-sm text-indigo-600 dark:text-indigo-400 font-medium hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
+                      >
+                        <RotateCcw size={16} className={isSyncingKeys ? 'animate-spin' : ''} />
+                        {isSyncingKeys ? 'Syncing Encryption Keys...' : 'Sync Encryption Keys'}
                       </button>
                     )}
 

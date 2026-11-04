@@ -56,6 +56,7 @@ export async function getWrapRecipients(folderId, currentUserId, fallbackPermiss
 
 export function clearKeyWrappingCaches() {
   Object.keys(recipientsCache).forEach((key) => delete recipientsCache[key]);
+  Object.keys(publicKeyCache).forEach((key) => delete publicKeyCache[key]);
 }
 
 export async function wrapItemKeysForUsers(aesKeyJwk, userIds) {
