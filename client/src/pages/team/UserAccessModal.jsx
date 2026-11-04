@@ -398,12 +398,6 @@ export default function UserAccessModal({
                           </span>
 
                           {/* Source indicator */}
-                          {folder.accessSource === 'ROLE_ADMIN' && (
-                            <span className="text-[11px] font-medium text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-md dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800">
-                              Admin Role
-                            </span>
-                          )}
-
                           {folder.accessSource === 'VAULT_OWNER' && (
                             <span className="text-[11px] font-medium text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-md dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800">
                               Vault Owner

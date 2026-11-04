@@ -337,11 +337,6 @@ function FolderUsersModal({ open, onClose, folderId, folderName, onSaved }) {
                                 Vault Owner
                               </span>
                             )}
-                            {item.isAdminRole && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 font-semibold shrink-0">
-                                {item.user?.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Admin'}
-                              </span>
-                            )}
                             {item.viaDepartment && (
                               <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 font-semibold shrink-0">
                                 {item.departmentName}
@@ -355,18 +350,10 @@ function FolderUsersModal({ open, onClose, folderId, folderName, onSaved }) {
                       </div>
 
                       <div className="flex items-center justify-end gap-2 shrink-0 pl-12 sm:pl-0">
-                        {item.isOwner ? (
+                        {item.isOwner || item.isAdminRole ? (
                           <div className="h-8 px-3 rounded-lg border border-indigo-200 bg-indigo-50 dark:border-indigo-800 dark:bg-indigo-900/20 flex items-center gap-1.5 text-xs font-semibold text-indigo-700 dark:text-indigo-400">
                             <Crown size={13} />
                             <span>Administrator</span>
-                          </div>
-                        ) : item.isAdminRole ? (
-                          <div className="h-8 px-2.5 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20 flex items-center gap-1.5 text-xs font-semibold text-amber-700 dark:text-amber-400" title="Workspace Administrator: full privileges over all company folders">
-                            <Crown size={13} />
-                            <span>Administrator</span>
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-200/70 dark:bg-amber-800/50 text-amber-900 dark:text-amber-200 font-bold ml-1">
-                              Admin Role
-                            </span>
                           </div>
                         ) : canManageMembers ? (
                           <div className="relative flex-1 sm:flex-initial">
