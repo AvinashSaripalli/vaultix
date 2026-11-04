@@ -213,7 +213,21 @@ const getVaults = async (req, res) => {
           },
         });
 
-        // Attach departmentMembers + myWrappedKey for each folder so sidebar can compute access correctly
+        const workspaceAdmins = await prisma.user.findMany({
+          where: {
+            role: { in: ['SUPER_ADMIN', 'ADMIN'] },
+            isActive: true,
+          },
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            role: true,
+          },
+          orderBy: { fullName: 'asc' },
+        });
+
+        // Attach departmentMembers + myWrappedKey + workspaceAdmins for each folder so sidebar can compute access correctly
         const allFolderIds = vaults.flatMap((v) => v.folders.map((f) => f.id));
         if (allFolderIds.length) {
           const withKeys = await prisma.folder.findMany({
@@ -227,6 +241,7 @@ const getVaults = async (req, res) => {
               folder.myWrappedKey = allWrapped[req.user.id] || null;
               // Attach departmentMembers for access level display
               folder.departmentMembers = await getFolderDepartmentMembers(folder.id);
+              folder.workspaceAdmins = workspaceAdmins;
             }
           }
         }
@@ -406,6 +421,20 @@ const getVaultBySlug = async (req, res) => {
     }
 
     if (vault.folders?.length) {
+      const workspaceAdmins = await prisma.user.findMany({
+        where: {
+          role: { in: ['SUPER_ADMIN', 'ADMIN'] },
+          isActive: true,
+        },
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          role: true,
+        },
+        orderBy: { fullName: 'asc' },
+      });
+
       const enriched = await Promise.all(
         vault.folders.map(async (folder) => {
           const allWrappedKeys = folder.wrappedKeys || {};
@@ -418,7 +447,7 @@ const getVaultBySlug = async (req, res) => {
           } catch {
             departmentMembers = [];
           }
-          return { ...rest, myWrappedKey, departmentMembers };
+          return { ...rest, myWrappedKey, departmentMembers, workspaceAdmins };
         })
       );
       vault = { ...vault, folders: enriched };

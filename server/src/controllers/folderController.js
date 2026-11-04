@@ -386,13 +386,28 @@ const getFoldersByVault = async (req, res) => {
       });
       for (const f of withKeys) wrappedMap.set(f.id, f.wrappedKeys);
     }
+
+    const workspaceAdmins = await prisma.user.findMany({
+      where: {
+        role: { in: ['SUPER_ADMIN', 'ADMIN'] },
+        isActive: true,
+      },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        role: true,
+      },
+      orderBy: { fullName: 'asc' },
+    });
+
     const result = await Promise.all(
       folders.map(async (folder) => {
         const allWrappedKeys = wrappedMap.get(folder.id) || folder.wrappedKeys || {};
         const myWrappedKey = allWrappedKeys[req.user.id] || null;
         const { wrappedKeys, ...rest } = folder;
         const departmentMembers = await getFolderDepartmentMembers(folder.id);
-        return { ...rest, myWrappedKey, departmentMembers };
+        return { ...rest, myWrappedKey, departmentMembers, workspaceAdmins };
       })
     );
 
