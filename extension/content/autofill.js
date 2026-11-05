@@ -774,8 +774,8 @@
       const urlChanged = location.href !== initialUrl;
       const pwField = findPasswordInput(document);
 
-      // Trigger condition: URL changed OR password field removed from DOM OR user registered
-      if (urlChanged || !pwField || checks >= 6) {
+      // Trigger condition: URL changed OR password field removed from DOM (successful navigation / SPA transition)
+      if (urlChanged || !pwField) {
         clearInterval(spaLoginWatcher);
         spaLoginWatcher = null;
         setTimeout(() => {
@@ -784,7 +784,8 @@
         return;
       }
 
-      if (checks >= 25) {
+      // Stop polling after 12 seconds if user is still on the login form with visible password field
+      if (checks >= 30) {
         clearInterval(spaLoginWatcher);
         spaLoginWatcher = null;
       }
@@ -1088,11 +1089,6 @@
   }
 
   function isLikelyLoginPage(pending) {
-    // If user was registering or changing password, ALWAYS prompt regardless of URL
-    if (pending?.isRegistration || pending?.mode === 'UPDATE') {
-      return false;
-    }
-
     const path = (location.pathname || '').toLowerCase();
     const search = (location.search || '').toLowerCase();
     const combined = path + ' ' + search;
@@ -1103,7 +1099,13 @@
       isSameSource = path === pending.sourcePath.toLowerCase();
     }
     const hasVisiblePw = !!findPasswordInput(document);
-    return hasVisiblePw && (loginPatterns.test(combined) || isSameSource);
+
+    // If password input is still visible on the login page, hold prompt until navigation succeeds
+    if (hasVisiblePw && (loginPatterns.test(combined) || isSameSource)) {
+      return true;
+    }
+
+    return false;
   }
 
   function checkPendingLoginBanner() {
@@ -1474,8 +1476,8 @@
         if (
           isUpdate &&
           pending.existingVaultType === 'COMPANY' &&
-          pending.existingFolderId &&
-          f.id === pending.existingFolderId
+          ((pending.existingVaultId && cv.id === pending.existingVaultId && f.id === pending.existingFolderId) ||
+           (!pending.existingVaultId && f.id === pending.existingFolderId))
         ) {
           opt.selected = true;
         }

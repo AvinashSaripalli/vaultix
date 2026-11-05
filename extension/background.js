@@ -208,6 +208,7 @@ function evaluateAgainstCache(creds, hostname, username, password) {
       status: 'UPDATE',
       existingId: userMatch.id,
       existingName: userMatch.name,
+      existingLogin: userMatch.login || '',
       existingVaultType: isPersonal ? 'PERSONAL' : 'COMPANY',
       existingVaultId: userMatch.vaultId || '',
       existingVaultName: userMatch.vaultName || '',
@@ -472,6 +473,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             pending.existingFolderId = evalResult.existingFolderId || '';
             pending.existingFolderName = evalResult.existingFolderName || '';
             if (evalResult.existingName) pending.name = evalResult.existingName;
+            if (evalResult.existingLogin && !pending.username) pending.username = evalResult.existingLogin;
             await chrome.storage.session.set({ pendingLogin: pending });
           } else if (evalResult.status === 'NEW' && evalResult.suggestedVaultType) {
             pending.suggestedVaultType = evalResult.suggestedVaultType;
@@ -646,7 +648,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         const mode = msg.mode || sess.pendingLogin?.mode || 'NEW';
         const existingId = msg.existingId || sess.pendingLogin?.existingId || null;
         const vaultType = msg.vaultType || 'PERSONAL';
-        const companyVaultId = msg.companyVaultId || '';
+        const companyVaultId = msg.companyVaultId || sess.pendingLogin?.existingVaultId || sess.pendingLogin?.suggestedVaultId || '';
         const requestedNewFolder = (msg.newFolderName || '').trim();
 
         if (!plainPassword) {
@@ -769,12 +771,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
               type: 'LOGIN',
               login: loginUser,
               encryptedPassword,
-              encryptedNote: '',
-              encryptedFields: '',
+              encryptedNote: existingItem?.encryptedNote || '',
+              encryptedFields: existingItem?.encryptedFields || '',
               wrappedKeys,
               url: itemUrl,
-              folderId: targetFolderId,
-              tags: [],
+              folderId: targetFolderId || existingItem?.folderId,
+              tags: Array.isArray(existingItem?.tags)
+                ? existingItem.tags.map((t) => (typeof t === 'string' ? t : t?.name || t?.tag?.name)).filter(Boolean)
+                : [],
               isSensitive: existingItem?.isSensitive !== undefined ? Boolean(existingItem.isSensitive) : Boolean(msg.isSensitive ?? false),
               strengthScore,
               isWeak,

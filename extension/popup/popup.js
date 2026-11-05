@@ -570,6 +570,7 @@ async function loadCreds(force) {
             }
             return {
               ...p,
+              vaultId: vault.id,
               vaultName: vault.name || '',
             };
           });
@@ -732,6 +733,7 @@ async function loadCreds(force) {
         url: entry.url || decryptedFields?.url || '',
         folderId: entry.folderId || entry.folder?.id || '',
         folderName: resolveFolderName(entry),
+        vaultId: entry.vaultId || entry.vault?.id || '',
         vaultName: entry.vaultName || entry.vault?.name || '',
         password,
         totpSecret,
@@ -1018,8 +1020,8 @@ function renderPendingSaveCard() {
             const isTarget =
               isUpdate &&
               pending.existingVaultType === 'COMPANY' &&
-              pending.existingFolderId &&
-              f.id === pending.existingFolderId;
+              ((pending.existingVaultId && cv.id === pending.existingVaultId && f.id === pending.existingFolderId) ||
+               (!pending.existingVaultId && f.id === pending.existingFolderId));
             if (isTarget) {
               opt.selected = true;
             }
