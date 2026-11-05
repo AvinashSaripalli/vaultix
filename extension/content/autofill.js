@@ -414,7 +414,11 @@
 
   function findPasswordInput(within) {
     const scope = within || document;
-    const candidates = [...scope.querySelectorAll('input[type="password"]')].filter(isVisible);
+    const candidates = [
+      ...scope.querySelectorAll(
+        'input[type="password"], input[name*="password" i], input[id*="password" i], input[autocomplete*="password" i], input[data-testid*="password" i]'
+      ),
+    ].filter((el) => isVisible(el) && !isCaptchaOrOtpField(el));
     return candidates[0] || null;
   }
 
@@ -612,11 +616,22 @@
     }
   }
 
+  let lastTypedPassword = '';
+
+  function isPasswordField(el) {
+    if (!el || el.tagName !== 'INPUT') return false;
+    const type = (el.type || '').toLowerCase();
+    if (type === 'password') return true;
+    const nm = `${el.name} ${el.id} ${el.placeholder || ''} ${el.getAttribute('autocomplete') || ''} ${el.getAttribute('data-testid') || ''}`.toLowerCase();
+    return /password|passcode|user_password|login_password/i.test(nm);
+  }
+
   function onInputTrack(e) {
     const el = e.target;
     if (!el || el.tagName !== 'INPUT') return;
-    const type = (el.type || '').toLowerCase();
-    if (type !== 'password' && isCredField(el)) {
+    if (isPasswordField(el)) {
+      lastTypedPassword = el.value || '';
+    } else if (isCredField(el)) {
       const val = (el.value || '').trim();
       if (val) lastTypedUsername = val;
     }
@@ -662,8 +677,24 @@
 
   // ─── Intelligent Password & Username Detection (Login, Register, Update) ──
   function detectFormCredentialFields(scope) {
-    const pwFields = [...(scope || document).querySelectorAll('input[type="password"]')].filter(isVisible);
-    if (!pwFields.length) return null;
+    const root = scope || document;
+    const pwFields = [
+      ...root.querySelectorAll(
+        'input[type="password"], input[name*="password" i], input[id*="password" i], input[autocomplete*="password" i], input[data-testid*="password" i]'
+      ),
+    ].filter((el) => isVisible(el) && !isCaptchaOrOtpField(el));
+
+    if (!pwFields.length) {
+      if (lastTypedPassword) {
+        return {
+          isChangePassword: false,
+          isRegistration: false,
+          password: lastTypedPassword,
+          pwField: null,
+        };
+      }
+      return null;
+    }
 
     // 1. Check for Change Password (Old + New + Confirm)
     const oldField = pwFields.find(p => {
@@ -755,6 +786,9 @@
         (resp) => {
           void chrome.runtime.lastError;
           if (resp && resp.ok && (resp.status === 'NEW' || resp.status === 'UPDATE')) {
+            setTimeout(() => {
+              if (window === window.top) checkPendingLoginBanner();
+            }, 1000);
             watchForSpaLoginSuccess();
           }
         }
@@ -1089,6 +1123,10 @@
   }
 
   function isLikelyLoginPage(pending) {
+    if (pending?.mode === 'UPDATE' || pending?.isRegistration) {
+      return false;
+    }
+
     const path = (location.pathname || '').toLowerCase();
     const search = (location.search || '').toLowerCase();
     const combined = path + ' ' + search;
@@ -1100,12 +1138,7 @@
     }
     const hasVisiblePw = !!findPasswordInput(document);
 
-    // If password input is still visible on the login page, hold prompt until navigation succeeds
-    if (hasVisiblePw && (loginPatterns.test(combined) || isSameSource)) {
-      return true;
-    }
-
-    return false;
+    return hasVisiblePw && (loginPatterns.test(combined) || isSameSource);
   }
 
   function checkPendingLoginBanner() {
@@ -1545,6 +1578,11 @@
     card.append(header, body, footer);
     shadow.append(style, card);
     document.documentElement.appendChild(saveBannerHost);
+    try {
+      chrome.runtime.sendMessage({ type: 'VAULTIX_MARK_PROMPTED' });
+    } catch {
+      /* ignore */
+    }
 
     const dismiss = (neverForSite = false) => {
       closeSaveBanner();

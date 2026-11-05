@@ -349,7 +349,60 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         const maxAge = await lockMs();
         const cacheValid =
           sess.master && sess.cache && (maxAge === Infinity || Date.now() - sess.cache.ts < maxAge);
-        const creds = cacheValid ? sess.cache.creds || [] : [];
+        let creds = cacheValid ? sess.cache.creds || [] : [];
+
+        // If in-memory cache has no match for this site, fetch vault metadata from server
+        const hasSiteMatch = creds.some((c) => hostMatches(hostname, c.url));
+        if (!hasSiteMatch) {
+          const { token } = await chrome.storage.local.get('token');
+          if (token) {
+            try {
+              const rawItems = [...creds];
+              const mine = await bgGet('/my-vault').catch(() => null);
+              if (Array.isArray(mine?.passwords)) {
+                for (const p of mine.passwords) {
+                  if (!rawItems.some((r) => r.id === p.id)) {
+                    rawItems.push({
+                      id: p.id,
+                      name: p.name,
+                      login: p.login,
+                      url: p.url,
+                      folderId: p.folderId,
+                      vaultId: '',
+                      vaultName: 'Personal',
+                      shared: false,
+                    });
+                  }
+                }
+              }
+              const vaults = await bgGet('/vaults').catch(() => null);
+              if (Array.isArray(vaults)) {
+                for (const v of vaults) {
+                  const vPasswords = await bgGet(`/passwords/vault/${v.id}`).catch(() => []);
+                  if (Array.isArray(vPasswords)) {
+                    for (const p of vPasswords) {
+                      if (!rawItems.some((r) => r.id === p.id)) {
+                        rawItems.push({
+                          id: p.id,
+                          name: p.name,
+                          login: p.login,
+                          url: p.url,
+                          folderId: p.folderId,
+                          vaultId: v.id,
+                          vaultName: v.name,
+                          shared: true,
+                        });
+                      }
+                    }
+                  }
+                }
+              }
+              creds = rawItems;
+            } catch (err) {
+              console.warn('[Vaultix] Error fetching vault metadata for matching:', err);
+            }
+          }
+        }
 
         const evalResult = evaluateAgainstCache(creds, hostname, username, password);
         if (evalResult.status === 'EXISTS') {
@@ -504,10 +557,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           }
         }
 
-        if (!msg.fromPopup) {
-          pending.hasPrompted = true;
-          await chrome.storage.session.set({ pendingLogin: pending });
-        }
+        // Do not burn hasPrompted on read; VAULTIX_MARK_PROMPTED sets it when rendered
 
         sendResponse({
           ok: true,
@@ -525,7 +575,24 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
-  // 3b. Reset prompted status (e.g. if page is waiting on 2FA or in-flight login)
+  // 3b. Mark prompted once rendered in DOM
+  if (msg.type === 'VAULTIX_MARK_PROMPTED') {
+    (async () => {
+      try {
+        const sess = await chrome.storage.session.get('pendingLogin');
+        if (sess.pendingLogin) {
+          sess.pendingLogin.hasPrompted = true;
+          await chrome.storage.session.set({ pendingLogin: sess.pendingLogin });
+        }
+        sendResponse({ ok: true });
+      } catch {
+        sendResponse({ ok: false });
+      }
+    })();
+    return true;
+  }
+
+  // 3c. Reset prompted status (e.g. if page is waiting on 2FA or in-flight login)
   if (msg.type === 'VAULTIX_RESET_PROMPTED') {
     (async () => {
       try {
