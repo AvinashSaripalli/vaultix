@@ -434,3 +434,34 @@ export async function generateTOTP(secret, stepSeconds = 30) {
     return null;
   }
 }
+
+
+/**
+ * Derives a zero-knowledge authentication key (AuthKey) from master password and user salt.
+ * Matches client/src/utils/crypto.js so raw master passwords never cross the network.
+ */
+export async function deriveAuthKey(masterPassword, salt) {
+  if (!masterPassword) return '';
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(masterPassword),
+    { name: 'PBKDF2' },
+    false,
+    ['deriveBits']
+  );
+
+  const authSalt = encoder.encode((salt || 'vault-salt') + '-vaultix-auth');
+  const derivedBits = await crypto.subtle.deriveBits(
+    {
+      name: 'PBKDF2',
+      salt: authSalt,
+      iterations: KDF_ITERATIONS_CURRENT,
+      hash: 'SHA-256',
+    },
+    keyMaterial,
+    256
+  );
+
+  const hashArray = Array.from(new Uint8Array(derivedBits));
+  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+}

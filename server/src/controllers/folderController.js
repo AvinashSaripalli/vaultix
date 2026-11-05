@@ -487,7 +487,23 @@ const getFolderById = async (req, res) => {
       orderBy: { fullName: 'asc' },
     });
 
-    res.json({ ...folderData, myWrappedKey, departmentMembers, workspaceAdmins });
+    const safePasswords = (folder.passwords || []).map((pw) => {
+      const allWrappedKeys = pw.wrappedKeys || {};
+      const { wrappedKeys: _wk, ...rest } = pw;
+      return {
+        ...rest,
+        myWrappedKey: allWrappedKeys[req.user.id] || null,
+        wrappedUserIds: Object.keys(allWrappedKeys),
+      };
+    });
+
+    res.json({
+      ...folderData,
+      passwords: safePasswords,
+      myWrappedKey,
+      departmentMembers,
+      workspaceAdmins,
+    });
   } catch (error) {
     console.error('Get folder by id error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -637,6 +653,40 @@ const deleteFolderPermission = async (req, res) => {
     await prisma.folderPermission.delete({
       where: { id },
     });
+
+    // Prune removed user from folder and password wrappedKeys (SEC-08)
+    try {
+      const removedUserId = existing.userId;
+      const currentFolder = await prisma.folder.findUnique({
+        where: { id: existing.folderId },
+        select: { wrappedKeys: true },
+      });
+      if (currentFolder?.wrappedKeys && currentFolder.wrappedKeys[removedUserId]) {
+        const updatedKeys = { ...currentFolder.wrappedKeys };
+        delete updatedKeys[removedUserId];
+        await prisma.folder.update({
+          where: { id: existing.folderId },
+          data: { wrappedKeys: updatedKeys },
+        });
+      }
+
+      const passwordsInFolder = await prisma.passwordEntry.findMany({
+        where: { folderId: existing.folderId },
+        select: { id: true, wrappedKeys: true },
+      });
+      for (const pw of passwordsInFolder) {
+        if (pw.wrappedKeys && pw.wrappedKeys[removedUserId]) {
+          const updatedKeys = { ...pw.wrappedKeys };
+          delete updatedKeys[removedUserId];
+          await prisma.passwordEntry.update({
+            where: { id: pw.id },
+            data: { wrappedKeys: updatedKeys },
+          });
+        }
+      }
+    } catch (pruneErr) {
+      console.error('Error pruning revoked keys:', pruneErr);
+    }
 
     await prisma.activityLog.create({
       data: {

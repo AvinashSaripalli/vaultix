@@ -144,16 +144,40 @@ export async function parseImportFile(file) {
   return { rows: [], format };
 }
 
+// Sanitize spreadsheet formula injection characters (=, +, -, @, \t, \r) (SEC-06)
+function sanitizeSpreadsheetValue(value) {
+  if (typeof value !== 'string') return value;
+  const trimmed = value.trimStart();
+  if (['=', '+', '-', '@', '\t', '\r'].some((prefix) => trimmed.startsWith(prefix))) {
+    return `'${value}`;
+  }
+  return value;
+}
+
+function sanitizeRowsForSpreadsheet(rows) {
+  if (!Array.isArray(rows)) return [];
+  return rows.map((row) => {
+    if (!row || typeof row !== 'object') return row;
+    const sanitized = {};
+    for (const [k, v] of Object.entries(row)) {
+      sanitized[k] = sanitizeSpreadsheetValue(v);
+    }
+    return sanitized;
+  });
+}
+
 // Convert decrypted internal rows into the requested export format string.
 export function buildExportContent(rows, format) {
   if (format === 'csv') {
-    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const safeRows = sanitizeRowsForSpreadsheet(rows);
+    const worksheet = XLSX.utils.json_to_sheet(safeRows);
     const csv = XLSX.utils.sheet_to_csv(worksheet);
     return { content: csv, mime: 'text/csv', ext: 'csv' };
   }
 
   if (format === 'excel') {
-    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const safeRows = sanitizeRowsForSpreadsheet(rows);
+    const worksheet = XLSX.utils.json_to_sheet(safeRows);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Passwords');
     const buffer = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' });

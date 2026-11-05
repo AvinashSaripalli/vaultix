@@ -295,6 +295,13 @@ const logout = async (req, res) => {
           where: { id: stored.id },
           data: { revokedAt: new Date() },
         });
+        // Invalidate current user's access tokens (SEC-07)
+        if (stored.userId) {
+          await prisma.user.update({
+            where: { id: stored.userId },
+            data: { tokenVersion: { increment: 1 } },
+          }).catch(() => {});
+        }
       }
     }
 
@@ -865,18 +872,24 @@ const changePassword = async (req, res) => {
     }
 
     const passwordHash = await bcrypt.hash(newPassword, 12);
+    // Password changed — update hash and increment tokenVersion to invalidate existing access tokens (SEC-07)
     await prisma.user.update({
       where: { id: userId },
-      data: { passwordHash },
+      data: {
+        passwordHash,
+        tokenVersion: { increment: 1 },
+      },
     });
 
-    // Password changed — revoke every existing session, then immediately mint
-    // a fresh one for the current device so the user isn't logged out here.
+    // Revoke all existing refresh sessions, then immediately mint a fresh one for this device
     await revokeAllRefreshTokens(userId);
     const { token: sessionToken } = await createRefreshSession(userId, req);
     setRefreshTokenCookie(res, sessionToken);
 
-    res.json({ message: 'Password changed successfully' });
+    const refreshedUser = await prisma.user.findUnique({ where: { id: userId } });
+    const freshAccessToken = signToken(refreshedUser);
+
+    res.json({ message: 'Password changed successfully', token: freshAccessToken });
   } catch (error) {
     console.error('Change password error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -1212,6 +1225,40 @@ const reencryptPasswords = async (req, res) => {
 // Stores a recovery key + an escrowed (recovery-key-encrypted) copy of the RSA
 // private key. Called during master-password setup so that a forgotten master
 // password can be recovered without losing vault data.
+
+// Encrypted storage helper for recovery keys to prevent plaintext exposure in database dumps (SEC-01)
+const getRecoveryKeyStorageSecret = () => {
+  const secret = process.env.RECOVERY_PEPPER_SECRET || process.env.JWT_ACCESS_SECRET || 'vaultix-recovery-storage-pepper';
+  return crypto.createHash('sha256').update(secret).digest();
+};
+
+const encryptRecoveryKeyForStorage = (key) => {
+  if (!key) return null;
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', getRecoveryKeyStorageSecret(), iv);
+  let encrypted = cipher.update(key.trim(), 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+  const authTag = cipher.getAuthTag().toString('hex');
+  return `enc:v1:${iv.toString('hex')}:${authTag}:${encrypted}`;
+};
+
+const decryptRecoveryKeyFromStorage = (stored) => {
+  if (!stored) return null;
+  // Backward compatibility: if stored in plaintext (legacy accounts), return as-is
+  if (!stored.startsWith('enc:v1:')) return stored;
+  try {
+    const [, , ivHex, tagHex, cipherHex] = stored.split(':');
+    const decipher = crypto.createDecipheriv('aes-256-gcm', getRecoveryKeyStorageSecret(), Buffer.from(ivHex, 'hex'));
+    decipher.setAuthTag(Buffer.from(tagHex, 'hex'));
+    let decrypted = decipher.update(cipherHex, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
+  } catch (err) {
+    console.error('Failed to decrypt stored recovery key:', err);
+    return null;
+  }
+};
+
 const setupRecoveryKey = async (req, res) => {
   try {
     const { recoveryKey, escrow } = req.body;
@@ -1236,7 +1283,7 @@ const setupRecoveryKey = async (req, res) => {
 
     await prisma.user.update({
       where: { id: userId },
-      data: { recoveryKey, recoveryKeyEscrow: escrow },
+      data: { recoveryKey: encryptRecoveryKeyForStorage(recoveryKey), recoveryKeyEscrow: escrow },
     });
 
     res.json({ message: 'Recovery key saved successfully' });
@@ -1300,7 +1347,7 @@ const requestMasterRecoveryKey = async (req, res) => {
             <tr>
               <td align="center" style="padding:28px 20px 24px">
                 <div style="font-family:'SF Mono',Consolas,'Liberation Mono',Menlo,Monaco,monospace;font-size:25px;font-weight:700;letter-spacing:4px;color:#10b981;word-break:break-all;line-height:1.3;text-shadow:0 0 16px rgba(16,185,129,0.35)">
-                  ${user.recoveryKey}
+                  ${decryptRecoveryKeyFromStorage(user.recoveryKey)}
                 </div>
                 <p style="margin:14px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:12px;line-height:1.5;color:#94a3b8">
                   Store this emergency key offline in a secure password manager or physical safe. It allows unauthenticated master vault reset.
@@ -1366,9 +1413,10 @@ const resetMasterPasswordWithRecoveryKey = async (req, res) => {
       return res.status(400).json({ message: 'No recovery key is set up for this account' });
     }
 
-    // Constant-ish compare to avoid trivial timing leaks.
+    // Decrypt stored recovery key for verification (SEC-01)
+    const storedRecoveryKey = decryptRecoveryKeyFromStorage(user.recoveryKey);
     const keyMatches =
-      Buffer.from(user.recoveryKey || '').toString().toLowerCase() ===
+      Buffer.from(storedRecoveryKey || '').toString().toLowerCase() ===
       Buffer.from(recoveryKey || '').toString().trim().toLowerCase();
 
     if (!keyMatches) {

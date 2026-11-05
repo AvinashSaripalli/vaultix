@@ -304,7 +304,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         cache.ts = Date.now();
         chrome.storage.session.set({ cache }).catch(() => {});
 
+        // Validate frame origin to prevent cross-origin iframe credential leakage (SEC-03)
+        const frameHost = hostOf(sender.url || '');
         const tabHost = hostOf(sender.tab?.url || '');
+        if (sender.frameId && sender.frameId > 0 && frameHost && tabHost && frameHost !== tabHost) {
+          sendResponse({ ok: true, creds: [], unlocked: true });
+          return;
+        }
+
         const creds = (cache.creds || []).filter(
           (c) => tabHost && hostMatches(tabHost, c.url)
         );

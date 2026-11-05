@@ -7,6 +7,7 @@ import {
   unwrapItemKey,
   decryptValueWithAesKey,
   decryptFieldsWithAesKey,
+  deriveAuthKey,
 } from '../lib/crypto.js';
 import { apiLogin, apiGet, apiPost, apiRefresh } from '../lib/api.js';
 
@@ -228,7 +229,7 @@ async function onLogin() {
     // Validate the master password against the server first, so a stale or
     // mistyped value fails loudly instead of silently producing an empty vault.
     try {
-      await securePost('/auth/verify-master-password', { masterPassword: master });
+      await verifyMasterPasswordWithServer(master);
     } catch (verifyErr) {
       await chrome.storage.local.remove(['token', 'refreshToken', 'user']);
       token = '';
@@ -261,7 +262,7 @@ async function onUnlock() {
   try {
     // Server-verify before storing, so a wrong master is never cached.
     try {
-      await securePost('/auth/verify-master-password', { masterPassword: master });
+      await verifyMasterPasswordWithServer(master);
     } catch (verifyErr) {
       $('unlockError').textContent =
         verifyErr.message === 'Invalid master password'
@@ -435,7 +436,7 @@ async function loadCreds(force) {
     // wrong master is surfaced immediately instead of silently failing decrypt.
     let masterVerified = false;
     try {
-      await securePost('/auth/verify-master-password', { masterPassword: master });
+      await verifyMasterPasswordWithServer(master);
       masterVerified = true;
     } catch (err) {
       if (err.message === 'Invalid master password') {

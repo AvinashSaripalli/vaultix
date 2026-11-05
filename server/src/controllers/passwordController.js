@@ -750,6 +750,17 @@ const updatePassword = async (req, res) => {
       if (!targetFolder || targetFolder.vaultId !== existingPassword.vaultId) {
         return res.status(400).json({ message: 'Folder does not belong to the same vault' });
       }
+
+      // Verify that caller has write access to the target folder (SEC-04)
+      const targetAccess = await getFolderAccess(folderId, req.user.id);
+      if (
+        !targetAccess ||
+        !['ADMINISTRATOR', 'READ_WRITE', 'FULL_ACCESS'].includes(targetAccess)
+      ) {
+        return res.status(403).json({
+          message: 'Access denied: You do not have permission to move items into the target folder',
+        });
+      }
     }
 
     const effectiveFolderId = folderId || existingPassword.folderId;
@@ -1294,7 +1305,7 @@ const getTrash = async (req, res) => {
         orderBy: { deletedAt: 'desc' },
       });
 
-      return res.json(trash);
+      return res.json(trash.map((pw) => toClientPassword(pw, req.user.id)));
     }
 
     // Check folder permissions for non-admin users
@@ -1335,7 +1346,7 @@ const getTrash = async (req, res) => {
       orderBy: { deletedAt: 'desc' },
     });
 
-    res.json(trash);
+    res.json(trash.map((pw) => toClientPassword(pw, req.user.id)));
   } catch (error) {
     console.error('Get trash error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -1749,8 +1760,6 @@ const batchWrapKeys = async (req, res) => {
             where: { id: passwordId },
             data: {
               wrappedKeys: mergedWrappedKeys,
-              ...(item.encryptedPassword && { encryptedPassword: item.encryptedPassword }),
-              ...(item.encryptedNote !== undefined && { encryptedNote: item.encryptedNote }),
             },
           });
           count += 1;
