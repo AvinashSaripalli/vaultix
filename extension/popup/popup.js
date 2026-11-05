@@ -207,6 +207,30 @@ async function securePost(path, body, { retried = false } = {}) {
   }
 }
 
+async function verifyMasterPasswordWithServer(master) {
+  const salt = user?.encryptionSalt || null;
+  const authKey = await deriveAuthKey(master, salt);
+  try {
+    return await securePost('/auth/verify-master-password', {
+      authKey,
+      legacyMasterPassword: master,
+    });
+  } catch (err) {
+    if (salt) {
+      try {
+        const defaultAuthKey = await deriveAuthKey(master, null);
+        return await securePost('/auth/verify-master-password', {
+          authKey: defaultAuthKey,
+          legacyMasterPassword: master,
+        });
+      } catch {
+        // fall through to rethrow original error below
+      }
+    }
+    throw err;
+  }
+}
+
 async function onLogin() {
   const email = $('loginEmail').value.trim();
   const password = $('loginPassword').value;
