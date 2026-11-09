@@ -44,6 +44,24 @@
     if (msg.type === 'VAULTIX_PROMPT_PENDING') {
       if (window === window.top) checkPendingLoginBanner();
       sendResponse({ ok: true });
+      return;
+    }
+    if (msg.type === 'VAULTIX_VAULT_MUTATED') {
+      window.postMessage({ type: 'VAULTIX_VAULT_MUTATED', detail: msg.detail, fromExtension: true }, '*');
+      sendResponse({ ok: true });
+      return;
+    }
+  });
+
+  window.addEventListener('message', (event) => {
+    if (event.source !== window) return;
+    if (event.data?.type === 'VAULTIX_VAULT_MUTATED' && !event.data?.fromExtension) {
+      try {
+        chrome.runtime.sendMessage({
+          type: 'VAULTIX_VAULT_MUTATED',
+          detail: event.data.detail,
+        }).catch(() => {});
+      } catch {}
     }
   });
 

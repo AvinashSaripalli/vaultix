@@ -62,6 +62,7 @@ import {
 } from '../../features/vault/vaultSlice';
 
 import VaultPolicyModal from '../../components/vault/VaultPolicyModal';
+import { subscribeToVaultMutations } from '../../utils/vaultSync';
 
 function VaultPage() {
   const dispatch = useDispatch();
@@ -281,6 +282,20 @@ function VaultPage() {
       dispatch(fetchVaultFolderTrash(selectedVault.id));
     }
   }, [dispatch, selectedVault?.id, trashOpen, canViewTrash]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToVaultMutations(() => {
+      if (selectedVault?.id) {
+        dispatch(fetchPasswordsByVault(selectedVault.id));
+        dispatch(fetchFoldersByVault(selectedVault.id));
+        if (canViewTrash) {
+          dispatch(fetchVaultTrash(selectedVault.id));
+          dispatch(fetchVaultFolderTrash(selectedVault.id));
+        }
+      }
+    });
+    return unsubscribe;
+  }, [dispatch, selectedVault?.id, canViewTrash]);
 
   const healedItemIdsRef = useRef(new Set());
   const isHealingRef = useRef(false);

@@ -210,6 +210,9 @@ function AddMyVaultPasswordModal({
         isWeak: isLogin ? strengthScore <= 2 : false,
         isOld: false,
         isAtRisk: atRisk,
+        rawPassword: formData.encryptedPassword,
+        rawFields: fieldsPayload,
+        rawNote: formData.encryptedNote,
       };
 
       onSubmit(payload);

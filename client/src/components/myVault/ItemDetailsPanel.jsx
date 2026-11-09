@@ -118,6 +118,24 @@ function PersonalAccountCard({
     })();
   }, [item, sessionMasterPassword, salt, decryptAll]);
 
+  useEffect(() => {
+    const handleSync = (e) => {
+      const detail = e.detail;
+      if (!detail || detail.id !== item?.id) return;
+      if (detail.decryptedPassword !== undefined) {
+        setDecryptedPassword(detail.decryptedPassword);
+      }
+      if (detail.decryptedFields !== undefined) {
+        setDecryptedFields(detail.decryptedFields);
+      }
+      if (detail.decryptedNote !== undefined) {
+        setDecryptedNote(detail.decryptedNote);
+      }
+    };
+    window.addEventListener('vaultix:item-updated', handleSync);
+    return () => window.removeEventListener('vaultix:item-updated', handleSync);
+  }, [item?.id]);
+
   const typeMeta = getItemTypeMeta(item.type);
 
   const copyText = (value, label) => {

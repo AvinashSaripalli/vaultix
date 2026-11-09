@@ -32,6 +32,7 @@ import {
   CUSTOM_FIELDS_KEY,
 } from '../../utils/itemTypes';
 import { luhnCheck, validateExpiry, validateCVV, validatePIN } from '../../utils/cardValidation';
+import { notifyVaultMutated } from '../../utils/vaultSync';
 
 const SUGGESTED_TAGS = [
   'Production',
@@ -358,6 +359,19 @@ function AddPasswordModal({ prefill, prefillName, onPrefillConsumed }) {
       );
 
       if (createPassword.fulfilled.match(result)) {
+        notifyVaultMutated({
+          id: result.payload?.id,
+          folderId: payload.folderId,
+          vaultId: payload.vaultId,
+          name: payload.name,
+          login: payload.login,
+          url: payload.url,
+          action: 'CREATE',
+          decryptedPassword: formState.password,
+          decryptedFields: finalFields,
+          decryptedNote: formState.note || null,
+          updatedAt: result.payload?.updatedAt || new Date().toISOString(),
+        });
         resetForm();
       } else {
         setLocalError(result.payload || 'Failed to create password');

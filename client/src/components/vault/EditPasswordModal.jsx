@@ -21,6 +21,7 @@ import {
   clearCompanyPasswordEditCache,
   getCompanyPasswordEditCache,
 } from '../../utils/companyPasswordEditCache';
+import { notifyVaultMutated } from '../../utils/vaultSync';
 import api from '../../services/api';
 import {
   setSessionRsaPrivateKey,
@@ -360,6 +361,13 @@ function EditPasswordModal() {
 
       if (updatePassword.fulfilled.match(result)) {
         clearCompanyPasswordEditCache(selectedPassword.id);
+        notifyVaultMutated({
+          id: selectedPassword.id,
+          action: 'UPDATE',
+          password: formDataPayload.password,
+          note: formDataPayload.note,
+          fields: fieldsPayload,
+        });
         dispatch(closeEditPasswordModal());
       } else {
         setLocalError(result.payload || 'Failed to update password');

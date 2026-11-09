@@ -405,17 +405,33 @@ async function loadCreds(force) {
       cached.cache.creds.some((c) => 'folderName' in c) &&
       (lockMs === Infinity || Date.now() - cached.cache.ts < lockMs)
     ) {
-      // Slide activity timestamp on active access
-      cached.cache.ts = Date.now();
-      chrome.storage.session.set({ cache: cached.cache }).catch(() => {});
-      creds = cached.cache.creds;
-      lockAt = lockMs === Infinity ? Infinity : cached.cache.ts + lockMs;
-      showList();
-      startLockTimer();
-      return;
+      let isStale = false;
+      try {
+        const syncStatus = await secureGet('/auth/sync-status');
+        if (
+          syncStatus &&
+          syncStatus.revision !== undefined &&
+          (cached.cache.revision === 0 ||
+            (cached.cache.revision !== undefined && syncStatus.revision > cached.cache.revision))
+        ) {
+          isStale = true;
+        }
+      } catch {
+        // Fall back gracefully to cache if offline
+      }
+
+      if (!isStale) {
+        // Slide activity timestamp on active access
+        cached.cache.ts = Date.now();
+        chrome.storage.session.set({ cache: cached.cache }).catch(() => {});
+        creds = cached.cache.creds;
+        lockAt = lockMs === Infinity ? Infinity : cached.cache.ts + lockMs;
+        showList();
+        startLockTimer();
+        return;
+      }
     }
-    // An empty cache is never trusted: it usually means a previous fetch or
-    // decrypt failed, so refetch instead of showing a false "no logins".
+    // An empty or stale cache triggers a fresh decrypt from server
   }
 
   const sess = await chrome.storage.session.get(['master', 'privKey']);
@@ -771,8 +787,17 @@ async function loadCreds(force) {
     creds = decrypted;
     const now = Date.now();
     lockAt = lockMs === Infinity ? Infinity : now + lockMs;
+
+    let syncRevision = now;
+    try {
+      const syncStatus = await secureGet('/auth/sync-status');
+      if (syncStatus && syncStatus.revision !== undefined) {
+        syncRevision = syncStatus.revision;
+      }
+    } catch {}
+
     await chrome.storage.session.set({
-      cache: { ts: now, creds, folders: personalFolders, unSyncedCount },
+      cache: { ts: now, creds, folders: personalFolders, unSyncedCount, revision: syncRevision },
     });
     startLockTimer();
 

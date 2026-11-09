@@ -1702,6 +1702,39 @@ const verifyEmail = async (req, res) => {
   }
 };
 
+const getSyncStatus = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const latest = await prisma.passwordEntry.findFirst({
+      where: {
+        OR: [
+          { createdById: userId },
+          { vault: { permissions: { some: { userId } } } },
+        ],
+      },
+      orderBy: { updatedAt: 'desc' },
+      select: { updatedAt: true },
+    });
+
+    const unread = await prisma.notification.count({
+      where: {
+        userId,
+        isRead: false,
+      },
+    });
+
+    const revision = latest?.updatedAt ? new Date(latest.updatedAt).getTime() : 0;
+    res.json({
+      revision,
+      unread,
+      serverTime: Date.now(),
+    });
+  } catch (error) {
+    console.error('getSyncStatus error:', error);
+    res.status(500).json({ message: 'Sync check failed' });
+  }
+};
+
 module.exports = {
   register,
   saveLoginActivity,
@@ -1709,6 +1742,7 @@ module.exports = {
   refresh,
   logout,
   me,
+  getSyncStatus,
   setMasterPassword,
   setupRecoveryKey,
   requestMasterRecoveryKey,

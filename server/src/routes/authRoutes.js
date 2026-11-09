@@ -17,6 +17,7 @@ router.post('/logout', authController.logout);
 router.post('/forgot-password', authLimiter, authController.requestPasswordReset);
 router.post('/reset-password', sensitiveLimiter, authController.resetPassword);
 router.get('/me', authenticate, authController.me);
+router.get('/sync-status', authenticate, authController.getSyncStatus);
 router.post('/set-master-password', authenticate, authController.setMasterPassword);
 router.post('/setup-recovery-key', authenticate, authController.setupRecoveryKey);
 router.post('/forgot-master-password', authLimiter, authController.requestMasterRecoveryKey);

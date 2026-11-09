@@ -20,6 +20,7 @@ import VerifyMasterPasswordModal from '../../components/security/VerifyMasterPas
 import ConfirmModal from '../../components/common/ConfirmModal';
 import FolderHistoryPanel from '../../components/folder/FolderHistoryPanel';
 import { showToast } from '../../utils/toast';
+import { notifyVaultMutated, subscribeToVaultMutations } from '../../utils/vaultSync';
 
 import {
   createMyVaultFolder,
@@ -125,6 +126,17 @@ function MyVaultPage() {
     }
   }, [dispatch, trashOpen]);
 
+  useEffect(() => {
+    const unsubscribe = subscribeToVaultMutations(() => {
+      dispatch(fetchMyVault());
+      if (trashOpen) {
+        dispatch(fetchMyVaultTrash());
+        dispatch(fetchMyVaultFolderTrash());
+      }
+    });
+    return unsubscribe;
+  }, [dispatch, trashOpen]);
+
   const filteredPasswords = useMemo(() => {
     if (!selectedFolderId) return passwords;
 
@@ -176,6 +188,7 @@ function MyVaultPage() {
     );
 
     if (updateMyVaultFolder.fulfilled.match(result)) {
+      notifyVaultMutated({ id: selectedFolderForEdit.id, action: 'UPDATE_FOLDER', vaultType: 'personal' });
       setEditFolderOpen(false);
       setSelectedFolderForEdit(null);
     }
@@ -189,6 +202,19 @@ function MyVaultPage() {
     const result = await dispatch(createMyVaultPassword(payload));
 
     if (createMyVaultPassword.fulfilled.match(result)) {
+      notifyVaultMutated({
+        id: result.payload?.id,
+        folderId: payload.folderId,
+        action: 'CREATE',
+        vaultType: 'personal',
+        name: payload.name,
+        login: payload.login,
+        url: payload.url,
+        decryptedPassword: payload.rawPassword,
+        decryptedFields: payload.rawFields,
+        decryptedNote: payload.rawNote,
+        updatedAt: result.payload?.updatedAt || new Date().toISOString(),
+      });
       setPasswordModalOpen(false);
       setAddChildParent(null);
     }
@@ -210,6 +236,19 @@ function MyVaultPage() {
     );
 
     if (updateMyVaultPassword.fulfilled.match(result)) {
+      notifyVaultMutated({
+        id: selectedPasswordForEdit.id,
+        folderId: data.folderId,
+        action: 'UPDATE',
+        vaultType: 'personal',
+        name: data.name,
+        login: data.login,
+        url: data.url,
+        decryptedPassword: data.rawPassword,
+        decryptedFields: data.rawFields,
+        decryptedNote: data.rawNote,
+        updatedAt: result.payload?.updatedAt || new Date().toISOString(),
+      });
       setEditPasswordOpen(false);
       setSelectedPasswordForEdit(null);
     }
@@ -228,10 +267,12 @@ function MyVaultPage() {
       dispatch(fetchMyVault());
       dispatch(fetchMyVaultFolderTrash());
       dispatch(fetchMyVaultTrash());
+      notifyVaultMutated({ id: item.id, action: 'DELETE_FOLDER', vaultType: 'personal' });
       showToast(`Folder "${item.name}" and its passwords moved to Trash`, 'info');
     } else if (type === 'password') {
       await dispatch(deleteMyVaultPassword(item.id));
       dispatch(fetchMyVaultTrash());
+      notifyVaultMutated({ id: item.id, action: 'DELETE', vaultType: 'personal' });
       showToast(`${item.name} moved to Trash`, 'info', 6000, {
         label: 'Undo',
         onClick: () => handleRestoreTrashItem(item),
@@ -282,6 +323,7 @@ function MyVaultPage() {
   const handleRestoreTrashFolder = async (folder) => {
     const result = await dispatch(restoreMyVaultFolder(folder.id));
     if (restoreMyVaultFolder.fulfilled.match(result)) {
+      notifyVaultMutated({ id: folder.id, action: 'RESTORE_FOLDER', vaultType: 'personal' });
       dispatch(fetchMyVault());
       dispatch(fetchMyVaultFolderTrash());
       dispatch(fetchMyVaultTrash());
@@ -298,6 +340,7 @@ function MyVaultPage() {
   const handleRestoreTrashItem = async (item) => {
     const result = await dispatch(restoreMyVaultPassword(item.id));
     if (restoreMyVaultPassword.fulfilled.match(result)) {
+      notifyVaultMutated({ id: item.id, action: 'RESTORE', vaultType: 'personal' });
       dispatch(fetchMyVault());
       dispatch(fetchMyVaultTrash());
       dispatch(fetchMyVaultFolderTrash());
@@ -323,6 +366,7 @@ function MyVaultPage() {
     if (confirmPurge.type === 'folder') {
       const result = await dispatch(purgeMyVaultFolder(itemToPurge.id));
       if (purgeMyVaultFolder.fulfilled.match(result)) {
+        notifyVaultMutated({ id: itemToPurge.id, action: 'PURGE_FOLDER', vaultType: 'personal' });
         dispatch(fetchMyVaultFolderTrash());
         dispatch(fetchMyVaultTrash());
         showToast(`Folder "${itemToPurge.name}" permanently deleted`, 'info');
@@ -332,6 +376,7 @@ function MyVaultPage() {
     } else {
       const result = await dispatch(purgeMyVaultPassword(itemToPurge.id));
       if (purgeMyVaultPassword.fulfilled.match(result)) {
+        notifyVaultMutated({ id: itemToPurge.id, action: 'PURGE', vaultType: 'personal' });
         dispatch(fetchMyVaultTrash());
         showToast(`"${itemToPurge.name}" permanently deleted`, 'info');
       } else {

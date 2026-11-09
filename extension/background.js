@@ -283,8 +283,57 @@ async function fetchAvailableVaultFolders(user) {
   return { personalFolders, companyVaults };
 }
 
+function broadcastToTabs(type, detail) {
+  try {
+    chrome.tabs.query({}, (tabs) => {
+      if (chrome.runtime.lastError || !Array.isArray(tabs)) return;
+      for (const tab of tabs) {
+        if (tab.id) {
+          chrome.tabs.sendMessage(tab.id, { type, detail }).catch(() => {});
+        }
+      }
+    });
+  } catch {}
+}
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!msg || !msg.type) return;
+
+  if (msg.type === 'VAULTIX_VAULT_MUTATED') {
+    (async () => {
+      try {
+        const detail = msg.detail || {};
+        const sess = await chrome.storage.session.get('cache');
+        if (sess.cache) {
+          const cache = sess.cache;
+          if (Array.isArray(cache.creds)) {
+            if (detail.action === 'UPDATE' && detail.id) {
+              const idx = cache.creds.findIndex((c) => c.id === detail.id);
+              if (idx !== -1) {
+                if (detail.decryptedPassword !== undefined) {
+                  cache.creds[idx].password = detail.decryptedPassword;
+                }
+                if (detail.name) cache.creds[idx].name = detail.name;
+                if (detail.login) cache.creds[idx].login = detail.login;
+                if (detail.url) cache.creds[idx].url = detail.url;
+                if (detail.decryptedFields) cache.creds[idx].fields = detail.decryptedFields;
+              }
+            } else if (detail.action === 'DELETE' && detail.id) {
+              cache.creds = cache.creds.filter((c) => c.id !== detail.id);
+            }
+          }
+          // Mark revision dirty so next popup or access refetches fresh data
+          cache.revision = 0;
+          cache.ts = Date.now();
+          await chrome.storage.session.set({ cache });
+        }
+        sendResponse({ ok: true });
+      } catch {
+        sendResponse({ ok: false });
+      }
+    })();
+    return true;
+  }
 
   // 1. Host-filtered credentials for autofill
   if (msg.type === 'VAULTIX_GET_CREDS') {
@@ -920,6 +969,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             },
           });
           await chrome.storage.session.remove('pendingLogin');
+          broadcastToTabs('VAULTIX_VAULT_MUTATED', { id: savedEntry.id, action: mode === 'UPDATE' ? 'UPDATE' : 'CREATE' });
 
           sendResponse({
             ok: true,
@@ -1068,6 +1118,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           },
         });
         await chrome.storage.session.remove('pendingLogin');
+        broadcastToTabs('VAULTIX_VAULT_MUTATED', { id: savedEntry.id, action: mode === 'UPDATE' ? 'UPDATE' : 'CREATE' });
 
         sendResponse({
           ok: true,
@@ -1161,3 +1212,26 @@ function hostMatches(tabHost, entryUrl) {
     tabHost.endsWith(`.${credHost}`)
   );
 }
+
+// Periodic background sync: check if server vault items were modified
+try {
+  chrome.alarms.create('vaultix_sync_alarm', { periodInMinutes: 2 });
+  chrome.alarms.onAlarm.addListener(async (alarm) => {
+    if (alarm.name === 'vaultix_sync_alarm') {
+      try {
+        const sess = await chrome.storage.session.get(['cache', 'master']);
+        if (!sess.cache || !sess.master) return;
+        const status = await bgGet('/auth/sync-status');
+        if (
+          status &&
+          status.revision !== undefined &&
+          sess.cache.revision !== undefined &&
+          status.revision > sess.cache.revision
+        ) {
+          sess.cache.revision = 0; // Mark dirty
+          await chrome.storage.session.set({ cache: sess.cache });
+        }
+      } catch {}
+    }
+  });
+} catch {}

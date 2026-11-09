@@ -38,6 +38,7 @@ import { TYPE_FIELDS, isFieldMasked, maskFieldValue, parseCustomFields, CUSTOM_F
 import { detectCardNetwork, formatCardNumber } from '../../utils/cardValidation';
 import ItemTypeBadge from '../myVault/ItemTypeBadge';
 import { formatItemAction, resolveFieldLabel, getActionBadge, getActionIcon } from '../../utils/activityActionFormatter';
+import { notifyVaultMutated } from '../../utils/vaultSync';
 
 const SENSITIVE_VERIFY_TTL_MS = 3 * 60 * 1000; // 3 minutes per item
 
@@ -169,13 +170,33 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
     };
   }, [selectedPasswordId, activeTab, token]);
 
-  // Pre-decrypt typed (fields) items as soon as they are selected so masked
+  useEffect(() => {
+    const handleItemUpdated = (e) => {
+      const { id, password, note, fields } = e.detail || {};
+      if (!id) return;
+      if (password !== undefined) {
+        setDecryptedPasswords((prev) => ({ ...prev, [id]: password }));
+      }
+      if (note !== undefined) {
+        setDecryptedNotes((prev) => ({ ...prev, [id]: note }));
+      }
+      if (fields !== undefined) {
+        setDecryptedFieldsMap((prev) => ({ ...prev, [id]: fields }));
+      }
+    };
+
+    window.addEventListener('vaultix:item-updated', handleItemUpdated);
+    return () => {
+      window.removeEventListener('vaultix:item-updated', handleItemUpdated);
+    };
+  }, []);
+
+  // Pre-decrypt typed (fields) items as soon as they are selected or updated so masked
   // values are shown instead of '-' and the copy buttons work on first click.
-  // Values stay masked; revealing/copying still goes through handleAction.
   useEffect(() => {
     if (!selectedPasswordId) return;
     const activeItem = passwords.find((item) => item.id === selectedPasswordId);
-    if (!activeItem || !activeItem.encryptedFields || decryptedFieldsMap[activeItem.id]) return;
+    if (!activeItem) return;
 
     decryptWithRefreshRetry(activeItem.id)
       .then(({ originalPassword, originalNote, originalFields }) => {
@@ -188,7 +209,12 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
       })
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPasswordId]);
+  }, [
+    selectedPasswordId,
+    selectedPassword?.updatedAt,
+    selectedPassword?.encryptedPassword,
+    selectedPassword?.encryptedFields,
+  ]);
 
   const sameNamePasswords = useMemo(() => {
     if (!selectedPassword) return [];
@@ -1118,6 +1144,7 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
           const vaultId = selectedVault?.id;
           const result = await dispatch(deletePassword(deletedId));
           if (deletePassword.fulfilled.match(result)) {
+            notifyVaultMutated({ id: deletedId, vaultId, action: 'DELETE' });
             dispatch(selectPassword(null));
             if (vaultId) {
               dispatch(fetchVaultTrash(vaultId));
@@ -1128,6 +1155,7 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
                 if (vaultId) {
                   const restoreRes = await dispatch(restorePassword({ passwordId: deletedId, vaultId }));
                   if (restorePassword.fulfilled.match(restoreRes)) {
+                    notifyVaultMutated({ id: deletedId, vaultId, action: 'RESTORE' });
                     dispatch(fetchPasswordsByVault(vaultId));
                     dispatch(fetchVaultTrash(vaultId));
                     showToast(`Restored "${deletedName}"`);

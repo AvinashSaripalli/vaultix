@@ -260,6 +260,9 @@ function EditMyVaultPasswordModal({
         isWeak: isLogin ? strengthScore <= 2 : false,
         isOld: isLogin ? isPasswordOld(password.lastUpdatedAt, password.createdAt) : false,
         isAtRisk: atRisk,
+        rawPassword: formData.encryptedPassword,
+        rawFields: fieldsPayload,
+        rawNote: formData.encryptedNote,
       });
 
       setShowPassword(false);
