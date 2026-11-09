@@ -141,6 +141,12 @@ function MyVaultPage() {
     setPasswordModalOpen(true);
   };
 
+  useEffect(() => {
+    const handler = () => openAddPasswordModal();
+    window.addEventListener('vaultix:mobile-add-item', handler);
+    return () => window.removeEventListener('vaultix:mobile-add-item', handler);
+  }, []);
+
   const handleCreateFolder = async (name) => {
     const result = await dispatch(createMyVaultFolder({ name }));
 

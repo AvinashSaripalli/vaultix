@@ -254,6 +254,15 @@ function VaultPage() {
   }, [isFolderForbidden, selectedPasswordId, dispatch]);
 
   useEffect(() => {
+    const handler = () => {
+      setPrefillData(null);
+      dispatch(openAddPasswordModal());
+    };
+    window.addEventListener('vaultix:mobile-add-item', handler);
+    return () => window.removeEventListener('vaultix:mobile-add-item', handler);
+  }, [dispatch]);
+
+  useEffect(() => {
     if (slug) {
       dispatch(fetchVaultBySlug(slug));
     }
