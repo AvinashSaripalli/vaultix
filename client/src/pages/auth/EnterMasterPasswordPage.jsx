@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -9,6 +9,8 @@ import {
   ShieldCheck,
   TimerReset,
   AlertTriangle,
+  Fingerprint,
+  ScanFace,
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import api from '../../services/api';
@@ -25,6 +27,13 @@ import {
 import { setRsaPrivateKey as storeRsaPrivateKey, persistEncryptedSession } from '../../utils/secureSession';
 import { validateMasterPassword, validateConfirmPassword, validateHint } from '../../utils/validation';
 import { verifyMasterPassword } from '../../utils/verifyMasterPassword';
+import {
+  isMobileNative,
+  checkBiometricsAvailable,
+  unlockWithBiometrics,
+  enableBiometricUnlock,
+  isBiometricUnlockEnabled,
+} from '../../utils/mobileBiometrics';
 import logo from '../../assets/Vaultix.png';
 import bgImage from '../../assets/auth-bg.png';
 
@@ -41,6 +50,11 @@ function EnterMasterPasswordPage() {
   const [error, setError] = useState('');
   const [verifying, setVerifying] = useState(false);
 
+  // Mobile biometrics state
+  const [biometricInfo, setBiometricInfo] = useState({ available: false, label: 'Biometrics', type: 'none' });
+  const [biometricActive, setBiometricActive] = useState(false);
+  const [rememberBiometric, setRememberBiometric] = useState(true);
+
   const [resetMode, setResetMode] = useState(false);
   const [accountPassword, setAccountPassword] = useState('');
   const [resetData, setResetData] = useState({
@@ -53,13 +67,7 @@ function EnterMasterPasswordPage() {
   const [resetErrors, setResetErrors] = useState({});
   const [resetting, setResetting] = useState(false);
 
-  if (!isAuthenticated || !token) {
-    return <Navigate to="/login" replace />;
-  }
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
+  const performUnlock = async (candidatePassword) => {
     try {
       setVerifying(true);
       setError('');
@@ -80,18 +88,18 @@ function EnterMasterPasswordPage() {
       }
 
       const verified = await verifyMasterPassword(
-        masterPassword,
+        candidatePassword,
         user?.encryptionSalt,
         { samples }
       );
 
       if (!verified) {
         setError('Invalid master password');
-        return;
+        return false;
       }
 
       dispatch(setMasterVerified(true));
-      dispatch(setSessionMasterPassword(masterPassword));
+      dispatch(setSessionMasterPassword(candidatePassword));
 
       try {
         const kpRes = await api.get('/keypair');
@@ -100,7 +108,7 @@ function EnterMasterPasswordPage() {
         if (kpRes.data?.encryptedPrivateKey) {
           privKey = await decryptPrivateKey(
             kpRes.data.encryptedPrivateKey,
-            masterPassword,
+            candidatePassword,
             kpRes.data.salt
           );
           dispatch({ type: 'auth/setSessionRsaPrivateKey', payload: privKey });
@@ -109,7 +117,7 @@ function EnterMasterPasswordPage() {
             dispatch(setSessionRsaPublicKey(pubKey));
           }
         }
-        await persistEncryptedSession(masterPassword, privKey, pubKey);
+        await persistEncryptedSession(candidatePassword, privKey, pubKey);
       } catch (err) {
         // Keys are mandatory for encrypting/decrypting vault items —
         // surface the failure instead of continuing with a broken session.
@@ -118,15 +126,73 @@ function EnterMasterPasswordPage() {
           'Vault unlocked, but encryption keys could not be loaded. Please try again.'
         );
         dispatch(setMasterVerified(false));
-        return;
+        return false;
+      }
+
+      // If on mobile native and user opted to enable biometrics:
+      if (rememberBiometric && isMobileNative() && user?.id) {
+        await enableBiometricUnlock(candidatePassword, user.id);
       }
 
       navigate('/dashboard');
+      return true;
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid master password');
+      return false;
     } finally {
       setVerifying(false);
     }
+  };
+
+  const handleBiometricUnlock = async () => {
+    if (!user?.id) return;
+    setError('');
+    setVerifying(true);
+    try {
+      const res = await unlockWithBiometrics(user.id);
+      if (!res.success) {
+        if (res.error && !res.error.toLowerCase().includes('cancel')) {
+          setError(res.error);
+        }
+        setVerifying(false);
+        return;
+      }
+      await performUnlock(res.masterPassword);
+    } catch {
+      setError('Biometric authentication failed. Please enter your master password.');
+      setVerifying(false);
+    }
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    if (!isMobileNative() || !user?.id) return;
+
+    (async () => {
+      const info = await checkBiometricsAvailable();
+      if (!mounted) return;
+      setBiometricInfo(info);
+      if (info.available && isBiometricUnlockEnabled(user.id)) {
+        setBiometricActive(true);
+        // Automatically prompt on page load on native devices
+        setTimeout(() => {
+          if (mounted) handleBiometricUnlock();
+        }, 350);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [user?.id]);
+
+  if (!isAuthenticated || !token) {
+    return <Navigate to="/login" replace />;
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    await performUnlock(masterPassword);
   };
 
   const handleResetSubmit = async (e) => {
@@ -258,6 +324,30 @@ function EnterMasterPasswordPage() {
             <>
               {error && <ErrorBox message={error} />}
 
+              {biometricActive && (
+                <button
+                  type="button"
+                  onClick={handleBiometricUnlock}
+                  disabled={verifying}
+                  className="w-full flex items-center justify-center gap-3 rounded-2xl border-2 border-blue-500 bg-blue-50/70 dark:bg-blue-950/40 py-3.5 sm:py-4 font-bold text-blue-700 dark:text-blue-300 transition-all hover:bg-blue-100 dark:hover:bg-blue-900/40 hover:shadow-md mb-4"
+                >
+                  {biometricInfo.type === 'faceId' ? (
+                    <ScanFace size={22} className="text-blue-600 dark:text-blue-400" />
+                  ) : (
+                    <Fingerprint size={22} className="text-blue-600 dark:text-blue-400" />
+                  )}
+                  <span>Unlock with {biometricInfo.label}</span>
+                </button>
+              )}
+
+              {biometricActive && (
+                <div className="flex items-center gap-3 my-4">
+                  <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">or use password</span>
+                  <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+                </div>
+              )}
+
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="relative">
                   <input
@@ -277,6 +367,21 @@ function EnterMasterPasswordPage() {
                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 </div>
+
+                {biometricInfo.available && !biometricActive && (
+                  <label className="flex items-center gap-2.5 cursor-pointer text-xs sm:text-sm text-slate-600 dark:text-slate-300 select-none py-1">
+                    <input
+                      type="checkbox"
+                      checked={rememberBiometric}
+                      onChange={(e) => setRememberBiometric(e.target.checked)}
+                      className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="flex items-center gap-1.5 font-medium">
+                      {biometricInfo.type === 'faceId' ? <ScanFace size={16} /> : <Fingerprint size={16} />}
+                      Enable {biometricInfo.label} unlock on this device
+                    </span>
+                  </label>
+                )}
 
                 <button
                   type="submit"

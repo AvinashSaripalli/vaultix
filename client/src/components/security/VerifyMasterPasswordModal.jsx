@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Eye, EyeOff, Fingerprint, ScanFace } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   setMasterVerified,
@@ -8,6 +8,12 @@ import {
 } from '../../features/auth/authSlice';
 import { verifyMasterPassword } from '../../utils/verifyMasterPassword';
 import { decryptPrivateKey } from '../../utils/crypto';
+import {
+  isMobileNative,
+  checkBiometricsAvailable,
+  unlockWithBiometrics,
+  isBiometricUnlockEnabled,
+} from '../../utils/mobileBiometrics';
 import api from '../../services/api';
 import ModalPortal, { ModalBackdrop } from '../common/ModalPortal';
 
@@ -26,6 +32,21 @@ function VerifyMasterPasswordModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Mobile biometrics
+  const [biometricInfo, setBiometricInfo] = useState({ available: false, label: 'Biometrics', type: 'none' });
+  const [biometricActive, setBiometricActive] = useState(false);
+
+  useEffect(() => {
+    if (!open || !user?.id || !isMobileNative()) return;
+    (async () => {
+      const info = await checkBiometricsAvailable();
+      setBiometricInfo(info);
+      if (info.available && isBiometricUnlockEnabled(user.id)) {
+        setBiometricActive(true);
+      }
+    })();
+  }, [open, user?.id]);
+
   if (!open) return null;
 
   const handleClose = () => {
@@ -35,33 +56,31 @@ function VerifyMasterPasswordModal({
     onClose();
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
+  const performVerify = async (candidatePassword) => {
     try {
       setLoading(true);
       setError('');
 
       const verified = await verifyMasterPassword(
-        masterPassword,
+        candidatePassword,
         user?.encryptionSalt,
         { samples }
       );
 
       if (!verified) {
         setError('Invalid master password');
-        return;
+        return false;
       }
 
       dispatch(setMasterVerified(true));
-      dispatch(setSessionMasterPassword(masterPassword));
+      dispatch(setSessionMasterPassword(candidatePassword));
 
       try {
         const kpRes = await api.get('/keypair');
         if (kpRes.data?.encryptedPrivateKey) {
           const privateKeyJwk = await decryptPrivateKey(
             kpRes.data.encryptedPrivateKey,
-            masterPassword,
+            candidatePassword,
             kpRes.data.salt
           );
           dispatch({ type: 'auth/setSessionRsaPrivateKey', payload: privateKeyJwk });
@@ -73,7 +92,7 @@ function VerifyMasterPasswordModal({
         // key pair may not exist yet
       }
 
-      const verifiedPassword = masterPassword;
+      const verifiedPassword = candidatePassword;
 
       setMasterPassword('');
       setShowPassword(false);
@@ -83,9 +102,36 @@ function VerifyMasterPasswordModal({
       if (onVerified) {
         onVerified(verifiedPassword);
       }
+      return true;
     } catch {
       setError('Invalid master password');
+      return false;
     } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    await performVerify(masterPassword);
+  };
+
+  const handleBiometricVerify = async () => {
+    if (!user?.id) return;
+    setError('');
+    setLoading(true);
+    try {
+      const res = await unlockWithBiometrics(user.id);
+      if (!res.success) {
+        if (res.error && !res.error.toLowerCase().includes('cancel')) {
+          setError(res.error);
+        }
+        setLoading(false);
+        return;
+      }
+      await performVerify(res.masterPassword);
+    } catch {
+      setError('Biometric authentication failed.');
       setLoading(false);
     }
   };
@@ -112,6 +158,29 @@ function VerifyMasterPasswordModal({
             <p className="text-sm text-red-600 dark:text-red-400">
               {error}
             </p>
+          </div>
+        )}
+
+        {biometricActive && (
+          <div className="mb-4">
+            <button
+              type="button"
+              onClick={handleBiometricVerify}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2.5 rounded-lg border-2 border-indigo-500 bg-indigo-50/60 dark:bg-indigo-950/40 py-3 font-semibold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors"
+            >
+              {biometricInfo.type === 'faceId' ? (
+                <ScanFace size={20} className="text-indigo-600 dark:text-indigo-400" />
+              ) : (
+                <Fingerprint size={20} className="text-indigo-600 dark:text-indigo-400" />
+              )}
+              <span>Verify with {biometricInfo.label}</span>
+            </button>
+            <div className="flex items-center gap-3 my-3">
+              <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+              <span className="text-xs uppercase tracking-wider text-slate-400">or enter password</span>
+              <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+            </div>
           </div>
         )}
 

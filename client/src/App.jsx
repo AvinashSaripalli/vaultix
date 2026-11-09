@@ -48,6 +48,8 @@ import ClipboardSettingsPage from './pages/security/ClipboardSettingsPage';
 import StatusBar from './components/common/StatusBar';
 import api from './services/api';
 import { decryptPrivateKey } from './utils/crypto';
+import { Capacitor } from '@capacitor/core';
+import { StatusBar as CapStatusBar, Style as CapStatusBarStyle } from '@capacitor/status-bar';
 
 function App() {
   const dispatch = useDispatch();
@@ -65,6 +67,23 @@ function App() {
   useInactivityLogout();
   useKeyboardShortcuts();
   useAutoKeySync();
+
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        CapStatusBar.setStyle({
+          style: mode === 'dark' ? CapStatusBarStyle.Dark : CapStatusBarStyle.Light,
+        });
+        if (Capacitor.getPlatform() === 'android') {
+          CapStatusBar.setBackgroundColor({
+            color: mode === 'dark' ? '#0f172a' : '#ffffff',
+          });
+        }
+      } catch (err) {
+        // ignore on platforms where status bar is unavailable
+      }
+    }
+  }, [mode]);
 
   useEffect(() => {
     (async () => {
