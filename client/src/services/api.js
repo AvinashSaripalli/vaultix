@@ -1,8 +1,31 @@
 import axios from 'axios';
+import { Capacitor } from '@capacitor/core';
 import { clearSecureSession } from '../utils/secureSession';
 
+export const PROD_API_URL = 'https://vaultix.knadvisors.pro/api/v1';
+
+export const getApiBaseUrl = () => {
+  const custom = localStorage.getItem('vaultix_custom_server');
+  if (custom) {
+    const trimmed = custom.trim().replace(/\/+$/, '');
+    return trimmed.endsWith('/api/v1') ? trimmed : `${trimmed}/api/v1`;
+  }
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  // Mobile app (Android or iOS native) defaults to production backend
+  if (Capacitor.isNativePlatform()) {
+    return PROD_API_URL;
+  }
+  // Web production defaults to production backend
+  if (import.meta.env.PROD) {
+    return PROD_API_URL;
+  }
+  return 'http://localhost:4000/api/v1';
+};
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4000/api/v1',
+  baseURL: getApiBaseUrl(),
   withCredentials: true,
 });
 
@@ -76,6 +99,7 @@ const applyAuthHeader = (config, token) => {
 };
 
 api.interceptors.request.use((config) => {
+  config.baseURL = getApiBaseUrl();
   const token = localStorage.getItem('token');
 
   if (token) {

@@ -81,9 +81,11 @@ export const loginUser = createAsyncThunk(
       const response = await api.post('/auth/login', formData);
       return response.data;
     } catch (error) {
-      return thunkAPI.rejectWithValue(
-        error.response?.data?.message || 'Login failed'
-      );
+      const msg =
+        error.response?.data?.message ||
+        (error.message && error.message !== 'Network Error' ? error.message : null) ||
+        (error.code === 'ERR_NETWORK' || !error.response ? 'Cannot reach server. Please check connection.' : 'Login failed');
+      return thunkAPI.rejectWithValue(msg);
     }
   }
 );

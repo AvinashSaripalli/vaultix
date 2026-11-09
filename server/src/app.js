@@ -60,9 +60,29 @@ const clientOrigins = (process.env.CLIENT_URL || '')
   .map((o) => o.trim())
   .filter(Boolean);
 
+const allowedMobileAndLocalOrigins = [
+  'https://localhost',
+  'capacitor://localhost',
+  'ionic://localhost',
+  'http://localhost',
+  'http://localhost:5173',
+  'http://localhost:3000',
+];
+
 app.use(
   cors({
-    origin: clientOrigins.length > 1 ? clientOrigins : clientOrigins[0],
+    origin: (origin, callback) => {
+      // Allow mobile apps, curl, server-to-server (where origin is undefined)
+      if (!origin) return callback(null, true);
+      if (
+        clientOrigins.includes(origin) ||
+        allowedMobileAndLocalOrigins.includes(origin) ||
+        origin.startsWith('chrome-extension://')
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, false);
+    },
     credentials: true,
     allowedHeaders: ['Authorization', 'Content-Type'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],

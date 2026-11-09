@@ -4,7 +4,8 @@ import { Eye, EyeOff, LockKeyhole, ShieldCheck, Users, KeyRound, Smartphone, Shi
 import { useDispatch, useSelector } from 'react-redux';
 import { clearError, loginUser, logoutUser, verify2FA } from '../../features/auth/authSlice';
 import { validateEmail, validatePassword } from '../../utils/validation';
-import api from '../../services/api';
+import api, { getApiBaseUrl } from '../../services/api';
+import { isMobileNative } from '../../utils/mobileBiometrics';
 import {
   generateWebAuthnAuthOptions,
   completeWebAuthnAuthentication,
@@ -32,6 +33,25 @@ function LoginPage() {
   const [twoFactorCode, setTwoFactorCode] = useState('');
   const [backupCode, setBackupCode] = useState('');
   const [webauthnLoading, setWebauthnLoading] = useState(false);
+  const [serverUrl, setServerUrl] = useState(() => getApiBaseUrl().replace('/api/v1', ''));
+
+  const handleChangeServer = () => {
+    const current = serverUrl;
+    const next = window.prompt(
+      'Enter Vaultix Server URL (e.g. https://vaultix.knadvisors.pro):',
+      current
+    );
+    if (next !== null) {
+      const cleaned = next.trim().replace(/\/+$/, '');
+      if (cleaned) {
+        localStorage.setItem('vaultix_custom_server', cleaned);
+        setServerUrl(cleaned);
+      } else {
+        localStorage.removeItem('vaultix_custom_server');
+        setServerUrl(getApiBaseUrl().replace('/api/v1', ''));
+      }
+    }
+  };
 
   useEffect(() => {
     if (isAuthenticated && user && userLoaded && !requires2FA) {
@@ -369,6 +389,20 @@ function LoginPage() {
             <ShieldCheck size={13} className="text-emerald-500" />
             End-to-end encrypted · Zero-knowledge architecture
           </p>
+
+          {isMobileNative() && (
+            <p className="mt-3 text-center text-xs text-slate-400 dark:text-slate-500">
+              Server: <span className="font-mono text-slate-600 dark:text-slate-300">{serverUrl}</span>
+              {' · '}
+              <button
+                type="button"
+                onClick={handleChangeServer}
+                className="text-blue-600 dark:text-blue-400 hover:underline font-semibold"
+              >
+                change
+              </button>
+            </p>
+          )}
         </AuthCard>
       </div>
     </div>
