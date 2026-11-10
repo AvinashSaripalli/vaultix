@@ -8,7 +8,7 @@ import {
   Settings,
   Plus,
 } from 'lucide-react';
-import { isMobileNative, getMobilePlatform } from '../../utils/mobileBiometrics';
+import { isMobileNative, getMobilePlatform, getEffectiveMobilePlatform } from '../../utils/mobileBiometrics';
 import { hapticLight, hapticSuccess } from '../../utils/haptics';
 import PasswordGeneratorModal from '../tools/PasswordGeneratorModal';
 
@@ -18,7 +18,7 @@ export default function MobileNavigation() {
   const [generatorOpen, setGeneratorOpen] = useState(false);
 
   // Determine platform style: iOS vs Android
-  const platform = getMobilePlatform(); // 'ios', 'android', or 'web'
+  const platform = getEffectiveMobilePlatform(); // 'ios', 'android', or 'web'
   const isIOS = platform === 'ios';
   const isAndroid = platform === 'android';
 

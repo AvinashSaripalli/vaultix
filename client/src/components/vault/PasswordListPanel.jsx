@@ -6,6 +6,8 @@ import {
   setSearchTerm,
 } from '../../features/vault/vaultSlice';
 import ItemTypeBadge from '../myVault/ItemTypeBadge';
+import ItemServiceIcon from '../common/ItemServiceIcon';
+import { hapticLight } from '../../utils/haptics';
 import { getItemTypeMeta } from '../../utils/itemTypes';
 
 function getPaginationItems(current, total) {
@@ -177,36 +179,45 @@ function PasswordListPanel() {
             return (
               <button
                 key={group.name}
-                onClick={() => dispatch(selectPassword(firstItem.id))}
-                className={`w-full text-left px-3.5 sm:px-4 py-3 sm:py-3.5 rounded-xl border transition min-w-0 ${
+                onClick={() => {
+                  hapticLight();
+                  dispatch(selectPassword(firstItem.id));
+                }}
+                className={`w-full text-left p-3 sm:px-4 sm:py-3.5 rounded-2xl border transition-all active:scale-[0.99] flex items-center gap-3 sm:gap-3.5 min-w-0 ${
                   active
-                    ? 'bg-indigo-50 border-indigo-200 shadow-sm dark:bg-indigo-900/20 dark:border-indigo-800'
-                    : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:hover:border-slate-600 dark:hover:bg-slate-700'
+                    ? 'bg-indigo-50/90 border-indigo-200 shadow-sm dark:bg-indigo-900/25 dark:border-indigo-800'
+                    : 'bg-white border-slate-200/90 hover:border-slate-300 hover:bg-slate-50/80 dark:bg-slate-800 dark:border-slate-700/80 dark:hover:border-slate-600 dark:hover:bg-slate-700/60 shadow-xs'
                 }`}
               >
-                <div className="text-sm sm:text-[15px] font-semibold text-slate-900 dark:text-slate-100 truncate">
-                  {group.name}
+                <ItemServiceIcon name={group.name} type={firstItem?.type} size="md" />
+
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm sm:text-[15px] font-bold text-slate-900 dark:text-slate-100 truncate">
+                    {group.name}
+                  </div>
+
+                  <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 min-w-0">
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate flex-1 min-w-0">
+                      {group.items.length > 1
+                        ? `${group.items.length} accounts`
+                        : firstItem?.login || meta.label}
+                    </span>
+                    {!selectedFolderId && (
+                      <span
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-amber-50 text-amber-800 border border-amber-200/80 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60 truncate max-w-[110px] shrink-0"
+                        title={firstItem?.folder?.name || folders.find((f) => f.id === firstItem?.folderId)?.name || 'Vault Root'}
+                      >
+                        <Folder size={10} className="text-amber-600 dark:text-amber-400 shrink-0" />
+                        <span className="truncate">
+                          {firstItem?.folder?.name || folders.find((f) => f.id === firstItem?.folderId)?.name || 'Vault Root'}
+                        </span>
+                      </span>
+                    )}
+                    <ItemTypeBadge type={firstItem?.type} />
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-2 mt-1 min-w-0">
-                  <span className="text-xs text-slate-500 dark:text-slate-400 truncate flex-1 min-w-0">
-                    {group.items.length > 1
-                      ? `${group.items.length} accounts`
-                      : firstItem?.login || meta.label}
-                  </span>
-                  {!selectedFolderId && (
-                    <span
-                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200/80 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60 truncate max-w-[130px] shrink-0"
-                      title={firstItem?.folder?.name || folders.find((f) => f.id === firstItem?.folderId)?.name || 'Vault Root'}
-                    >
-                      <Folder size={11} className="text-amber-600 dark:text-amber-400 shrink-0" />
-                      <span className="truncate">
-                        {firstItem?.folder?.name || folders.find((f) => f.id === firstItem?.folderId)?.name || 'Vault Root'}
-                      </span>
-                    </span>
-                  )}
-                  <ItemTypeBadge type={firstItem?.type} />
-                </div>
+                <ChevronRight size={18} className="text-slate-300 dark:text-slate-600 shrink-0" />
               </button>
             );
           })}

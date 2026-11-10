@@ -37,6 +37,8 @@ import { setSessionRsaPrivateKey, setSessionRsaPublicKey } from '../../features/
 import { TYPE_FIELDS, isFieldMasked, maskFieldValue, parseCustomFields, CUSTOM_FIELDS_KEY, getItemTypeMeta } from '../../utils/itemTypes';
 import { detectCardNetwork, formatCardNumber } from '../../utils/cardValidation';
 import ItemTypeBadge from '../myVault/ItemTypeBadge';
+import ItemServiceIcon from '../common/ItemServiceIcon';
+import { hapticLight, hapticMedium } from '../../utils/haptics';
 import { formatItemAction, resolveFieldLabel, getActionBadge, getActionIcon } from '../../utils/activityActionFormatter';
 import { notifyVaultMutated } from '../../utils/vaultSync';
 
@@ -496,35 +498,79 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
 
   return (
     <div className="p-3.5 sm:p-6 lg:p-8 min-w-0">
-      {onBackToList && (
-        <button
-          type="button"
-          onClick={onBackToList}
-          className="md:hidden inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 mb-4 py-1.5 px-3 rounded-xl bg-indigo-50/70 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 transition border border-indigo-100 dark:border-indigo-800"
-        >
-          <ArrowLeft size={14} />
-          Back to items
-        </button>
-      )}
-      <div className="mb-5 sm:mb-8 flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 min-w-0">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2.5 flex-wrap min-w-0">
-            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100 truncate">
-              {selectedPassword.name}
-            </h2>
+      {/* Mobile Top Navigation & Hero Display */}
+      <div className="md:hidden mb-5">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-200/80 dark:border-slate-700/80 mb-3">
+          <button
+            type="button"
+            onClick={() => {
+              hapticLight();
+              onBackToList?.();
+            }}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 py-1.5 px-3 rounded-xl bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-900/30 transition active:scale-95 cursor-pointer"
+          >
+            <ArrowLeft size={15} />
+            <span>Back</span>
+          </button>
+
+          {canAddLogin && onAddLogin && (
+            <button
+              onClick={() =>
+                onAddLogin({
+                  name: selectedPassword.name,
+                  url: selectedPassword.url,
+                  tags: (selectedPassword.tags || []).map((t) => t.tag?.name).filter(Boolean),
+                })
+              }
+              className="h-8 px-3 rounded-xl bg-indigo-600 text-white text-xs font-semibold inline-flex items-center gap-1 shadow-xs active:scale-95 transition"
+            >
+              <Plus size={14} />
+              <span>Add Login</span>
+            </button>
+          )}
+        </div>
+
+        {/* Hero Card */}
+        <div className="flex flex-col items-center text-center py-2">
+          <ItemServiceIcon name={selectedPassword.name} type={selectedPassword.type} size="lg" className="mb-2.5 shadow-md" />
+          <h2 className="text-xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
+            {selectedPassword.name}
+          </h2>
+          <div className="flex items-center gap-1.5 mt-1">
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+              {selectedFolder?.name || 'Company Vault'}
+            </span>
+            <span className="text-slate-300 dark:text-slate-600">•</span>
             <ItemTypeBadge type={selectedPassword.type} />
-            {selectedPassword.isSensitive && (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 text-amber-800 px-2.5 py-0.5 text-xs font-semibold dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shrink-0">
-                <Lock size={12} />
-                Secured
-              </span>
-            )}
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1.5 dark:text-slate-400">
-            {sameNamePasswords.length > 1
-              ? `${sameNamePasswords.length} accounts in ${selectedFolder?.name || 'Company Vault'}`
-              : `${getItemTypeMeta(selectedPassword.type).label} in ${selectedFolder?.name || 'Company Vault'}`}
-          </p>
+        </div>
+      </div>
+
+      {/* Desktop Header */}
+      <div className="hidden md:flex mb-5 sm:mb-8 flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 min-w-0">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <ItemServiceIcon name={selectedPassword.name} type={selectedPassword.type} size="md" />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2.5 flex-wrap min-w-0">
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100 truncate">
+                  {selectedPassword.name}
+                </h2>
+                <ItemTypeBadge type={selectedPassword.type} />
+                {selectedPassword.isSensitive && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 text-amber-800 px-2.5 py-0.5 text-xs font-semibold dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shrink-0">
+                    <Lock size={12} />
+                    Secured
+                  </span>
+                )}
+              </div>
+              <p className="text-xs sm:text-sm text-slate-500 mt-1 dark:text-slate-400">
+                {sameNamePasswords.length > 1
+                  ? `${sameNamePasswords.length} accounts in ${selectedFolder?.name || 'Company Vault'}`
+                  : `${getItemTypeMeta(selectedPassword.type).label} in ${selectedFolder?.name || 'Company Vault'}`}
+              </p>
+            </div>
+          </div>
         </div>
         <div className="flex items-center flex-wrap gap-2 shrink-0">
           {canAddLogin && onAddLogin && (
@@ -1247,6 +1293,7 @@ function CopyIconButton({ onCopy, title = 'Copy to clipboard' }) {
   const [copied, setCopied] = useState(false);
   const handle = (e) => {
     e.stopPropagation();
+    hapticMedium();
     onCopy();
     setCopied(true);
     setTimeout(() => setCopied(false), 1800);
@@ -1255,26 +1302,36 @@ function CopyIconButton({ onCopy, title = 'Copy to clipboard' }) {
     <button
       type="button"
       onClick={handle}
-      className={`p-1.5 rounded-lg transition-colors ${
+      className={`px-2.5 sm:px-2 py-1 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 transition active:scale-95 cursor-pointer ${
         copied
-          ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-400'
-          : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-750'
+          ? 'bg-emerald-500 text-white shadow-xs'
+          : 'bg-slate-100 dark:bg-slate-700/80 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 text-slate-700 dark:text-slate-200 hover:text-indigo-600 border border-slate-200/80 dark:border-slate-600'
       }`}
       title={copied ? 'Copied!' : title}
       aria-label={copied ? 'Copied' : title}
     >
-      {copied ? <Check size={16} /> : <Copy size={16} />}
+      {copied ? (
+        <>
+          <Check size={13} className="stroke-[2.6]" />
+          <span>Copied</span>
+        </>
+      ) : (
+        <>
+          <Copy size={13} />
+          <span className="sm:hidden">Copy</span>
+        </>
+      )}
     </button>
   );
 }
 
 function DetailRow({ label, value, action, isMono = false }) {
   return (
-    <div className="flex flex-col gap-1 sm:grid sm:grid-cols-[130px_1fr_auto] sm:gap-3 sm:items-center border-b border-slate-200 last:border-b-0 px-3 sm:px-4 py-3 sm:py-3.5 dark:border-slate-700/80 min-w-0">
-      <p className="text-[11px] sm:text-sm font-medium text-slate-500 dark:text-slate-400 shrink-0">{label}</p>
+    <div className="flex flex-col gap-1 sm:grid sm:grid-cols-[130px_1fr_auto] sm:gap-3 sm:items-center border-b border-slate-200 last:border-b-0 px-3.5 sm:px-4 py-3 sm:py-3.5 dark:border-slate-700/80 min-w-0">
+      <p className="text-[11px] sm:text-sm font-semibold uppercase tracking-wider text-slate-400 sm:text-slate-500 sm:normal-case sm:tracking-normal dark:text-slate-400 shrink-0">{label}</p>
 
       <div className="flex items-center justify-between gap-2 min-w-0 sm:contents">
-        <div className={`text-xs sm:text-sm text-slate-900 break-all min-w-0 flex-1 dark:text-slate-100 ${isMono ? 'font-mono tracking-wider select-all' : ''}`}>
+        <div className={`text-xs sm:text-sm font-medium text-slate-900 break-all min-w-0 flex-1 dark:text-slate-100 ${isMono ? 'font-mono tracking-wider select-all' : ''}`}>
           {value}
         </div>
 

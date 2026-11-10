@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
-import { Lock, LockKeyhole, Search, SearchX, ArrowLeft } from 'lucide-react';
+import { Lock, LockKeyhole, Search, SearchX, ArrowLeft, ChevronRight } from 'lucide-react';
 import ItemTypeBadge from './ItemTypeBadge';
 import ItemDetailsPanel from './ItemDetailsPanel';
+import ItemServiceIcon from '../common/ItemServiceIcon';
+import { hapticLight } from '../../utils/haptics';
 import { getItemTypeMeta } from '../../utils/itemTypes';
 
 function MyVaultPasswordWorkspace({
@@ -71,6 +73,7 @@ function MyVaultPasswordWorkspace({
   const selectedGroupItems = selectedGroup?.items || [];
 
   const handleSelect = (id) => {
+    hapticLight();
     onSelectPassword(id);
   };
 
@@ -127,28 +130,34 @@ function MyVaultPasswordWorkspace({
                     <button
                       key={group.name}
                       onClick={() => handleSelect(firstItem.id)}
-                      className={`w-full text-left rounded-xl border p-4 transition min-w-0 ${
+                      className={`w-full text-left rounded-2xl border p-3.5 sm:p-4 transition-all active:scale-[0.99] flex items-center gap-3.5 min-w-0 ${
                         active
-                          ? 'bg-indigo-50 border-indigo-200 dark:bg-indigo-900/20 dark:border-indigo-800'
-                          : 'bg-white border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-slate-700'
+                          ? 'bg-indigo-50/90 border-indigo-200 shadow-sm dark:bg-indigo-900/25 dark:border-indigo-800'
+                          : 'bg-white border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-slate-700 shadow-xs'
                       }`}
                     >
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <h3 className="font-semibold text-slate-900 truncate flex items-center gap-1.5 flex-1 dark:text-slate-100 min-w-0">
-                          {group.name}
-                        </h3>
-                        {firstItem?.isSensitive && (
-                          <Lock size={12} className="text-emerald-600 shrink-0 dark:text-emerald-400" />
-                        )}
+                      <ItemServiceIcon name={group.name} type={firstItem?.type} size="md" />
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <h3 className="font-bold text-slate-900 truncate flex items-center gap-1.5 flex-1 dark:text-slate-100 min-w-0 text-sm sm:text-base">
+                            {group.name}
+                          </h3>
+                          {firstItem?.isSensitive && (
+                            <Lock size={12} className="text-emerald-600 shrink-0 dark:text-emerald-400" />
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1 min-w-0">
+                          <p className="text-xs text-slate-500 truncate dark:text-slate-400 min-w-0 flex-1 font-mono">
+                            {group.items.length > 1
+                              ? `${group.items.length} accounts`
+                              : firstItem?.login || meta.label}
+                          </p>
+                          <ItemTypeBadge type={firstItem?.type} />
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 mt-1.5 min-w-0">
-                        <p className="text-sm text-slate-500 truncate dark:text-slate-400 min-w-0 flex-1">
-                          {group.items.length > 1
-                            ? `${group.items.length} accounts`
-                            : firstItem?.login || meta.label}
-                        </p>
-                        <ItemTypeBadge type={firstItem?.type} />
-                      </div>
+
+                      <ChevronRight size={18} className="text-slate-300 dark:text-slate-600 shrink-0" />
                     </button>
                   );
                 })}

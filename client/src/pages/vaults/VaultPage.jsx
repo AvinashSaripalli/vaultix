@@ -867,7 +867,7 @@ function VaultPage() {
   return (
     <AppLayout>
       <div className="bg-white rounded-2xl border border-slate-200 dark:bg-slate-800 dark:border-slate-700 shadow-sm min-w-0">
-        <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5 border-b border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800 rounded-t-2xl">
+        <div className={`px-4 sm:px-6 lg:px-8 py-4 sm:py-5 border-b border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800 rounded-t-2xl ${selectedPasswordId ? 'hidden md:block' : 'block'}`}>
           {isTrashView ? (
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
               <div className="min-w-0 flex-1">
@@ -912,7 +912,7 @@ function VaultPage() {
               </div>
             </div>
           ) : (
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+            <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 ${selectedPasswordId ? 'hidden md:flex' : 'flex'}`}>
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
                   Company Vault

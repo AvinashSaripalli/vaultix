@@ -19,6 +19,21 @@ export function getMobilePlatform() {
 }
 
 /**
+ * Returns the effective mobile platform ('ios', 'android', or 'web'),
+ * even when testing in responsive/emulated mobile browsers.
+ */
+export function getEffectiveMobilePlatform() {
+  const cap = Capacitor.getPlatform();
+  if (cap === 'ios' || cap === 'android') return cap;
+  if (typeof navigator !== 'undefined') {
+    const ua = navigator.userAgent || '';
+    if (/iPhone|iPad|iPod/i.test(ua)) return 'ios';
+    if (/Android/i.test(ua)) return 'android';
+  }
+  return 'web';
+}
+
+/**
  * Inspects the native hardware for biometric support (Face ID, Touch ID, Fingerprint).
  */
 export async function checkBiometricsAvailable() {

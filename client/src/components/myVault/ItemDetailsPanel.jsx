@@ -37,6 +37,8 @@ import {
 } from '../../utils/itemTypes';
 import { detectCardNetwork, formatCardNumber } from '../../utils/cardValidation';
 import ItemTypeBadge from './ItemTypeBadge';
+import ItemServiceIcon from '../common/ItemServiceIcon';
+import { hapticLight, hapticMedium } from '../../utils/haptics';
 import { formatItemAction, resolveFieldLabel, getActionBadge, getActionIcon } from '../../utils/activityActionFormatter';
 import TotpField from './TotpField';
 import DecryptDialog from '../common/DecryptDialog';
@@ -790,25 +792,46 @@ function ItemDetailsPanel({
         }}
       />
 
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 mb-5 sm:mb-6 min-w-0">
+      {/* Mobile Hero Center Display */}
+      <div className="md:hidden flex flex-col items-center text-center py-2 mb-4">
+        <ItemServiceIcon name={item.name} type={item.type} size="lg" className="mb-2.5 shadow-md" />
+        <h1 className="text-xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
+          {item.name}
+        </h1>
+        <div className="flex items-center gap-1.5 mt-1">
+          <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+            Personal Vault
+          </span>
+          <span className="text-slate-300 dark:text-slate-600">•</span>
+          <ItemTypeBadge type={item.type} />
+        </div>
+      </div>
+
+      {/* Desktop Header */}
+      <div className="hidden md:flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 mb-5 sm:mb-6 min-w-0">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2.5 flex-wrap min-w-0">
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100 truncate">
-              {item.name}
-            </h1>
-            <ItemTypeBadge type={item.type} />
-            {item.isSensitive && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium dark:bg-emerald-900/20 dark:text-emerald-400 shrink-0">
-                <Lock size={12} />
-                Secure
-              </span>
-            )}
+          <div className="flex items-center gap-3.5 min-w-0">
+            <ItemServiceIcon name={item.name} type={item.type} size="md" />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2.5 flex-wrap min-w-0">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100 truncate">
+                  {item.name}
+                </h1>
+                <ItemTypeBadge type={item.type} />
+                {item.isSensitive && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium dark:bg-emerald-900/20 dark:text-emerald-400 shrink-0">
+                    <Lock size={12} />
+                    Secure
+                  </span>
+                )}
+              </div>
+              <p className="text-slate-500 mt-1.5 text-xs sm:text-sm dark:text-slate-400">
+                {effectiveGroupItems.length > 1
+                  ? `${effectiveGroupItems.length} accounts in Personal Vault`
+                  : `${typeMeta.label} in Personal Vault`}
+              </p>
+            </div>
           </div>
-          <p className="text-slate-500 mt-1.5 text-xs sm:text-sm dark:text-slate-400">
-            {effectiveGroupItems.length > 1
-              ? `${effectiveGroupItems.length} accounts in Personal Vault`
-              : `${typeMeta.label} in Personal Vault`}
-          </p>
         </div>
 
         <div className="flex items-center flex-wrap gap-2 shrink-0">
@@ -1042,6 +1065,7 @@ function CopyIconButton({ onCopy, title = 'Copy to clipboard' }) {
   const [copied, setCopied] = useState(false);
   const handle = (e) => {
     e.stopPropagation();
+    hapticMedium();
     onCopy();
     setCopied(true);
     setTimeout(() => setCopied(false), 1800);
@@ -1050,15 +1074,25 @@ function CopyIconButton({ onCopy, title = 'Copy to clipboard' }) {
     <button
       type="button"
       onClick={handle}
-      className={`p-1.5 rounded-lg transition-colors ${
+      className={`px-2.5 sm:px-2 py-1 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 transition active:scale-95 cursor-pointer ${
         copied
-          ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-400'
-          : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-750'
+          ? 'bg-emerald-500 text-white shadow-xs'
+          : 'bg-slate-100 dark:bg-slate-700/80 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 text-slate-700 dark:text-slate-200 hover:text-indigo-600 border border-slate-200/80 dark:border-slate-600'
       }`}
       title={copied ? 'Copied!' : title}
       aria-label={copied ? 'Copied' : title}
     >
-      {copied ? <Check size={16} /> : <Copy size={16} />}
+      {copied ? (
+        <>
+          <Check size={13} className="stroke-[2.6]" />
+          <span>Copied</span>
+        </>
+      ) : (
+        <>
+          <Copy size={13} />
+          <span className="sm:hidden">Copy</span>
+        </>
+      )}
     </button>
   );
 }
