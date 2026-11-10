@@ -308,7 +308,7 @@ export default function MobileAuthScreen({
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col justify-between px-6 pt-12 pb-8 select-none relative overflow-x-hidden transition-colors duration-200">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col justify-between px-6 pt-16 pb-6 select-none relative overflow-x-hidden overflow-y-auto transition-colors duration-200">
       
       {/* Background Ambient Glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-indigo-500/10 dark:bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
@@ -321,35 +321,37 @@ export default function MobileAuthScreen({
           dispatch(toggleTheme());
         }}
         aria-label="Toggle dark/light theme"
-        className="absolute top-8 right-6 z-30 w-9 h-9 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center shadow-md active:scale-95 transition"
+        className="absolute top-9 right-6 z-30 w-9 h-9 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center shadow-md active:scale-95 transition"
         title={isDark ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
       >
         {isDark ? <Sun size={17} className="text-amber-400" /> : <Moon size={17} className="text-indigo-600" />}
       </button>
 
-      {/* Top Brand Hero */}
-      <div className="text-center space-y-3 z-10 pt-2">
-        {/* High-Contrast White Squircle Badge: Makes dark navy shield 100% visible in both light & dark themes */}
-        <div className="w-20 h-20 mx-auto rounded-3xl bg-white p-3 flex items-center justify-center shadow-2xl shadow-indigo-500/25 border border-slate-200/80 dark:border-white/10 active:scale-95 transition-transform duration-200">
-          <img
-            src={vaultixLogo}
-            alt="Vaultix Logo"
-            className="w-full h-full object-contain select-none drop-shadow-xs"
-          />
+      {/* Main Content Column */}
+      <div className="w-full max-w-sm mx-auto z-10 flex flex-col">
+        {/* Top Brand Hero (Moved a little bit below) */}
+        <div className="text-center space-y-3 pt-3">
+          {/* High-Contrast White Squircle Badge: Makes dark navy shield 100% visible in both light & dark themes */}
+          <div className="w-20 h-20 mx-auto rounded-3xl bg-white p-3 flex items-center justify-center shadow-2xl shadow-indigo-500/25 border border-slate-200/80 dark:border-white/10 active:scale-95 transition-transform duration-200">
+            <img
+              src={vaultixLogo}
+              alt="Vaultix Logo"
+              className="w-full h-full object-contain select-none drop-shadow-xs"
+            />
+          </div>
+          <div>
+            <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white flex items-center justify-center gap-1.5">
+              <span>Vaultix</span>
+              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">
+                Mobile
+              </span>
+            </h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Zero-Knowledge Encrypted Security</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white flex items-center justify-center gap-1.5">
-            <span>Vaultix</span>
-            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">
-              Mobile
-            </span>
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Zero-Knowledge Encrypted Security</p>
-        </div>
-      </div>
 
-      {/* Main Content Area */}
-      <div className="my-auto py-6 z-10 space-y-5">
+        {/* Main Content Area (Gap reduced a little bit between logo content and fields) */}
+        <div className="w-full mt-14 space-y-5">
         
         {/* Error Banner */}
         {error && (
@@ -741,10 +743,11 @@ export default function MobileAuthScreen({
             )}
           </div>
         )}
+        </div>
       </div>
 
       {/* Bottom Security Guarantee */}
-      <div className="text-center z-10 pt-2 border-t border-slate-200 dark:border-slate-900">
+      <div className="text-center z-10 pt-4 pb-2 border-t border-slate-200 dark:border-slate-900 mt-8">
         <p className="text-[11px] text-slate-500 flex items-center justify-center gap-1.5 font-medium">
           <ShieldCheck size={13} className="text-emerald-500" />
           <span>AES-256-GCM Zero-Knowledge Encryption</span>
