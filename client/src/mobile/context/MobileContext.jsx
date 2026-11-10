@@ -1,12 +1,18 @@
 import { Capacitor } from '@capacitor/core';
 
 /**
- * Checks if the current environment is running on a mobile device:
- * either natively via Capacitor (Android/iOS) or within a mobile viewport (< 768px).
+ * Checks if the current environment is running on the native mobile app (Capacitor Android/iOS).
+ * All web browser visits (both desktop and mobile phone browsers) will load the responsive Web Application.
+ * For testing/development in a browser, visiting with `?view=mobile` will force the mobile app shell.
  */
 export function isMobileDevice() {
   if (Capacitor.isNativePlatform()) return true;
-  if (typeof window !== 'undefined' && window.innerWidth < 768) return true;
+
+  if (typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('view') === 'mobile') return true;
+  }
+
   return false;
 }
 
