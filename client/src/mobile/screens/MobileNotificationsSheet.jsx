@@ -154,6 +154,20 @@ export default function MobileNotificationsSheet({ isOpen, onClose }) {
     }
   }, [isOpen]);
 
+  const filtered = useMemo(() => {
+    const list = Array.isArray(notifications) ? notifications.filter(Boolean) : [];
+    if (filter === 'UNREAD') {
+      return list.filter((n) => !n.isRead);
+    }
+    if (filter === 'SECURITY') {
+      return list.filter((n) => {
+        const t = String(n.type || '').toUpperCase();
+        return t.includes('SECURITY') || t.includes('ALERT') || t.includes('LOGIN');
+      });
+    }
+    return list;
+  }, [notifications, filter]);
+
   if (!isOpen) return null;
 
   const handleMarkAsRead = async (id) => {
@@ -183,20 +197,6 @@ export default function MobileNotificationsSheet({ isOpen, onClose }) {
       console.warn('markAllRead error:', err);
     }
   };
-
-  const filtered = useMemo(() => {
-    const list = Array.isArray(notifications) ? notifications.filter(Boolean) : [];
-    if (filter === 'UNREAD') {
-      return list.filter((n) => !n.isRead);
-    }
-    if (filter === 'SECURITY') {
-      return list.filter((n) => {
-        const t = String(n.type || '').toUpperCase();
-        return t.includes('SECURITY') || t.includes('ALERT') || t.includes('LOGIN');
-      });
-    }
-    return list;
-  }, [notifications, filter]);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex flex-col justify-end select-none animate-fadeIn">
