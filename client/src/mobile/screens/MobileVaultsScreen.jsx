@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Search, Plus, ChevronRight, X, Lock } from 'lucide-react';
 import ItemServiceIcon from '../../components/common/ItemServiceIcon';
 import { hapticLight, hapticMedium } from '../../utils/haptics';
+import vaultixLogo from '../../assets/Vaultix1.png';
 
 export default function MobileVaultsScreen({
   passwords = [],
@@ -37,9 +38,14 @@ export default function MobileVaultsScreen({
       {/* Sticky Top Header & Search */}
       <div className="px-5 pt-3 pb-2 space-y-2.5 border-b border-slate-800/80 sticky top-0 bg-slate-950/95 backdrop-blur-md z-30">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-black tracking-tight text-white">Vaults</h1>
-            <p className="text-[11px] text-slate-400">{passwords.length} encrypted credentials</p>
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-slate-900 border border-indigo-500/30 p-1 flex items-center justify-center shadow-sm shrink-0">
+              <img src={vaultixLogo} alt="Vaultix" className="w-full h-full object-contain drop-shadow" />
+            </div>
+            <div>
+              <h1 className="text-xl font-black tracking-tight text-white">Vaults</h1>
+              <p className="text-[11px] text-slate-400">{passwords.length} encrypted credentials</p>
+            </div>
           </div>
           <button
             onClick={() => {

@@ -24,6 +24,7 @@ import {
 } from '../../utils/mobileBiometrics';
 import { hapticMedium, hapticSuccess, hapticLight } from '../../utils/haptics';
 import api from '../../services/api';
+import vaultixLogo from '../../assets/Vaultix1.png';
 
 export default function MobileAuthScreen({
   user,
@@ -306,8 +307,12 @@ export default function MobileAuthScreen({
 
       {/* Top Brand Hero */}
       <div className="text-center space-y-3 z-10 pt-2">
-        <div className="w-16 h-16 mx-auto rounded-3xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-600 flex items-center justify-center text-white shadow-2xl shadow-indigo-600/35 active:scale-95 transition-transform duration-200">
-          <LockKeyhole size={32} strokeWidth={2.4} />
+        <div className="w-20 h-20 mx-auto rounded-3xl bg-slate-900/90 border border-indigo-500/30 p-2.5 flex items-center justify-center shadow-2xl shadow-indigo-600/30 active:scale-95 transition-transform duration-200">
+          <img
+            src={vaultixLogo}
+            alt="Vaultix Logo"
+            className="w-full h-full object-contain drop-shadow-md select-none"
+          />
         </div>
         <div>
           <h1 className="text-2xl font-black tracking-tight text-white flex items-center justify-center gap-1.5">
@@ -804,9 +809,7 @@ export default function MobileAuthScreen({
             
             <div className="flex items-center justify-between pb-1">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
-                  <KeyRound size={16} />
-                </div>
+                <img src={vaultixLogo} alt="Vaultix" className="w-7 h-7 object-contain drop-shadow" />
                 <h3 className="text-base font-extrabold text-white">Emergency Key Recovery</h3>
               </div>
               <button

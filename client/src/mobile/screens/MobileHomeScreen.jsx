@@ -1,6 +1,7 @@
 import { LockKeyhole, KeyRound, AlertTriangle, Check, Users, Sparkles, ShieldCheck, RefreshCw, ChevronRight } from 'lucide-react';
 import ItemServiceIcon from '../../components/common/ItemServiceIcon';
 import { hapticLight } from '../../utils/haptics';
+import vaultixLogo from '../../assets/Vaultix1.png';
 
 export default function MobileHomeScreen({
   user,
@@ -27,8 +28,8 @@ export default function MobileHomeScreen({
       {/* Top Header: Greeting & Quick Lock */}
       <div className="flex items-center justify-between pb-2 border-b border-slate-800/80">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-indigo-500 to-violet-600 text-white font-black text-xs flex items-center justify-center shadow-md">
-            {user?.fullName?.charAt(0)?.toUpperCase() || 'U'}
+          <div className="w-10 h-10 rounded-2xl bg-slate-900 border border-indigo-500/30 p-1.5 flex items-center justify-center shadow-md shrink-0">
+            <img src={vaultixLogo} alt="Vaultix" className="w-full h-full object-contain drop-shadow" />
           </div>
           <div>
             <h2 className="text-sm font-bold text-white leading-tight">
