@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, Plus, ChevronRight, X, Lock, Folder, Trash2, Building, ShieldCheck, ChevronDown } from 'lucide-react';
+import { Search, Plus, ChevronRight, X, Lock, Folder, Trash2, Building, ShieldCheck, ChevronDown, Bell, Share2 } from 'lucide-react';
 import ItemServiceIcon from '../../components/common/ItemServiceIcon';
 import { hapticLight, hapticMedium } from '../../utils/haptics';
 import vaultixLogo from '../../assets/Vaultix1.png';
@@ -9,12 +9,15 @@ export default function MobileVaultsScreen({
   folders = [],
   vaults = [],
   selectedVault,
+  unreadCount = 0,
   onSelectVault,
   onOpenItem,
   onAddNewItem,
   onQuickCopy,
   onOpenFolderManager,
   onOpenTrash,
+  onOpenNotifications,
+  onOpenSharedWithMe,
 }) {
   const [search, setSearch] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('ALL');
@@ -98,6 +101,22 @@ export default function MobileVaultsScreen({
           </div>
 
           <div className="flex items-center gap-1.5">
+            {/* Notifications Bell */}
+            <button
+              type="button"
+              onClick={() => {
+                hapticLight();
+                onOpenNotifications?.();
+              }}
+              className="w-8 h-8 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 flex items-center justify-center active:scale-95 transition shadow-xs relative"
+              title="Notifications"
+            >
+              <Bell size={15} />
+              {unreadCount > 0 && (
+                <span className="absolute 1.5 top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-slate-900" />
+              )}
+            </button>
+
             {/* Manage Folders Button */}
             <button
               type="button"
@@ -167,6 +186,7 @@ export default function MobileVaultsScreen({
             { id: 'CARDS', label: 'Cards' },
             { id: 'NOTES', label: 'Notes' },
             { id: 'IDENTITIES', label: 'Identities' },
+            { id: 'SHARED', label: 'Shared with Me' },
           ].map((cat) => {
             const active = selectedFilter === cat.id;
             return (
@@ -175,7 +195,11 @@ export default function MobileVaultsScreen({
                 type="button"
                 onClick={() => {
                   hapticLight();
-                  setSelectedFilter(cat.id);
+                  if (cat.id === 'SHARED') {
+                    onOpenSharedWithMe?.();
+                  } else {
+                    setSelectedFilter(cat.id);
+                  }
                 }}
                 className={`px-3 py-1 rounded-full text-[11px] font-bold whitespace-nowrap transition ${
                   active

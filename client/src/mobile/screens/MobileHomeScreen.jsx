@@ -1,4 +1,17 @@
-import { LockKeyhole, KeyRound, AlertTriangle, Check, Users, Sparkles, ShieldCheck, RefreshCw, ChevronRight } from 'lucide-react';
+import {
+  LockKeyhole,
+  KeyRound,
+  AlertTriangle,
+  Check,
+  Users,
+  Sparkles,
+  ShieldCheck,
+  RefreshCw,
+  ChevronRight,
+  Bell,
+  Share2,
+  Download,
+} from 'lucide-react';
 import ItemServiceIcon from '../../components/common/ItemServiceIcon';
 import { hapticLight } from '../../utils/haptics';
 import vaultixLogo from '../../assets/Vaultix1.png';
@@ -7,11 +20,15 @@ export default function MobileHomeScreen({
   user,
   summary,
   passwords = [],
+  unreadCount = 0,
   onOpenItem,
   onNavigateTab,
   onLockVault,
   onAddNewItem,
   onRefresh,
+  onOpenNotifications,
+  onOpenSharedWithMe,
+  onOpenImportExport,
 }) {
   const {
     totalPasswords = passwords.length,
@@ -28,7 +45,7 @@ export default function MobileHomeScreen({
       {/* Top Header: Greeting & Quick Lock */}
       <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800/80">
         <div className="flex items-center gap-2.5">
-          {/* White Squircle Logo Badge - 100% visible in both light & dark themes */}
+          {/* White Squircle Logo Badge */}
           <div className="w-10 h-10 rounded-2xl bg-white border border-slate-200/80 dark:border-white/10 p-1.5 flex items-center justify-center shadow-md shadow-slate-200/50 dark:shadow-none shrink-0">
             <img src={vaultixLogo} alt="Vaultix" className="w-full h-full object-contain" />
           </div>
@@ -40,18 +57,36 @@ export default function MobileHomeScreen({
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            hapticLight();
-            onLockVault();
-          }}
-          className="h-8 px-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 hover:border-red-300 dark:hover:border-red-800/60 transition flex items-center gap-1 active:scale-95 shadow-xs"
-          title="Lock Vault"
-        >
-          <LockKeyhole size={14} />
-          <span>Lock</span>
-        </button>
+        <div className="flex items-center gap-1.5">
+          {/* Notifications Button */}
+          <button
+            type="button"
+            onClick={() => {
+              hapticLight();
+              onOpenNotifications?.();
+            }}
+            className="w-8 h-8 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 flex items-center justify-center active:scale-95 transition shadow-xs relative"
+            title="Notifications"
+          >
+            <Bell size={15} />
+            {unreadCount > 0 && (
+              <span className="absolute 1.5 top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-slate-900" />
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              hapticLight();
+              onLockVault();
+            }}
+            className="h-8 px-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 hover:border-red-300 dark:hover:border-red-800/60 transition flex items-center gap-1 active:scale-95 shadow-xs"
+            title="Lock Vault"
+          >
+            <LockKeyhole size={14} />
+            <span>Lock</span>
+          </button>
+        </div>
       </div>
 
       {/* Security Health Radial Gauge Card */}
@@ -136,15 +171,18 @@ export default function MobileHomeScreen({
           </div>
 
           {/* Card 4: Shared */}
-          <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1 shadow-xs">
+          <div
+            onClick={onOpenSharedWithMe}
+            className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1 cursor-pointer active:scale-98 transition shadow-xs"
+          >
             <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-500 dark:text-slate-400">Old / At Risk</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">Shared with Me</span>
               <span className="w-6 h-6 rounded-lg bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xs">
-                <Users size={13} />
+                <Share2 size={13} />
               </span>
             </div>
             <p className="text-2xl font-extrabold text-slate-900 dark:text-white">{oldPasswords + riskPasswords}</p>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">Vault credentials</p>
+            <p className="text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold">Tap to view shares →</p>
           </div>
         </div>
       </div>

@@ -9,11 +9,17 @@ import MobileItemEditorSheet from './screens/MobileItemEditorSheet';
 import MobileFolderManagerSheet from './screens/MobileFolderManagerSheet';
 import MobileTrashSheet from './screens/MobileTrashSheet';
 import MobileShareSheet from './screens/MobileShareSheet';
+import MobileSharedWithMeSheet from './screens/MobileSharedWithMeSheet';
+import MobileNotificationsSheet from './screens/MobileNotificationsSheet';
 import MobileTwoFactorSheet from './screens/MobileTwoFactorSheet';
 import MobileSessionsSheet from './screens/MobileSessionsSheet';
 import MobileActivityLogSheet from './screens/MobileActivityLogSheet';
 import MobileTeamSheet from './screens/MobileTeamSheet';
 import MobileApprovalsSheet from './screens/MobileApprovalsSheet';
+import MobileDepartmentsSheet from './screens/MobileDepartmentsSheet';
+import MobilePoliciesSheet from './screens/MobilePoliciesSheet';
+import MobileImportExportSheet from './screens/MobileImportExportSheet';
+import MobileProfileSheet from './screens/MobileProfileSheet';
 import MobileGeneratorScreen from './screens/MobileGeneratorScreen';
 import MobileHealthScreen from './screens/MobileHealthScreen';
 import MobileSettingsScreen from './screens/MobileSettingsScreen';
@@ -75,6 +81,7 @@ export default function MobileRoot() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [decryptedPassword, setDecryptedPassword] = useState('');
   const [toast, setToast] = useState('');
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // Item Editor State (Create & Edit)
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -85,9 +92,11 @@ export default function MobileRoot() {
   const [isFolderManagerOpen, setIsFolderManagerOpen] = useState(false);
   const [isTrashOpen, setIsTrashOpen] = useState(false);
 
-  // Sharing Sheet
+  // Sharing & Notifications Sheets
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [sharingItem, setSharingItem] = useState(null);
+  const [isSharedWithMeOpen, setIsSharedWithMeOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
   // Security & Enterprise Sheets
   const [isTwoFactorOpen, setIsTwoFactorOpen] = useState(false);
@@ -95,19 +104,35 @@ export default function MobileRoot() {
   const [isActivityLogsOpen, setIsActivityLogsOpen] = useState(false);
   const [isTeamOpen, setIsTeamOpen] = useState(false);
   const [isApprovalsOpen, setIsApprovalsOpen] = useState(false);
+  const [isDepartmentsOpen, setIsDepartmentsOpen] = useState(false);
+  const [isPoliciesOpen, setIsPoliciesOpen] = useState(false);
+  const [isImportExportOpen, setIsImportExportOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const showToast = useCallback((msg) => {
     setToast(msg);
     setTimeout(() => setToast(''), 2400);
   }, []);
 
-  // Fetch initial vaults & summary once master verified
+  const fetchUnreadNotifications = useCallback(async () => {
+    try {
+      const res = await api.get('/notifications');
+      setUnreadCount(res.data?.unreadCount || 0);
+    } catch {
+      //
+    }
+  }, []);
+
+  // Fetch initial vaults, summary, & notifications once master verified
   useEffect(() => {
     if (isAuthenticated && isMasterVerified && token) {
       dispatch(fetchVaults());
       dispatch(fetchSecuritySummary());
+      fetchUnreadNotifications();
+      window.addEventListener('vaultix:notifications-updated', fetchUnreadNotifications);
+      return () => window.removeEventListener('vaultix:notifications-updated', fetchUnreadNotifications);
     }
-  }, [isAuthenticated, isMasterVerified, token, dispatch]);
+  }, [isAuthenticated, isMasterVerified, token, dispatch, fetchUnreadNotifications]);
 
   // Select default vault and fetch its items & folders
   useEffect(() => {
@@ -328,13 +353,18 @@ export default function MobileRoot() {
           user={user}
           summary={securitySummary}
           passwords={passwords}
+          unreadCount={unreadCount}
           onOpenItem={handleOpenItem}
           onNavigateTab={setActiveTab}
           onLockVault={handleLockVault}
           onAddNewItem={handleOpenCreateItem}
+          onOpenNotifications={() => setIsNotificationsOpen(true)}
+          onOpenSharedWithMe={() => setIsSharedWithMeOpen(true)}
+          onOpenImportExport={() => setIsImportExportOpen(true)}
           onRefresh={() => {
             dispatch(fetchVaults());
             dispatch(fetchSecuritySummary());
+            fetchUnreadNotifications();
             if (selectedVault?.id) {
               dispatch(fetchPasswordsByVault(selectedVault.id));
               dispatch(fetchFoldersByVault(selectedVault.id));
@@ -351,12 +381,15 @@ export default function MobileRoot() {
           folders={folders}
           vaults={vaults}
           selectedVault={selectedVault}
+          unreadCount={unreadCount}
           onSelectVault={handleSelectVault}
           onOpenItem={handleOpenItem}
           onAddNewItem={handleOpenCreateItem}
           onQuickCopy={handleQuickCopy}
           onOpenFolderManager={() => setIsFolderManagerOpen(true)}
           onOpenTrash={() => setIsTrashOpen(true)}
+          onOpenNotifications={() => setIsNotificationsOpen(true)}
+          onOpenSharedWithMe={() => setIsSharedWithMeOpen(true)}
         />
       )}
 
@@ -384,11 +417,15 @@ export default function MobileRoot() {
         <MobileSettingsScreen
           user={user}
           onLockAndLogout={handleLogout}
+          onOpenProfile={() => setIsProfileOpen(true)}
           onOpenTwoFactor={() => setIsTwoFactorOpen(true)}
           onOpenSessions={() => setIsSessionsOpen(true)}
           onOpenActivityLogs={() => setIsActivityLogsOpen(true)}
           onOpenTeam={() => setIsTeamOpen(true)}
           onOpenApprovals={() => setIsApprovalsOpen(true)}
+          onOpenDepartments={() => setIsDepartmentsOpen(true)}
+          onOpenPolicies={() => setIsPoliciesOpen(true)}
+          onOpenImportExport={() => setIsImportExportOpen(true)}
         />
       )}
 
@@ -460,6 +497,21 @@ export default function MobileRoot() {
         onSuccess={(msg) => showToast(msg)}
       />
 
+      {/* Shared With Me Sheet */}
+      <MobileSharedWithMeSheet
+        isOpen={isSharedWithMeOpen}
+        onClose={() => setIsSharedWithMeOpen(false)}
+      />
+
+      {/* Notifications Sheet */}
+      <MobileNotificationsSheet
+        isOpen={isNotificationsOpen}
+        onClose={() => {
+          setIsNotificationsOpen(false);
+          fetchUnreadNotifications();
+        }}
+      />
+
       {/* Two-Factor Authentication Sheet */}
       <MobileTwoFactorSheet
         isOpen={isTwoFactorOpen}
@@ -488,6 +540,30 @@ export default function MobileRoot() {
       <MobileApprovalsSheet
         isOpen={isApprovalsOpen}
         onClose={() => setIsApprovalsOpen(false)}
+      />
+
+      {/* Departments Sheet */}
+      <MobileDepartmentsSheet
+        isOpen={isDepartmentsOpen}
+        onClose={() => setIsDepartmentsOpen(false)}
+      />
+
+      {/* Organization Security Policies Sheet */}
+      <MobilePoliciesSheet
+        isOpen={isPoliciesOpen}
+        onClose={() => setIsPoliciesOpen(false)}
+      />
+
+      {/* Vault Import & Export Sheet */}
+      <MobileImportExportSheet
+        isOpen={isImportExportOpen}
+        onClose={() => setIsImportExportOpen(false)}
+      />
+
+      {/* Profile & Credentials Security Sheet */}
+      <MobileProfileSheet
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
       />
     </MobileAppShell>
   );

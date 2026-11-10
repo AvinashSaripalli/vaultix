@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Eye,
   EyeOff,
@@ -15,10 +15,14 @@ import {
   User,
   KeyRound,
   ShieldAlert,
+  Activity,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import ItemServiceIcon from '../../components/common/ItemServiceIcon';
 import { hapticMedium, hapticLight } from '../../utils/haptics';
 import { parseCustomFields } from '../../utils/itemTypes';
+import api from '../../services/api';
 
 export default function MobileItemDetailSheet({
   item,
@@ -33,6 +37,21 @@ export default function MobileItemDetailSheet({
 }) {
   const [revealed, setRevealed] = useState(false);
   const [copiedField, setCopiedField] = useState(null);
+
+  // Item Activity History
+  const [showActivity, setShowActivity] = useState(false);
+  const [itemActivity, setItemActivity] = useState([]);
+  const [loadingActivity, setLoadingActivity] = useState(false);
+
+  useEffect(() => {
+    if (showActivity && item?.id) {
+      setLoadingActivity(true);
+      api.get(`/passwords/${item.id}/activity?includeGroup=true`)
+        .then((res) => setItemActivity(res.data || []))
+        .catch(() => {})
+        .finally(() => setLoadingActivity(false));
+    }
+  }, [showActivity, item?.id]);
 
   if (!item) return null;
 
@@ -462,7 +481,7 @@ export default function MobileItemDetailSheet({
           </div>
         )}
 
-        {/* Security / Metadata Card */}
+        {/* Security & Metadata Card */}
         <div className="rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 p-3.5 space-y-2 text-xs shadow-xs">
           <div className="flex justify-between text-slate-500 dark:text-slate-400">
             <span>Folder</span>
@@ -474,6 +493,42 @@ export default function MobileItemDetailSheet({
               <span className="text-slate-900 dark:text-slate-200 font-semibold">
                 {new Date(item.updatedAt).toLocaleDateString()}
               </span>
+            </div>
+          )}
+        </div>
+
+        {/* Item Activity Trail (Audit History) */}
+        <div className="rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 overflow-hidden shadow-xs">
+          <div
+            onClick={() => setShowActivity(!showActivity)}
+            className="p-3.5 flex items-center justify-between text-xs cursor-pointer active:bg-slate-100 dark:active:bg-slate-800 transition"
+          >
+            <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+              <Activity size={15} className="text-indigo-600 dark:text-indigo-400" />
+              <span className="font-bold">Item Audit Trail</span>
+            </div>
+            {showActivity ? <ChevronUp size={15} className="text-slate-400" /> : <ChevronDown size={15} className="text-slate-400" />}
+          </div>
+
+          {showActivity && (
+            <div className="p-3 border-t border-slate-200 dark:border-slate-800 space-y-2">
+              {loadingActivity ? (
+                <p className="text-xs text-slate-400 text-center py-2">Loading audit events...</p>
+              ) : itemActivity.length === 0 ? (
+                <p className="text-xs text-slate-400 text-center py-2">No recorded events for this item yet.</p>
+              ) : (
+                itemActivity.slice(0, 5).map((log) => (
+                  <div key={log.id} className="text-[11px] flex items-center justify-between py-1 border-b border-slate-100 dark:border-slate-800/60 last:border-0">
+                    <div>
+                      <span className="font-bold text-slate-900 dark:text-white mr-1.5">{log.action}</span>
+                      <span className="text-slate-500 dark:text-slate-400">by {log.user?.fullName || 'You'}</span>
+                    </div>
+                    <span className="text-[10px] text-slate-400">
+                      {new Date(log.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                ))
+              )}
             </div>
           )}
         </div>
