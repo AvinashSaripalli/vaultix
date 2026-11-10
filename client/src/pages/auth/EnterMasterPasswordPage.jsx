@@ -402,7 +402,8 @@ function EnterMasterPasswordPage() {
 
               <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-6">
                 Your vault stays locked until your master password is verified.
-                Press <kbd className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-[10px] font-mono">Ctrl+Shift+L</kbd> anytime to re-lock.
+                <span className="hidden sm:inline"> Press <kbd className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-[10px] font-mono">Ctrl+Shift+L</kbd> anytime to re-lock.</span>
+                <span className="sm:hidden"> Tap the Lock icon anytime to re-lock your vault.</span>
               </p>
             </>
           ) : (

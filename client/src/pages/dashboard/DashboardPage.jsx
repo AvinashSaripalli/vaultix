@@ -68,17 +68,17 @@ function StatCard({ icon, label, value, subtext, gradient, valueColor, onClick }
   return (
     <button
       onClick={onClick}
-      className="relative rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 text-left overflow-hidden transition-all hover:shadow-md hover:-translate-y-0.5 group min-w-0"
+      className="relative rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 sm:p-4 text-left overflow-hidden transition-all hover:shadow-md hover:-translate-y-0.5 group min-w-0"
     >
       <div className={`absolute inset-0 opacity-[0.03] ${gradient}`} />
-      <div className="flex items-center gap-3 mb-1.5">
-        <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${gradient} text-white shrink-0`}>
-          <IconEl size={18} />
+      <div className="flex items-center gap-2.5 sm:gap-3 mb-1">
+        <div className={`h-8 w-8 sm:h-9 sm:w-9 rounded-xl flex items-center justify-center ${gradient} text-white shrink-0`}>
+          <IconEl size={16} />
         </div>
       </div>
-      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{label}</p>
-      <p className={`text-2xl font-bold mt-0.5 ${valueColor || 'text-slate-900 dark:text-slate-100'}`}>{value}</p>
-      {subtext && <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{subtext}</p>}
+      <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 truncate">{label}</p>
+      <p className={`text-xl sm:text-2xl font-bold mt-0.5 ${valueColor || 'text-slate-900 dark:text-slate-100'}`}>{value}</p>
+      {subtext && <p className="text-[11px] sm:text-xs text-slate-400 dark:text-slate-500 mt-0.5 truncate">{subtext}</p>}
     </button>
   );
 }
@@ -212,7 +212,7 @@ function DashboardPage() {
               {vaultType === 'COMPANY' ? 'Company Vault Dashboard' : 'Personal Vault Dashboard'}
               {selectedFolderName ? ` — ${selectedFolderName}` : ''}
             </p>
-            <p className={`text-xs mt-0.5 ${vaultType === 'COMPANY' ? 'text-indigo-700 dark:text-indigo-300' : 'text-emerald-700 dark:text-emerald-300'}`}>
+            <p className={`text-xs mt-0.5 hidden sm:block ${vaultType === 'COMPANY' ? 'text-indigo-700 dark:text-indigo-300' : 'text-emerald-700 dark:text-emerald-300'}`}>
               {vaultType === 'COMPANY'
                 ? ['SUPER_ADMIN', 'ADMIN'].includes(user?.role)
                   ? 'Showing organization-wide analytics — shared passwords, team activity, and overall security health for your Company Vault.'
@@ -220,7 +220,7 @@ function DashboardPage() {
                 : 'Showing private analytics — your personal passwords, weak/old/at-risk counts, and your own security score.'}
             </p>
           </div>
-          <span className={`ml-auto hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold shrink-0 ${vaultType === 'COMPANY' ? 'bg-white dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700' : 'bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700'}`}>
+          <span className={`ml-auto inline-flex sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold shrink-0 ${vaultType === 'COMPANY' ? 'bg-white dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700' : 'bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700'}`}>
             <span className={`h-2 w-2 rounded-full ${vaultType === 'COMPANY' ? 'bg-indigo-600' : 'bg-emerald-600'}`} />
             {selectedFolderName || (vaultType === 'COMPANY' ? 'Company' : 'Personal')}
           </span>
@@ -239,8 +239,23 @@ function DashboardPage() {
         {/* Content */}
         {!loading && !error && (
           <>
-            {/* Stat Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {/* Mobile Security Health Hero (Visible on mobile only) */}
+            <div className="md:hidden rounded-2xl bg-gradient-to-br from-indigo-950/70 via-slate-900 to-slate-900 border border-indigo-500/30 p-4 flex items-center justify-between shadow-sm">
+              <div className="space-y-0.5">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-400">Vault Health</span>
+                <h3 className="text-xl font-extrabold text-slate-100">{securityScore}% Secure</h3>
+                <p className="text-xs text-slate-400">{scoreLabel} · {weakPasswords > 0 ? `${weakPasswords} weak to review` : 'All items strong'}</p>
+              </div>
+              <button
+                onClick={() => navigate('/security/password-health')}
+                className="h-9 px-3.5 rounded-xl bg-indigo-600 text-white text-xs font-bold inline-flex items-center gap-1 shadow-md shadow-indigo-600/30 active:scale-95 transition"
+              >
+                Audit →
+              </button>
+            </div>
+
+            {/* Stat Cards - 2x2 Grid on Mobile, 4 columns on Desktop */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
               <StatCard
                 icon={KeyRound} label="Total Items" value={totalPasswords || 0}
                 subtext={selectedFolderName || (vaultType === 'COMPANY' ? 'Company vault' : 'Personal vault')}
@@ -269,6 +284,46 @@ function DashboardPage() {
                 valueColor="text-red-600"
                 onClick={() => navigate('/security/password-health')}
               />
+            </div>
+
+            {/* Mobile Quick Action Buttons (Visible on mobile only) */}
+            <div className="md:hidden grid grid-cols-4 gap-2 text-center">
+              <button
+                onClick={() => navigate('/my-vault')}
+                className="p-2.5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xs active:scale-95 transition"
+              >
+                <div className="w-8 h-8 mx-auto rounded-xl bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-1 text-sm">
+                  🔑
+                </div>
+                <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block truncate">My Vault</span>
+              </button>
+              <button
+                onClick={() => navigate('/security/password-health')}
+                className="p-2.5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xs active:scale-95 transition"
+              >
+                <div className="w-8 h-8 mx-auto rounded-xl bg-emerald-50 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-1 text-sm">
+                  🛡️
+                </div>
+                <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block truncate">Audit</span>
+              </button>
+              <button
+                onClick={() => navigate('/activity-log')}
+                className="p-2.5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xs active:scale-95 transition"
+              >
+                <div className="w-8 h-8 mx-auto rounded-xl bg-amber-50 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-1 text-sm">
+                  📋
+                </div>
+                <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block truncate">Activity</span>
+              </button>
+              <button
+                onClick={() => navigate('/profile')}
+                className="p-2.5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xs active:scale-95 transition"
+              >
+                <div className="w-8 h-8 mx-auto rounded-xl bg-purple-50 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-1 text-sm">
+                  ⚙️
+                </div>
+                <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block truncate">Settings</span>
+              </button>
             </div>
 
             {/* Charts Row — taller and more spacious */}

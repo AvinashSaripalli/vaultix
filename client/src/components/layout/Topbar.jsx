@@ -165,13 +165,13 @@ function Topbar() {
   };
 
   return (
-    <div className="h-[calc(4rem+env(safe-area-inset-top))] sm:h-[72px] pt-[env(safe-area-inset-top)] bg-[var(--bg-topbar)] border-b border-[var(--border-primary)] flex items-center justify-between px-4 sm:px-6 lg:px-8 transition-colors duration-200">
-      {/* Left side: drawer/collapse toggles + title */}
-      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-        {/* Mobile drawer toggle */}
+    <div className="h-[calc(3.75rem+env(safe-area-inset-top))] sm:h-[72px] pt-[env(safe-area-inset-top)] bg-[var(--bg-topbar)] border-b border-[var(--border-primary)] flex items-center justify-between px-3.5 sm:px-6 lg:px-8 transition-colors duration-200">
+      {/* Left side: branding/avatar + title */}
+      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        {/* Tablet drawer toggle (hidden on mobile phones where bottom nav is active) */}
         <button
           onClick={toggleMobileSidebar}
-          className="lg:hidden h-9 w-9 sm:h-10 sm:w-10 rounded-xl border border-[var(--border-primary)] bg-[var(--bg-card)] flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors shrink-0"
+          className="hidden md:flex lg:hidden h-9 w-9 sm:h-10 sm:w-10 rounded-xl border border-[var(--border-primary)] bg-[var(--bg-card)] items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors shrink-0"
           title="Open navigation menu"
           aria-label="Open navigation menu"
         >
@@ -188,9 +188,21 @@ function Topbar() {
           <PanelLeft size={18} />
         </button>
 
-        <h2 className="text-xs sm:text-sm font-semibold text-[var(--text-secondary)] truncate">
-          Password Manager
-        </h2>
+        {/* Mobile Header Branding & User Greeting */}
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="md:hidden w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 to-violet-500 text-white text-xs font-extrabold flex items-center justify-center shadow-xs shrink-0">
+            {user?.fullName ? user.fullName.charAt(0).toUpperCase() : 'V'}
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-xs sm:text-sm font-bold text-[var(--text-primary)] truncate">
+              Vaultix
+            </h2>
+            <p className="md:hidden text-[10px] text-slate-400 dark:text-slate-500 truncate -mt-0.5">
+              {user?.fullName || 'Password Manager'}
+            </p>
+          </div>
+        </div>
+
         {isMasterVerified && (
           <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 shrink-0">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -204,18 +216,18 @@ function Topbar() {
         {isMasterVerified && (
           <button
             onClick={() => lockVault()}
-            className="flex items-center gap-1.5 sm:gap-2 h-9 sm:h-10 rounded-xl border border-[var(--border-primary)] bg-[var(--bg-card)] px-2.5 sm:px-3 text-xs sm:text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-red-600 dark:hover:text-red-400 transition-colors"
+            className="flex items-center gap-1.5 sm:gap-2 h-8 sm:h-10 rounded-xl border border-[var(--border-primary)] bg-[var(--bg-card)] px-2 sm:px-3 text-xs sm:text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-red-600 dark:hover:text-red-400 transition-colors"
             title="Lock vault (Ctrl+Shift+L)"
           >
-            <LockKeyhole size={16} />
+            <LockKeyhole size={15} />
             <span className="hidden sm:inline">Lock</span>
           </button>
         )}
 
-        {/* Theme toggle */}
+        {/* Theme toggle - visible on tablets & desktop, accessible via Settings on mobile */}
         <button
           onClick={() => dispatch(toggleTheme())}
-          className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl border border-[var(--border-primary)] bg-[var(--bg-card)] flex items-center justify-center hover:bg-[var(--bg-hover)] transition-colors"
+          className="hidden sm:flex h-9 w-9 sm:h-10 sm:w-10 rounded-xl border border-[var(--border-primary)] bg-[var(--bg-card)] items-center justify-center hover:bg-[var(--bg-hover)] transition-colors"
           title={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
         >
           {mode === 'dark' ? (
@@ -368,8 +380,8 @@ function Topbar() {
           )}
         </div>
 
-        {/* User avatar with dropdown */}
-        <div className="relative" ref={userMenuRef}>
+        {/* User avatar with dropdown (hidden on mobile phones where profile is in bottom nav) */}
+        <div className="relative hidden sm:block" ref={userMenuRef}>
           <button
             onClick={() => setUserMenuOpen((prev) => !prev)}
             className="flex items-center gap-2 sm:gap-2.5 hover:bg-[var(--bg-hover)] rounded-xl px-1.5 sm:px-2 py-1.5 transition-colors"
