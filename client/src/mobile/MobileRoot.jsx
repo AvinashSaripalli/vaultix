@@ -12,6 +12,8 @@ import AddPasswordModal from '../components/vault/AddPasswordModal';
 import EditPasswordModal from '../components/vault/EditPasswordModal';
 import {
   logoutUser,
+  loginUser,
+  registerUser,
   setMasterVerified,
   setSessionMasterPassword,
   setSessionRsaPublicKey,
@@ -214,12 +216,30 @@ export default function MobileRoot() {
     }
   };
 
-  // If user is not yet master verified, show dedicated mobile unlock screen
+  // If user is not yet master verified, show dedicated mobile auth / unlock screen
   if (!isAuthenticated || !isMasterVerified) {
     return (
       <MobileAuthScreen
         user={user}
-        onUnlock={handleMasterUnlock}
+        isAuthenticated={isAuthenticated}
+        onLogin={async (credentials) => {
+          const action = await dispatch(loginUser(credentials));
+          if (loginUser.fulfilled.match(action)) {
+            if (action.payload?.require2FA) {
+              return { require2FA: true, twoFactorMethod: action.payload.twoFactorMethod };
+            }
+            return { success: true };
+          }
+          return { error: action.payload || 'Login failed' };
+        }}
+        onRegister={async (formData) => {
+          const action = await dispatch(registerUser(formData));
+          if (registerUser.fulfilled.match(action)) {
+            return { success: true };
+          }
+          return { error: action.payload || 'Registration failed' };
+        }}
+        onUnlockMaster={handleMasterUnlock}
         onLogout={handleLogout}
       />
     );

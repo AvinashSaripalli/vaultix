@@ -45,14 +45,37 @@ const sendInvitation = async (req, res) => {
       to: email,
       subject: "You're invited to join Vaultix",
       html: renderEmail({
-        title: "You're invited to join Vaultix",
-        body: `Your team is using <strong>Vaultix</strong> to securely manage passwords, API keys, and sensitive credentials with zero-knowledge encryption.<br><br>Click the button below to accept your invitation, create your account, and set up your encrypted vault.`,
+        title: "You've been invited to Vaultix",
+        body: `Your organization is using <strong>Vaultix Enterprise</strong> to manage shared passwords, sensitive credentials, and secrets with zero-knowledge encryption.<br><br>Click the button below to accept your invitation and activate your account.`,
         buttonText: 'Accept Invitation &rarr;',
         buttonUrl: registerLink,
         accent: 'purple',
         badge: 'TEAM INVITATION',
         icon: '🤝',
-        footerNote: `This invitation was issued for <strong>${email}</strong> and expires in 7 days. If you were not expecting this invitation, you can safely ignore this email.`,
+        recipientEmail: email,
+        extraHtml: `
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:22px 0 16px;background-color:#faf5ff;border:1px solid #e9d5ff;border-radius:14px">
+            <tr>
+              <td style="padding:16px 20px">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                  <tr>
+                    <td style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;color:#7c3aed;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;padding-bottom:8px">
+                      INVITATION DETAILS
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:13px;color:#4a044e;line-height:1.7">
+                      <strong>Invited Email:</strong> ${email}<br>
+                      <strong>Assigned Role:</strong> <span style="display:inline-block;padding:2px 8px;background-color:#f3e8ff;border:1px solid #d8b4fe;border-radius:6px;font-weight:700;color:#6b21a8;font-size:11px">${targetRole}</span><br>
+                      <strong>Security Standard:</strong> AES-256-GCM / RSA-4096 End-to-End
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        `,
+        footerNote: `This invitation was issued for <strong>${email}</strong> and expires in 7 days. If you were not expecting this invite, you can safely ignore this email.`,
       }),
     });
 
