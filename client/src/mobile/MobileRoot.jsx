@@ -116,10 +116,25 @@ export default function MobileRoot() {
 
   const fetchUnreadNotifications = useCallback(async () => {
     try {
-      const res = await api.get('/notifications');
-      setUnreadCount(res.data?.unreadCount || 0);
+      let raw = null;
+      try {
+        const resActivity = await api.get('/notifications/recent-activity');
+        raw = resActivity?.data;
+      } catch {
+        const resNotif = await api.get('/notifications');
+        raw = resNotif?.data;
+      }
+      const count =
+        typeof raw?.unreadCount === 'number'
+          ? raw.unreadCount
+          : Array.isArray(raw?.items)
+          ? raw.items.filter((i) => i && !i.isRead).length
+          : Array.isArray(raw?.notifications)
+          ? raw.notifications.filter((n) => n && !n.isRead).length
+          : 0;
+      setUnreadCount(count);
     } catch {
-      //
+      // ignore
     }
   }, []);
 
