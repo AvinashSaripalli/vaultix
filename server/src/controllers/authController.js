@@ -482,13 +482,13 @@ const register = async (req, res) => {
           icon: '🛡️',
           recipientEmail: user.email,
           extraHtml: `
-            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:22px 0 16px;background-color:#f0f9ff;border:1px solid #bae6fd;border-radius:12px">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:20px 0 16px;background-color:#f0f9ff;border-left:4px solid #0284c7;border-top:1px solid #bae6fd;border-right:1px solid #bae6fd;border-bottom:1px solid #bae6fd;border-radius:10px">
               <tr>
-                <td style="padding:16px 18px">
-                  <p style="margin:0 0 8px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:12px;font-weight:700;color:#0369a1;letter-spacing:0.5px">
-                    WHAT HAPPENS NEXT:
+                <td style="padding:14px 18px" align="left">
+                  <p style="margin:0 0 6px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;font-weight:700;color:#0369a1;letter-spacing:0.5px;text-transform:uppercase">
+                    What Happens Next:
                   </p>
-                  <p style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:13px;line-height:1.6;color:#0c4a6e">
+                  <p style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:12.5px;line-height:1.6;color:#0c4a6e">
                     Once verified, you will be prompted to create your <strong>Master Password</strong>. Your master password derives your local AES-256 encryption key and is never sent to our servers.
                   </p>
                 </td>
@@ -969,13 +969,13 @@ const requestPasswordReset = async (req, res) => {
         icon: '🔑',
         recipientEmail: user.email,
         extraHtml: `
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:22px 0 16px;background-color:#eef2ff;border:1px solid #c7d2fe;border-radius:12px">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:20px 0 16px;background-color:#eef2ff;border-left:4px solid #4f46e5;border-top:1px solid #c7d2fe;border-right:1px solid #c7d2fe;border-bottom:1px solid #c7d2fe;border-radius:10px">
             <tr>
-              <td style="padding:16px 18px">
-                <p style="margin:0 0 8px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:12px;font-weight:700;color:#3730a3;letter-spacing:0.5px">
-                  SECURITY ADVISORY:
+              <td style="padding:14px 18px" align="left">
+                <p style="margin:0 0 6px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;font-weight:700;color:#3730a3;letter-spacing:0.5px;text-transform:uppercase">
+                  Security Advisory:
                 </p>
-                <p style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:13px;line-height:1.6;color:#312e81">
+                <p style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:12.5px;line-height:1.6;color:#312e81">
                   This reset only affects your account login password. Your encrypted vault credentials remain safely locked behind your separate <strong>Master Password</strong>, which is never stored on our servers.
                 </p>
               </td>
@@ -1708,13 +1708,13 @@ const requestEmailVerification = async (req, res) => {
         icon: '🛡️',
         recipientEmail: user.email,
         extraHtml: `
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:22px 0 16px;background-color:#f0f9ff;border:1px solid #bae6fd;border-radius:12px">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:20px 0 16px;background-color:#f0f9ff;border-left:4px solid #0284c7;border-top:1px solid #bae6fd;border-right:1px solid #bae6fd;border-bottom:1px solid #bae6fd;border-radius:10px">
             <tr>
-              <td style="padding:16px 18px">
-                <p style="margin:0 0 8px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:12px;font-weight:700;color:#0369a1;letter-spacing:0.5px">
-                  WHY EMAIL VERIFICATION IS REQUIRED:
+              <td style="padding:14px 18px" align="left">
+                <p style="margin:0 0 6px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;font-weight:700;color:#0369a1;letter-spacing:0.5px;text-transform:uppercase">
+                  Why Email Verification is Required:
                 </p>
-                <p style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:13px;line-height:1.6;color:#0c4a6e">
+                <p style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:12.5px;line-height:1.6;color:#0c4a6e">
                   Email verification enables secure session notifications, critical security alerts, and ensures that emergency master password recovery keys are only dispatched to confirmed owners.
                 </p>
               </td>

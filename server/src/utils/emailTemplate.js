@@ -1,5 +1,5 @@
 /**
- * Vaultix Enterprise Transactional Email Template 2.0
+ * Vaultix Enterprise Transactional Email Template 2.0 (Unified Left-Aligned Enterprise Grid)
  * 
  * Bulletproof, high-contrast, responsive HTML email layout built for 100% fidelity across:
  * - Microsoft Outlook (Desktop 2016-2024, Web 365, iOS, Android, Mac)
@@ -97,18 +97,18 @@ function renderEmail({
 
   const buttonSection = buttonText && buttonUrl
     ? `
-      <!-- Action Button (Bulletproof VML for Outlook + Modern CSS) -->
-      <table role="presentation" cellspacing="0" cellpadding="0" style="margin:26px 0 16px;width:100%">
+      <!-- Action Button (Bulletproof VML for Outlook + Left-Aligned Modern CSS) -->
+      <table role="presentation" cellspacing="0" cellpadding="0" style="margin:24px 0 20px;width:100%">
         <tr>
-          <td align="center">
+          <td align="left">
             <!--[if mso]>
-            <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${buttonUrl}" style="height:50px;v-text-anchor:middle;width:280px;" arcsize="20%" stroke="f" fillcolor="${conf.primary}">
+            <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${buttonUrl}" style="height:48px;v-text-anchor:middle;width:240px;" arcsize="20%" stroke="f" fillcolor="${conf.primary}">
             <w:anchorlock/>
-            <center style="color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;font-size:15px;font-weight:700;">${buttonText}</center>
+            <center style="color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;font-size:14px;font-weight:700;">${buttonText}</center>
             </v:roundrect>
             <![endif]-->
             <!--[if !mso]><!-->
-            <a href="${buttonUrl}" target="_blank" style="display:inline-block;padding:14px 38px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:12px;background-color:${conf.primary};letter-spacing:0.2px;box-shadow:0 4px 14px ${conf.shadow};transition:all 0.2s">
+            <a href="${buttonUrl}" target="_blank" style="display:inline-block;padding:13px 32px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:10px;background-color:${conf.primary};letter-spacing:0.2px;box-shadow:0 4px 14px ${conf.shadow};">
               ${buttonText}
             </a>
             <!--<![endif]-->
@@ -116,16 +116,16 @@ function renderEmail({
         </tr>
       </table>
 
-      <!-- Secondary URL fallback box -->
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:16px 0 4px;background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:12px">
+      <!-- Secondary Clean URL Fallback Box -->
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:16px 0 4px;padding-top:16px;border-top:1px solid #f1f5f9">
         <tr>
-          <td style="padding:12px 16px">
-            <p style="margin:0 0 4px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.6px">
-              Direct Link Fallback:
+          <td align="left" style="padding:0">
+            <p style="margin:0 0 6px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;font-weight:600;color:#64748b;line-height:1.4">
+              Button not working? Paste this link into your browser:
             </p>
-            <p style="margin:0;font-family:'SF Mono',Consolas,Menlo,Monaco,monospace;font-size:11px;line-height:1.5;color:#0284c7;word-break:break-all">
-              <a href="${buttonUrl}" style="color:#0284c7;text-decoration:none">${buttonUrl}</a>
-            </p>
+            <div style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;font-family:'SF Mono',Consolas,Menlo,monospace;font-size:11px;line-height:1.5;color:#0284c7;word-break:break-all;overflow-wrap:anywhere">
+              <a href="${buttonUrl}" style="color:#0284c7;text-decoration:none;word-break:break-all">${buttonUrl}</a>
+            </div>
           </td>
         </tr>
       </table>
@@ -134,16 +134,16 @@ function renderEmail({
 
   const securityNotice = footerNote
     ? `
-      <!-- Security Callout Notice -->
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:22px;border-top:1px solid #f1f5f9;padding-top:16px">
+      <!-- Security Callout Notice (Clean Left-Aligned) -->
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:20px;border-top:1px solid #f1f5f9;padding-top:16px">
         <tr>
-          <td style="vertical-align:top;width:26px;padding-right:10px">
-            <div style="width:24px;height:24px;border-radius:8px;background-color:#f8fafc;border:1px solid #e2e8f0;text-align:center;line-height:22px;font-size:12px">
+          <td style="vertical-align:top;width:24px;padding-right:10px">
+            <div style="width:22px;height:22px;border-radius:6px;background-color:#f8fafc;border:1px solid #e2e8f0;text-align:center;line-height:20px;font-size:11px">
               🔒
             </div>
           </td>
-          <td style="vertical-align:middle">
-            <p style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:12px;line-height:1.6;color:#64748b">
+          <td style="vertical-align:middle" align="left">
+            <p style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11.5px;line-height:1.6;color:#64748b">
               ${footerNote}
             </p>
           </td>
@@ -174,8 +174,8 @@ function renderEmail({
     table { border-collapse: collapse !important; }
     @media only screen and (max-width: 600px) {
       .email-container { width: 100% !important; max-width: 100% !important; }
-      .card-body { padding: 26px 20px 22px !important; }
-      .brand-logo { width: 155px !important; max-width: 155px !important; }
+      .card-body { padding: 24px 20px 20px !important; }
+      .brand-logo { width: 145px !important; max-width: 145px !important; }
     }
   </style>
 </head>
@@ -190,38 +190,34 @@ function renderEmail({
     <tr>
       <td align="center" style="padding:0">
         
-        <!-- Header: Official Application Logo -->
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" class="email-container" style="max-width:580px;margin-bottom:22px">
+        <!-- Header: Official Application Logo (Aligned with Card Width) -->
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" class="email-container" style="max-width:580px;margin-bottom:20px">
           <tr>
-            <td align="center" style="padding:0">
+            <td align="left" style="padding:0">
               <a href="${appUrl}" target="_blank" style="text-decoration:none;display:inline-block">
-                <img src="${brandLogoSrc}" alt="Vaultix" class="brand-logo" width="175" style="display:block;width:175px;max-width:175px;height:auto;border:0;outline:none;text-decoration:none;margin:0 auto" />
+                <img src="${brandLogoSrc}" alt="Vaultix" class="brand-logo" width="160" style="display:block;width:160px;max-width:160px;height:auto;border:0;outline:none;text-decoration:none" />
               </a>
+            </td>
+            <td align="right" style="vertical-align:middle;padding:0">
+              <span style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;font-weight:600;color:#94a3b8;letter-spacing:0.3px">
+                Zero-Knowledge Security
+              </span>
             </td>
           </tr>
         </table>
 
         <!-- Main Card Container -->
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" bgcolor="#ffffff" class="email-container" style="max-width:580px;background-color:#ffffff;border-radius:18px;border:1px solid #e2e8f0;box-shadow:0 12px 30px -8px rgba(15,23,42,0.08), 0 4px 12px -2px rgba(15,23,42,0.03);overflow:hidden">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" bgcolor="#ffffff" class="email-container" style="max-width:580px;background-color:#ffffff;border-radius:16px;border:1px solid #e2e8f0;box-shadow:0 10px 25px -5px rgba(15,23,42,0.06);overflow:hidden">
           
-          <!-- Top Card Accent Gradient Line -->
+          <!-- Integrated Subheader: Badge Row with Clean Divider -->
           <tr>
-            <td bgcolor="${conf.primary}" style="height:4px;background-color:${conf.primary};border-top-left-radius:18px;border-top-right-radius:18px;line-height:4px;font-size:1px">
-              &nbsp;
-            </td>
-          </tr>
-
-          <!-- Card Content Body -->
-          <tr>
-            <td class="card-body" style="padding:36px 36px 32px">
-              
-              <!-- Badge & Metadata Row -->
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:18px">
+            <td bgcolor="#fafbfc" style="padding:18px 32px 14px;border-bottom:1px solid #f1f5f9;background-color:#fafbfc">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                 <tr>
-                  <td>
+                  <td align="left">
                     <table role="presentation" cellspacing="0" cellpadding="0">
                       <tr>
-                        <td bgcolor="${conf.badgeBg}" style="background-color:${conf.badgeBg};border:1px solid ${conf.badgeBorder};border-radius:9999px;padding:5px 14px">
+                        <td bgcolor="${conf.badgeBg}" style="background-color:${conf.badgeBg};border:1px solid ${conf.badgeBorder};border-radius:9999px;padding:4px 12px">
                           <span style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:10.5px;font-weight:700;color:${conf.badgeText};letter-spacing:0.8px;text-transform:uppercase">
                             ${iconEmoji}&nbsp; ${badgeLabel}
                           </span>
@@ -229,23 +225,32 @@ function renderEmail({
                       </tr>
                     </table>
                   </td>
+                  <td align="right" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;color:#94a3b8;font-weight:500">
+                    Vaultix Enterprise
+                  </td>
                 </tr>
               </table>
+            </td>
+          </tr>
 
+          <!-- Card Content Body (Strict Left-Aligned) -->
+          <tr>
+            <td class="card-body" align="left" style="padding:32px 32px 28px;text-align:left">
+              
               <!-- Main Heading -->
-              <h1 style="margin:0 0 14px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:23px;font-weight:800;line-height:1.35;color:#0f172a;letter-spacing:-0.4px">
+              <h1 style="margin:0 0 14px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:22px;font-weight:800;line-height:1.35;color:#0f172a;letter-spacing:-0.4px;text-align:left">
                 ${title}
               </h1>
 
               <!-- Message Body -->
-              <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:14.5px;line-height:1.65;color:#334155;margin:0">
+              <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:14px;line-height:1.65;color:#334155;margin:0;text-align:left">
                 ${body}
               </div>
 
-              <!-- Extra Content (Recovery Key Box, Verification Codes, etc.) -->
+              <!-- Extra Content (Recovery Key Box, Verification Codes, Callouts) -->
               ${extraHtml}
 
-              <!-- Action Button & Fallback -->
+              <!-- Action Button & Fallback (Strict Left-Aligned) -->
               ${buttonSection}
 
               <!-- Security Callout Notice -->
@@ -255,11 +260,11 @@ function renderEmail({
           </tr>
         </table>
 
-        <!-- Modern Security & Legal Footer -->
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" class="email-container" style="max-width:580px;margin-top:24px">
+        <!-- Modern Security & Legal Footer (Aligned with Card Margin) -->
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" class="email-container" style="max-width:580px;margin-top:22px">
           <tr>
-            <td align="center" style="padding:0 20px">
-              <p style="margin:0 0 6px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:12px;color:#64748b;line-height:1.5">
+            <td align="left" style="padding:0 4px">
+              <p style="margin:0 0 6px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11.5px;color:#64748b;line-height:1.5">
                 Sent by <strong style="color:#0f172a">Vaultix Enterprise</strong> &middot; <a href="${appUrl}" target="_blank" style="color:#2563eb;text-decoration:none;font-weight:600">vaultix.knadvisors.pro</a>
               </p>
               <p style="margin:0 0 4px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;color:#94a3b8;line-height:1.5">

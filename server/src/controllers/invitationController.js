@@ -54,17 +54,17 @@ const sendInvitation = async (req, res) => {
         icon: '🤝',
         recipientEmail: email,
         extraHtml: `
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:22px 0 16px;background-color:#faf5ff;border:1px solid #e9d5ff;border-radius:14px">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:20px 0 16px;background-color:#faf5ff;border-left:4px solid #7c3aed;border-top:1px solid #e9d5ff;border-right:1px solid #e9d5ff;border-bottom:1px solid #e9d5ff;border-radius:10px">
             <tr>
-              <td style="padding:16px 20px">
+              <td style="padding:14px 18px" align="left">
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                   <tr>
-                    <td style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;color:#7c3aed;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;padding-bottom:8px">
-                      INVITATION DETAILS
+                    <td style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;color:#7c3aed;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;padding-bottom:6px" align="left">
+                      Invitation Details
                     </td>
                   </tr>
                   <tr>
-                    <td style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:13px;color:#4a044e;line-height:1.7">
+                    <td style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:12.5px;color:#4a044e;line-height:1.7" align="left">
                       <strong>Invited Email:</strong> ${email}<br>
                       <strong>Assigned Role:</strong> <span style="display:inline-block;padding:2px 8px;background-color:#f3e8ff;border:1px solid #d8b4fe;border-radius:6px;font-weight:700;color:#6b21a8;font-size:11px">${targetRole}</span><br>
                       <strong>Security Standard:</strong> AES-256-GCM / RSA-4096 End-to-End
