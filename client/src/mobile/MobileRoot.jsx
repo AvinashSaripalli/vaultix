@@ -5,11 +5,18 @@ import MobileAuthScreen from './screens/MobileAuthScreen';
 import MobileHomeScreen from './screens/MobileHomeScreen';
 import MobileVaultsScreen from './screens/MobileVaultsScreen';
 import MobileItemDetailSheet from './screens/MobileItemDetailSheet';
+import MobileItemEditorSheet from './screens/MobileItemEditorSheet';
+import MobileFolderManagerSheet from './screens/MobileFolderManagerSheet';
+import MobileTrashSheet from './screens/MobileTrashSheet';
+import MobileShareSheet from './screens/MobileShareSheet';
+import MobileTwoFactorSheet from './screens/MobileTwoFactorSheet';
+import MobileSessionsSheet from './screens/MobileSessionsSheet';
+import MobileActivityLogSheet from './screens/MobileActivityLogSheet';
+import MobileTeamSheet from './screens/MobileTeamSheet';
+import MobileApprovalsSheet from './screens/MobileApprovalsSheet';
 import MobileGeneratorScreen from './screens/MobileGeneratorScreen';
 import MobileHealthScreen from './screens/MobileHealthScreen';
 import MobileSettingsScreen from './screens/MobileSettingsScreen';
-import AddPasswordModal from '../components/vault/AddPasswordModal';
-import EditPasswordModal from '../components/vault/EditPasswordModal';
 import {
   logoutUser,
   loginUser,
@@ -21,14 +28,12 @@ import {
 import {
   fetchPasswordsByVault,
   fetchVaults,
-  openAddPasswordModal,
-  openEditPasswordModal,
+  fetchVaultBySlug,
+  fetchFoldersByVault,
   deletePassword,
 } from '../features/vault/vaultSlice';
 import { fetchSecuritySummary } from '../features/dashboard/dashboardSlice';
-import {
-  verifyMasterPassword,
-} from '../utils/verifyMasterPassword';
+import { verifyMasterPassword } from '../utils/verifyMasterPassword';
 import {
   decryptPrivateKey,
   unwrapItemKey,
@@ -39,7 +44,7 @@ import {
 } from '../utils/crypto';
 import { persistEncryptedSession } from '../utils/secureSession';
 import { secureCopyText } from '../utils/clipboard';
-import { hapticSuccess, hapticMedium } from '../utils/haptics';
+import { hapticSuccess, hapticMedium, hapticLight } from '../utils/haptics';
 import api from '../services/api';
 
 export default function MobileRoot() {
@@ -57,23 +62,46 @@ export default function MobileRoot() {
   const {
     passwords = [],
     vaults = [],
-    isAddPasswordModalOpen,
-    isEditPasswordModalOpen,
+    selectedVault,
+    folders = [],
   } = useSelector((state) => state.vault);
 
   const { securitySummary } = useSelector((state) => state.dashboard);
 
+  // Tab State
   const [activeTab, setActiveTab] = useState('home');
+
+  // Sheet States
   const [selectedItem, setSelectedItem] = useState(null);
   const [decryptedPassword, setDecryptedPassword] = useState('');
   const [toast, setToast] = useState('');
 
+  // Item Editor State (Create & Edit)
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [editorMode, setEditorMode] = useState('create');
+  const [editingItem, setEditingItem] = useState(null);
+
+  // Folders & Trash Sheets
+  const [isFolderManagerOpen, setIsFolderManagerOpen] = useState(false);
+  const [isTrashOpen, setIsTrashOpen] = useState(false);
+
+  // Sharing Sheet
+  const [isShareOpen, setIsShareOpen] = useState(false);
+  const [sharingItem, setSharingItem] = useState(null);
+
+  // Security & Enterprise Sheets
+  const [isTwoFactorOpen, setIsTwoFactorOpen] = useState(false);
+  const [isSessionsOpen, setIsSessionsOpen] = useState(false);
+  const [isActivityLogsOpen, setIsActivityLogsOpen] = useState(false);
+  const [isTeamOpen, setIsTeamOpen] = useState(false);
+  const [isApprovalsOpen, setIsApprovalsOpen] = useState(false);
+
   const showToast = useCallback((msg) => {
     setToast(msg);
-    setTimeout(() => setToast(''), 2200);
+    setTimeout(() => setToast(''), 2400);
   }, []);
 
-  // Fetch initial vaults & passwords once master verified
+  // Fetch initial vaults & summary once master verified
   useEffect(() => {
     if (isAuthenticated && isMasterVerified && token) {
       dispatch(fetchVaults());
@@ -81,14 +109,32 @@ export default function MobileRoot() {
     }
   }, [isAuthenticated, isMasterVerified, token, dispatch]);
 
+  // Select default vault and fetch its items & folders
   useEffect(() => {
     if (vaults?.length > 0 && isMasterVerified) {
-      const defaultVault = vaults.find((v) => v.type === 'COMPANY') || vaults[0];
-      if (defaultVault?.id) {
-        dispatch(fetchPasswordsByVault(defaultVault.id));
+      const targetVault = selectedVault || vaults.find((v) => v.type === 'COMPANY') || vaults[0];
+      if (targetVault?.id) {
+        if (!selectedVault || selectedVault.id !== targetVault.id) {
+          if (targetVault.slug) {
+            dispatch(fetchVaultBySlug(targetVault.slug));
+          }
+        }
+        dispatch(fetchPasswordsByVault(targetVault.id));
+        dispatch(fetchFoldersByVault(targetVault.id));
       }
     }
   }, [vaults, isMasterVerified, dispatch]);
+
+  // Handle switching vaults
+  const handleSelectVault = (vault) => {
+    if (!vault?.id) return;
+    if (vault.slug) {
+      dispatch(fetchVaultBySlug(vault.slug));
+    }
+    dispatch(fetchPasswordsByVault(vault.id));
+    dispatch(fetchFoldersByVault(vault.id));
+    showToast(`Switched to ${vault.name}`);
+  };
 
   // Master password unlock handler
   const handleMasterUnlock = async (candidatePassword) => {
@@ -216,6 +262,28 @@ export default function MobileRoot() {
     }
   };
 
+  // Modal Triggers
+  const handleOpenCreateItem = () => {
+    hapticMedium();
+    setEditingItem(null);
+    setEditorMode('create');
+    setIsEditorOpen(true);
+  };
+
+  const handleOpenEditItem = (item) => {
+    hapticMedium();
+    setEditingItem(item);
+    setEditorMode('edit');
+    setSelectedItem(null);
+    setIsEditorOpen(true);
+  };
+
+  const handleOpenShareItem = (item) => {
+    hapticMedium();
+    setSharingItem(item);
+    setIsShareOpen(true);
+  };
+
   // If user is not yet master verified, show dedicated mobile auth / unlock screen
   if (!isAuthenticated || !isMasterVerified) {
     return (
@@ -263,10 +331,14 @@ export default function MobileRoot() {
           onOpenItem={handleOpenItem}
           onNavigateTab={setActiveTab}
           onLockVault={handleLockVault}
-          onAddNewItem={() => dispatch(openAddPasswordModal())}
+          onAddNewItem={handleOpenCreateItem}
           onRefresh={() => {
             dispatch(fetchVaults());
             dispatch(fetchSecuritySummary());
+            if (selectedVault?.id) {
+              dispatch(fetchPasswordsByVault(selectedVault.id));
+              dispatch(fetchFoldersByVault(selectedVault.id));
+            }
             showToast('Vault Synchronized');
           }}
         />
@@ -276,9 +348,15 @@ export default function MobileRoot() {
       {activeTab === 'vaults' && (
         <MobileVaultsScreen
           passwords={passwords}
+          folders={folders}
+          vaults={vaults}
+          selectedVault={selectedVault}
+          onSelectVault={handleSelectVault}
           onOpenItem={handleOpenItem}
-          onAddNewItem={() => dispatch(openAddPasswordModal())}
+          onAddNewItem={handleOpenCreateItem}
           onQuickCopy={handleQuickCopy}
+          onOpenFolderManager={() => setIsFolderManagerOpen(true)}
+          onOpenTrash={() => setIsTrashOpen(true)}
         />
       )}
 
@@ -306,10 +384,15 @@ export default function MobileRoot() {
         <MobileSettingsScreen
           user={user}
           onLockAndLogout={handleLogout}
+          onOpenTwoFactor={() => setIsTwoFactorOpen(true)}
+          onOpenSessions={() => setIsSessionsOpen(true)}
+          onOpenActivityLogs={() => setIsActivityLogsOpen(true)}
+          onOpenTeam={() => setIsTeamOpen(true)}
+          onOpenApprovals={() => setIsApprovalsOpen(true)}
         />
       )}
 
-      {/* Item Detail Bottom Sheet */}
+      {/* Detail Sheet */}
       {selectedItem && (
         <MobileItemDetailSheet
           item={selectedItem}
@@ -319,23 +402,93 @@ export default function MobileRoot() {
             secureCopyText(text, label);
             showToast(`${label} Copied`);
           }}
-          onEdit={() => {
-            setSelectedItem(null);
-            dispatch(openEditPasswordModal());
-          }}
+          onEdit={(item) => handleOpenEditItem(item)}
+          onShare={(item) => handleOpenShareItem(item)}
           onDelete={async (item) => {
             if (window.confirm(`Move "${item.name}" to Trash?`)) {
               await dispatch(deletePassword(item.id));
               setSelectedItem(null);
               showToast(`Moved "${item.name}" to Trash`);
+              if (selectedVault?.id) {
+                dispatch(fetchPasswordsByVault(selectedVault.id));
+              }
             }
           }}
         />
       )}
 
-      {/* Modals when triggered from Mobile */}
-      {isAddPasswordModalOpen && <AddPasswordModal />}
-      {isEditPasswordModalOpen && <EditPasswordModal />}
+      {/* Item Editor Sheet (Create / Edit all 4 item types) */}
+      <MobileItemEditorSheet
+        isOpen={isEditorOpen}
+        mode={editorMode}
+        item={editingItem}
+        initialDecryptedPassword={editingItem?.id === selectedItem?.id ? decryptedPassword : ''}
+        onClose={() => {
+          setIsEditorOpen(false);
+          setEditingItem(null);
+        }}
+        onSaved={() => {
+          setIsEditorOpen(false);
+          setEditingItem(null);
+          showToast(editorMode === 'create' ? 'Item Created' : 'Item Updated');
+          if (selectedVault?.id) {
+            dispatch(fetchPasswordsByVault(selectedVault.id));
+          }
+        }}
+      />
+
+      {/* Folder Manager Sheet */}
+      <MobileFolderManagerSheet
+        isOpen={isFolderManagerOpen}
+        onClose={() => setIsFolderManagerOpen(false)}
+      />
+
+      {/* Trash Recovery Sheet */}
+      <MobileTrashSheet
+        isOpen={isTrashOpen}
+        onClose={() => setIsTrashOpen(false)}
+      />
+
+      {/* Share Credential Sheet */}
+      <MobileShareSheet
+        isOpen={isShareOpen}
+        item={sharingItem}
+        onClose={() => {
+          setIsShareOpen(false);
+          setSharingItem(null);
+        }}
+        onSuccess={(msg) => showToast(msg)}
+      />
+
+      {/* Two-Factor Authentication Sheet */}
+      <MobileTwoFactorSheet
+        isOpen={isTwoFactorOpen}
+        onClose={() => setIsTwoFactorOpen(false)}
+      />
+
+      {/* Active Sessions Sheet */}
+      <MobileSessionsSheet
+        isOpen={isSessionsOpen}
+        onClose={() => setIsSessionsOpen(false)}
+      />
+
+      {/* Audit Activity Log Sheet */}
+      <MobileActivityLogSheet
+        isOpen={isActivityLogsOpen}
+        onClose={() => setIsActivityLogsOpen(false)}
+      />
+
+      {/* Team Management Sheet */}
+      <MobileTeamSheet
+        isOpen={isTeamOpen}
+        onClose={() => setIsTeamOpen(false)}
+      />
+
+      {/* Admin Approvals Sheet */}
+      <MobileApprovalsSheet
+        isOpen={isApprovalsOpen}
+        onClose={() => setIsApprovalsOpen(false)}
+      />
     </MobileAppShell>
   );
 }

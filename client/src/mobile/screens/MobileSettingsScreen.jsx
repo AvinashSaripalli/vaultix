@@ -1,11 +1,33 @@
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Shield, Smartphone, Clock, Sparkles, Moon, Sun, LogOut, CheckCircle2 } from 'lucide-react';
+import {
+  Shield,
+  Smartphone,
+  Clock,
+  Sparkles,
+  Moon,
+  Sun,
+  LogOut,
+  ChevronRight,
+  KeyRound,
+  Activity,
+  Users,
+  ShieldAlert,
+} from 'lucide-react';
 import { isBiometricUnlockEnabled, isMobileNative } from '../../utils/mobileBiometrics';
 import { hapticMedium, hapticLight } from '../../utils/haptics';
-import { setTheme, toggleTheme } from '../../features/theme/themeSlice';
+import { setTheme } from '../../features/theme/themeSlice';
+import { isAdmin } from '../../utils/roles';
 
-export default function MobileSettingsScreen({ user, onLockAndLogout }) {
+export default function MobileSettingsScreen({
+  user,
+  onLockAndLogout,
+  onOpenTwoFactor,
+  onOpenSessions,
+  onOpenActivityLogs,
+  onOpenTeam,
+  onOpenApprovals,
+}) {
   const dispatch = useDispatch();
   const { mode } = useSelector((state) => state.theme);
   const isDark = mode === 'dark';
@@ -24,11 +46,13 @@ export default function MobileSettingsScreen({ user, onLockAndLogout }) {
     dispatch(setTheme(newMode));
   };
 
+  const userIsAdmin = isAdmin(user);
+
   return (
     <div className="px-5 pt-3 pb-8 space-y-4 select-none">
       <div>
         <h1 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">Settings</h1>
-        <p className="text-xs text-slate-500 dark:text-slate-400">Device security, theme &amp; vault preferences</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">Security, active sessions, enterprise &amp; theme</p>
       </div>
 
       {/* Profile Inset Card */}
@@ -45,7 +69,7 @@ export default function MobileSettingsScreen({ user, onLockAndLogout }) {
         </div>
       </div>
 
-      {/* Inset Group: Appearance / Theme Switcher */}
+      {/* Appearance / Theme Switcher */}
       <div className="space-y-1.5">
         <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-1">
           Appearance &amp; Theme
@@ -61,7 +85,6 @@ export default function MobileSettingsScreen({ user, onLockAndLogout }) {
             </div>
           </div>
 
-          {/* Theme Mode Segmented Pill */}
           <div className="grid grid-cols-2 gap-2 bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800/80">
             <button
               type="button"
@@ -92,16 +115,71 @@ export default function MobileSettingsScreen({ user, onLockAndLogout }) {
         </div>
       </div>
 
-      {/* Inset Group: Security */}
+      {/* Security Hub & Multi-Factor */}
       <div className="space-y-1.5">
         <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-1">
-          Security &amp; Biometrics
+          Security &amp; Privacy Hub
         </span>
         <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 divide-y divide-slate-200 dark:divide-slate-800/80 overflow-hidden shadow-xs">
+          
+          {/* Two-Factor Authentication Link */}
+          <div
+            onClick={() => {
+              hapticLight();
+              onOpenTwoFactor?.();
+            }}
+            className="p-3.5 flex items-center justify-between text-xs cursor-pointer active:bg-slate-50 dark:active:bg-slate-800 transition"
+          >
+            <div className="flex items-center gap-2.5">
+              <KeyRound size={16} className="text-indigo-600 dark:text-indigo-400" />
+              <div>
+                <p className="font-bold text-slate-900 dark:text-white">Two-Factor Authentication (2FA)</p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">TOTP Authenticator &amp; Backup Codes</p>
+              </div>
+            </div>
+            <ChevronRight size={16} className="text-slate-400" />
+          </div>
+
+          {/* Active Sessions Link */}
+          <div
+            onClick={() => {
+              hapticLight();
+              onOpenSessions?.();
+            }}
+            className="p-3.5 flex items-center justify-between text-xs cursor-pointer active:bg-slate-50 dark:active:bg-slate-800 transition"
+          >
+            <div className="flex items-center gap-2.5">
+              <Smartphone size={16} className="text-indigo-600 dark:text-indigo-400" />
+              <div>
+                <p className="font-bold text-slate-900 dark:text-white">Active Sessions &amp; Devices</p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">Review and terminate remote devices</p>
+              </div>
+            </div>
+            <ChevronRight size={16} className="text-slate-400" />
+          </div>
+
+          {/* Audit Activity Logs Link */}
+          <div
+            onClick={() => {
+              hapticLight();
+              onOpenActivityLogs?.();
+            }}
+            className="p-3.5 flex items-center justify-between text-xs cursor-pointer active:bg-slate-50 dark:active:bg-slate-800 transition"
+          >
+            <div className="flex items-center gap-2.5">
+              <Activity size={16} className="text-indigo-600 dark:text-indigo-400" />
+              <div>
+                <p className="font-bold text-slate-900 dark:text-white">Audit Activity Log</p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">Complete immutable vault events</p>
+              </div>
+            </div>
+            <ChevronRight size={16} className="text-slate-400" />
+          </div>
+
           {/* Biometric Toggle */}
           <div className="p-3.5 flex items-center justify-between text-xs">
             <div className="flex items-center gap-2.5">
-              <Smartphone size={16} className="text-indigo-600 dark:text-indigo-400" />
+              <Shield size={16} className="text-indigo-600 dark:text-indigo-400" />
               <div>
                 <p className="font-bold text-slate-900 dark:text-white">Biometric Unlock</p>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">Face ID / Touch ID / Fingerprint</p>
@@ -126,22 +204,57 @@ export default function MobileSettingsScreen({ user, onLockAndLogout }) {
             </div>
             <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">5 minutes</span>
           </div>
-
-          {/* Clear Clipboard */}
-          <div className="p-3.5 flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2.5">
-              <Shield size={16} className="text-indigo-600 dark:text-indigo-400" />
-              <div>
-                <p className="font-bold text-slate-900 dark:text-white">Clear Clipboard</p>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">Purges copied passwords from memory</p>
-              </div>
-            </div>
-            <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">30 seconds</span>
-          </div>
         </div>
       </div>
 
-      {/* Inset Group: App Details */}
+      {/* Enterprise & Admin Console (if Admin) */}
+      {userIsAdmin && (
+        <div className="space-y-1.5">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-1">
+            Enterprise Administration
+          </span>
+          <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 divide-y divide-slate-200 dark:divide-slate-800/80 overflow-hidden shadow-xs">
+            
+            {/* Team Management */}
+            <div
+              onClick={() => {
+                hapticLight();
+                onOpenTeam?.();
+              }}
+              className="p-3.5 flex items-center justify-between text-xs cursor-pointer active:bg-slate-50 dark:active:bg-slate-800 transition"
+            >
+              <div className="flex items-center gap-2.5">
+                <Users size={16} className="text-indigo-600 dark:text-indigo-400" />
+                <div>
+                  <p className="font-bold text-slate-900 dark:text-white">Team &amp; User Access</p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">Manage members, roles &amp; invitations</p>
+                </div>
+              </div>
+              <ChevronRight size={16} className="text-slate-400" />
+            </div>
+
+            {/* Admin Approvals */}
+            <div
+              onClick={() => {
+                hapticLight();
+                onOpenApprovals?.();
+              }}
+              className="p-3.5 flex items-center justify-between text-xs cursor-pointer active:bg-slate-50 dark:active:bg-slate-800 transition"
+            >
+              <div className="flex items-center gap-2.5">
+                <ShieldAlert size={16} className="text-indigo-600 dark:text-indigo-400" />
+                <div>
+                  <p className="font-bold text-slate-900 dark:text-white">Admin Approvals Queue</p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">Multi-party authorization reviews</p>
+                </div>
+              </div>
+              <ChevronRight size={16} className="text-slate-400" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* App Details */}
       <div className="space-y-1.5">
         <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-1">
           App System
@@ -157,7 +270,7 @@ export default function MobileSettingsScreen({ user, onLockAndLogout }) {
                 </p>
               </div>
             </div>
-            <span className="text-[11px] font-mono text-slate-500 font-semibold">v3.4.8 Native</span>
+            <span className="text-[11px] font-mono text-slate-500 font-semibold">v3.5.0 Native</span>
           </div>
         </div>
       </div>
