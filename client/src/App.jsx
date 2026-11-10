@@ -50,6 +50,8 @@ import api from './services/api';
 import { decryptPrivateKey } from './utils/crypto';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar as CapStatusBar, Style as CapStatusBarStyle } from '@capacitor/status-bar';
+import MobileRoot from './mobile/MobileRoot';
+import { isMobileDevice } from './mobile/context/MobileContext';
 
 function App() {
   const dispatch = useDispatch();
@@ -196,6 +198,24 @@ function App() {
           <p className="text-sm text-[var(--text-muted)] font-medium">Loading Vaultix...</p>
         </div>
       </div>
+    );
+  }
+
+  if (isMobileDevice()) {
+    return (
+      <>
+        <StatusBar />
+        <SessionWarningModal
+          open={sessionWarningOpen}
+          secondsLeft={sessionWarningSeconds}
+          onExtend={() => {
+            touchActivity();
+            dispatch(dismissSessionWarning());
+          }}
+          onLock={() => lockVault()}
+        />
+        <MobileRoot />
+      </>
     );
   }
 
