@@ -308,7 +308,7 @@ export default function MobileAuthScreen({
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col justify-between px-6 pt-10 pb-6 select-none relative overflow-x-hidden overflow-y-auto transition-colors duration-200">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col justify-center items-center px-6 py-6 select-none relative overflow-x-hidden overflow-y-auto transition-colors duration-200">
       
       {/* Background Ambient Glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-indigo-500/10 dark:bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
@@ -321,436 +321,430 @@ export default function MobileAuthScreen({
           dispatch(toggleTheme());
         }}
         aria-label="Toggle dark/light theme"
-        className="absolute top-8 right-6 z-30 w-9 h-9 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center shadow-md active:scale-95 transition"
+        className="absolute top-5 right-5 z-30 w-9 h-9 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center shadow-md active:scale-95 transition"
         title={isDark ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
       >
-        {isDark ? <Sun size={17} className="text-amber-400" /> : <Moon size={17} className="text-indigo-600" />}
+        {isDark ? <Sun size={16} className="text-amber-400" /> : <Moon size={16} className="text-indigo-600" />}
       </button>
 
-      {/* Main Content Column */}
-      <div className="w-full max-w-sm mx-auto z-10 flex-1 flex flex-col justify-between">
-        
-        {/* Upper Section: Brand Hero + Balanced Gap + Form */}
-        <div className="w-full pt-1">
-          {/* Top Brand Hero */}
-          <div className="text-center space-y-2.5">
-            {/* High-Contrast White Squircle Badge: Makes dark navy shield 100% visible in both light & dark themes */}
-            <div className="w-20 h-20 mx-auto rounded-3xl bg-white p-3 flex items-center justify-center shadow-2xl shadow-indigo-500/20 border border-slate-200/80 dark:border-white/10 active:scale-95 transition-transform duration-200">
-              <img
-                src={vaultixLogo}
-                alt="Vaultix Logo"
-                className="w-full h-full object-contain select-none"
-              />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white flex items-center justify-center gap-1.5">
-                <span>Vaultix</span>
-                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">
-                  Mobile
-                </span>
-              </h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Zero-Knowledge Encrypted Security</p>
-            </div>
+      {/* Centered Cohesive Card Container */}
+      <div className="w-full max-w-sm mx-auto flex flex-col items-center z-10 my-auto py-2">
+        {/* Top Brand Hero */}
+        <div className="text-center">
+          {/* High-Contrast White Squircle Badge: Makes dark navy shield 100% visible in both light & dark themes */}
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-white p-2.5 flex items-center justify-center shadow-xl shadow-indigo-500/20 border border-slate-200/80 dark:border-white/10 active:scale-95 transition-transform duration-200">
+            <img
+              src={vaultixLogo}
+              alt="Vaultix Logo"
+              className="w-full h-full object-contain select-none"
+            />
           </div>
+          <h1 className="text-xl font-black tracking-tight text-slate-900 dark:text-white flex items-center justify-center gap-1.5 mt-2.5">
+            <span>Vaultix</span>
+            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">
+              Mobile
+            </span>
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Zero-Knowledge Encrypted Security</p>
+        </div>
 
-          {/* Form Area with Balanced Moderate Gap */}
-          <div className="w-full mt-10 space-y-4">
-            
-            {/* Error Banner */}
-            {error && (
-              <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/70 border border-rose-200 dark:border-rose-800/80 text-rose-700 dark:text-rose-300 text-xs flex items-start gap-2.5 shadow-lg shadow-rose-500/5 dark:shadow-rose-950/30 animate-fadeIn">
-                <ShieldAlert size={16} className="shrink-0 mt-0.5 text-rose-500 dark:text-rose-400" />
-                <span className="flex-1 font-medium leading-relaxed">{error}</span>
+        {/* Main Content Area */}
+        <div className="w-full mt-4 space-y-3">
+          
+          {/* Error Banner */}
+          {error && (
+            <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/70 border border-rose-200 dark:border-rose-800/80 text-rose-700 dark:text-rose-300 text-xs flex items-start gap-2 shadow-sm animate-fadeIn">
+              <ShieldAlert size={15} className="shrink-0 mt-0.5 text-rose-500 dark:text-rose-400" />
+              <span className="flex-1 font-medium leading-relaxed">{error}</span>
+            </div>
+          )}
+
+          {/* Success Banner */}
+          {successMsg && (
+            <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-800/80 text-emerald-700 dark:text-emerald-300 text-xs flex items-start gap-2 shadow-sm animate-fadeIn">
+              <CheckCircle2 size={15} className="shrink-0 mt-0.5 text-emerald-500 dark:text-emerald-400" />
+              <span className="flex-1 font-medium leading-relaxed">{successMsg}</span>
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* VIEW 1: MASTER PASSWORD UNLOCK (When account is authenticated) */}
+          {/* ========================================================= */}
+          {authMode === 'master' && (
+            <div className="space-y-3.5">
+              
+              {/* User Avatar Card */}
+              <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800/80 flex items-center justify-between shadow-xs">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-violet-600 text-white font-black text-sm flex items-center justify-center shadow-xs">
+                    {user?.fullName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'U'}
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white leading-tight">
+                      {user?.fullName || 'Locked Vault'}
+                    </h3>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate max-w-[180px]">
+                      {user?.email || 'Encrypted Session'}
+                    </p>
+                  </div>
+                </div>
+
+                {onLogout && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      hapticLight();
+                      onLogout();
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-bold border border-slate-200 dark:border-slate-700/80 active:scale-95 transition"
+                  >
+                    Switch
+                  </button>
+                )}
               </div>
-            )}
 
-            {/* Success Banner */}
-            {successMsg && (
-              <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-800/80 text-emerald-700 dark:text-emerald-300 text-xs flex items-start gap-2.5 shadow-lg shadow-emerald-500/5 dark:shadow-emerald-950/30 animate-fadeIn">
-                <CheckCircle2 size={16} className="shrink-0 mt-0.5 text-emerald-500 dark:text-emerald-400" />
-                <span className="flex-1 font-medium leading-relaxed">{successMsg}</span>
+              {/* Quick Biometrics Button if Enrolled */}
+              {bioInfo.available && user?.id && isBiometricUnlockEnabled(user.id) && (
+                <button
+                  type="button"
+                  onClick={handleBiometricAuth}
+                  disabled={loading}
+                  className="w-full py-3 rounded-xl bg-indigo-50 dark:bg-indigo-600/15 border border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 text-xs font-bold flex items-center justify-center gap-2 hover:bg-indigo-100 dark:hover:bg-indigo-600/25 active:scale-98 transition shadow-xs"
+                >
+                  {bioInfo.type === 'faceId' ? <ScanFace size={18} /> : <Fingerprint size={18} />}
+                  <span>Unlock with {bioInfo.label || 'Biometrics'}</span>
+                </button>
+              )}
+
+              {/* Master Password Input Form */}
+              <form onSubmit={handleMasterUnlockSubmit} className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block px-1">
+                    Master Password
+                  </label>
+                  <div className="relative">
+                    <KeyRound size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+                    <input
+                      type={showMasterPassword ? 'text' : 'password'}
+                      value={masterPassword}
+                      onChange={(e) => setMasterPassword(e.target.value)}
+                      placeholder="Enter your master password"
+                      autoFocus
+                      required
+                      className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition shadow-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowMasterPassword(!showMasterPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                    >
+                      {showMasterPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading || !masterPassword}
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold text-xs sm:text-sm shadow-lg shadow-indigo-600/25 hover:opacity-95 active:scale-98 transition flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {loading ? (
+                    <RefreshCw size={16} className="animate-spin" />
+                  ) : (
+                    <>
+                      <span>Unlock Encrypted Vault</span>
+                      <ArrowRight size={15} />
+                    </>
+                  )}
+                </button>
+              </form>
+
+              {/* Helper: Emergency Recovery Key Link */}
+              <div className="text-center pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    hapticLight();
+                    setRecoveryError('');
+                    setRecoverySuccess('');
+                    setShowRecoverySheet(true);
+                  }}
+                  className="text-[11px] text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 font-semibold underline underline-offset-4 active:opacity-75 transition"
+                >
+                  Forgot Master Password? Use Recovery Key
+                </button>
               </div>
-            )}
+            </div>
+          )}
 
-            {/* ========================================================= */}
-            {/* VIEW 1: MASTER PASSWORD UNLOCK (When account is authenticated) */}
-            {/* ========================================================= */}
-            {authMode === 'master' && (
-              <div className="space-y-4">
+          {/* ========================================================= */}
+          {/* VIEW 2: ACCOUNT SIGN IN & REGISTRATION (When not authenticated) */}
+          {/* ========================================================= */}
+          {authMode !== 'master' && (
+            <div className="space-y-3.5">
+              
+              {/* Mode Switcher Pills */}
+              <div className="flex bg-slate-200/80 dark:bg-slate-900 p-1 rounded-xl border border-slate-300 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    hapticLight();
+                    setAuthMode('signin');
+                    setError('');
+                  }}
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition ${
+                    authMode === 'signin'
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  Sign In
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    hapticLight();
+                    setAuthMode('register');
+                    setError('');
+                  }}
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition ${
+                    authMode === 'register'
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  Create Account
+                </button>
+              </div>
+
+              {/* 2FA Challenge Step */}
+              {requires2FA ? (
+                <form onSubmit={handleSignInSubmit} className="space-y-3.5">
+                  <div className="p-3.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-500/30 text-center space-y-1">
+                    <ShieldCheck size={24} className="mx-auto text-indigo-600 dark:text-indigo-400 mb-0.5" />
+                    <h3 className="text-xs font-bold text-slate-900 dark:text-white">Two-Factor Authentication</h3>
+                    <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                      Enter the 6-digit verification code from your authenticator app
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block px-1">
+                      Security Code
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={6}
+                      value={twoFactorCode}
+                      onChange={(e) => setTwoFactorCode(e.target.value.replace(/[^0-9]/g, ''))}
+                      placeholder="000 000"
+                      autoFocus
+                      required
+                      className="w-full text-center tracking-[8px] font-mono font-extrabold text-lg py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white outline-none focus:border-indigo-500 transition shadow-xs"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading || twoFactorCode.length < 6}
+                    className="w-full py-3 rounded-xl bg-indigo-600 text-white font-bold text-xs sm:text-sm shadow-lg shadow-indigo-600/25 active:scale-98 transition flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {loading ? <RefreshCw size={16} className="animate-spin" /> : <span>Verify &amp; Continue</span>}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRequires2FA(false);
+                      setTwoFactorCode('');
+                    }}
+                    className="w-full text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium text-center"
+                  >
+                    Cancel and return to Sign In
+                  </button>
+                </form>
+              ) : authMode === 'signin' ? (
                 
-                {/* User Avatar Card */}
-                <div className="p-4 rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800/80 flex items-center justify-between shadow-lg shadow-slate-200/50 dark:shadow-none">
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-500 to-violet-600 text-white font-black text-sm flex items-center justify-center shadow-md">
-                      {user?.fullName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'U'}
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-bold text-slate-900 dark:text-white leading-tight">
-                        {user?.fullName || 'Locked Vault'}
-                      </h3>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate max-w-[190px]">
-                        {user?.email || 'Encrypted Session'}
-                      </p>
+                /* SIGN IN FORM */
+                <form onSubmit={handleSignInSubmit} className="space-y-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block px-1">
+                      Email Address
+                    </label>
+                    <div className="relative">
+                      <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="name@company.com"
+                        autoCapitalize="none"
+                        autoCorrect="off"
+                        keyboardType="email-address"
+                        required
+                        className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition shadow-xs"
+                      />
                     </div>
                   </div>
 
-                  {onLogout && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        hapticLight();
-                        onLogout();
-                      }}
-                      className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-bold border border-slate-200 dark:border-slate-700/80 active:scale-95 transition"
-                    >
-                      Switch
-                    </button>
-                  )}
-                </div>
-
-                {/* Quick Biometrics Button if Enrolled */}
-                {bioInfo.available && user?.id && isBiometricUnlockEnabled(user.id) && (
-                  <button
-                    type="button"
-                    onClick={handleBiometricAuth}
-                    disabled={loading}
-                    className="w-full py-3.5 rounded-2xl bg-indigo-50 dark:bg-indigo-600/15 border border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 text-xs font-bold flex items-center justify-center gap-2 hover:bg-indigo-100 dark:hover:bg-indigo-600/25 active:scale-98 transition shadow-lg shadow-indigo-500/5 dark:shadow-indigo-950/40"
-                  >
-                    {bioInfo.type === 'faceId' ? <ScanFace size={20} /> : <Fingerprint size={20} />}
-                    <span>Unlock with {bioInfo.label || 'Biometrics'}</span>
-                  </button>
-                )}
-
-                {/* Master Password Input Form */}
-                <form onSubmit={handleMasterUnlockSubmit} className="space-y-3">
                   <div className="space-y-1">
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block px-1">
-                      Master Password
-                    </label>
+                    <div className="flex justify-between items-center px-1">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                        Account Password
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          hapticLight();
+                          setForgotEmail(email);
+                          setForgotError('');
+                          setForgotSuccess('');
+                          setShowForgotPasswordSheet(true);
+                        }}
+                        className="text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold hover:text-indigo-500 transition"
+                      >
+                        Forgot?
+                      </button>
+                    </div>
                     <div className="relative">
-                      <KeyRound size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+                      <LockKeyhole size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                       <input
-                        type={showMasterPassword ? 'text' : 'password'}
-                        value={masterPassword}
-                        onChange={(e) => setMasterPassword(e.target.value)}
-                        placeholder="Enter your master password"
-                        autoFocus
+                        type={showPassword ? 'text' : 'password'}
+                        value={accountPassword}
+                        onChange={(e) => setAccountPassword(e.target.value)}
+                        placeholder="••••••••••••"
                         required
-                        className="w-full pl-10 pr-11 py-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition shadow-xs"
+                        className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition shadow-xs"
                       />
                       <button
                         type="button"
-                        onClick={() => setShowMasterPassword(!showMasterPassword)}
-                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white"
                       >
-                        {showMasterPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                       </button>
                     </div>
                   </div>
 
                   <button
                     type="submit"
-                    disabled={loading || !masterPassword}
-                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold text-sm shadow-xl shadow-indigo-600/30 hover:opacity-95 active:scale-98 transition flex items-center justify-center gap-2 disabled:opacity-50"
+                    disabled={loading || !email || !accountPassword}
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold text-xs sm:text-sm shadow-lg shadow-indigo-600/25 hover:opacity-95 active:scale-98 transition flex items-center justify-center gap-2 disabled:opacity-50 mt-1"
                   >
                     {loading ? (
-                      <RefreshCw size={18} className="animate-spin" />
+                      <RefreshCw size={16} className="animate-spin" />
                     ) : (
                       <>
-                        <span>Unlock Encrypted Vault</span>
-                        <ArrowRight size={16} />
+                        <span>Sign In to Vaultix</span>
+                        <ArrowRight size={15} />
                       </>
                     )}
                   </button>
                 </form>
-
-                {/* Helper: Emergency Recovery Key Link */}
-                <div className="text-center pt-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      hapticLight();
-                      setRecoveryError('');
-                      setRecoverySuccess('');
-                      setShowRecoverySheet(true);
-                    }}
-                    className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 font-semibold underline underline-offset-4 active:opacity-75 transition"
-                  >
-                    Forgot Master Password? Use Recovery Key
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* ========================================================= */}
-            {/* VIEW 2: ACCOUNT SIGN IN & REGISTRATION (When not authenticated) */}
-            {/* ========================================================= */}
-            {authMode !== 'master' && (
-              <div className="space-y-4">
+              ) : (
                 
-                {/* Mode Switcher Pills */}
-                <div className="flex bg-slate-200/80 dark:bg-slate-900 p-1 rounded-2xl border border-slate-300 dark:border-slate-800">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      hapticLight();
-                      setAuthMode('signin');
-                      setError('');
-                    }}
-                    className={`flex-1 py-2 rounded-xl text-xs font-bold transition ${
-                      authMode === 'signin'
-                        ? 'bg-indigo-600 text-white shadow-md'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                    }`}
-                  >
-                    Sign In
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      hapticLight();
-                      setAuthMode('register');
-                      setError('');
-                    }}
-                    className={`flex-1 py-2 rounded-xl text-xs font-bold transition ${
-                      authMode === 'register'
-                        ? 'bg-indigo-600 text-white shadow-md'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                    }`}
-                  >
-                    Create Account
-                  </button>
-                </div>
-
-                {/* 2FA Challenge Step */}
-                {requires2FA ? (
-                  <form onSubmit={handleSignInSubmit} className="space-y-4">
-                    <div className="p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-500/30 text-center space-y-1">
-                      <ShieldCheck size={28} className="mx-auto text-indigo-600 dark:text-indigo-400 mb-1" />
-                      <h3 className="text-sm font-bold text-slate-900 dark:text-white">Two-Factor Authentication</h3>
-                      <p className="text-xs text-slate-600 dark:text-slate-300">
-                        Enter the 6-digit verification code from your authenticator app
-                      </p>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block px-1">
-                        Security Code
-                      </label>
+                /* REGISTRATION FORM */
+                <form onSubmit={handleRegisterSubmit} className="space-y-2.5">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block px-1">
+                      Full Name
+                    </label>
+                    <div className="relative">
+                      <User size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                       <input
                         type="text"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        maxLength={6}
-                        value={twoFactorCode}
-                        onChange={(e) => setTwoFactorCode(e.target.value.replace(/[^0-9]/g, ''))}
-                        placeholder="000 000"
-                        autoFocus
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        placeholder="Jane Doe"
                         required
-                        className="w-full text-center tracking-[8px] font-mono font-extrabold text-xl py-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white outline-none focus:border-indigo-500 transition shadow-xs"
+                        className="w-full pl-10 pr-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-indigo-500 transition shadow-xs"
                       />
                     </div>
+                  </div>
 
-                    <button
-                      type="submit"
-                      disabled={loading || twoFactorCode.length < 6}
-                      className="w-full py-3.5 rounded-2xl bg-indigo-600 text-white font-bold text-sm shadow-xl shadow-indigo-600/30 active:scale-98 transition flex items-center justify-center gap-2 disabled:opacity-50"
-                    >
-                      {loading ? <RefreshCw size={18} className="animate-spin" /> : <span>Verify &amp; Continue</span>}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setRequires2FA(false);
-                        setTwoFactorCode('');
-                      }}
-                      className="w-full text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium text-center"
-                    >
-                      Cancel and return to Sign In
-                    </button>
-                  </form>
-                ) : authMode === 'signin' ? (
-                  
-                  /* SIGN IN FORM */
-                  <form onSubmit={handleSignInSubmit} className="space-y-3.5">
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block px-1">
-                        Email Address
-                      </label>
-                      <div className="relative">
-                        <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
-                        <input
-                          type="email"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          placeholder="name@company.com"
-                          autoCapitalize="none"
-                          autoCorrect="off"
-                          keyboardType="email-address"
-                          required
-                          className="w-full pl-10 pr-3.5 py-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition shadow-xs"
-                        />
-                      </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block px-1">
+                      Work Email
+                    </label>
+                    <div className="relative">
+                      <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="name@company.com"
+                        autoCapitalize="none"
+                        required
+                        className="w-full pl-10 pr-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-indigo-500 transition shadow-xs"
+                      />
                     </div>
+                  </div>
 
-                    <div className="space-y-1">
-                      <div className="flex justify-between items-center px-1">
-                        <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                          Account Password
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            hapticLight();
-                            setForgotEmail(email);
-                            setForgotError('');
-                            setForgotSuccess('');
-                            setShowForgotPasswordSheet(true);
-                          }}
-                          className="text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold hover:text-indigo-500 transition"
-                        >
-                          Forgot?
-                        </button>
-                      </div>
-                      <div className="relative">
-                        <LockKeyhole size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
-                        <input
-                          type={showPassword ? 'text' : 'password'}
-                          value={accountPassword}
-                          onChange={(e) => setAccountPassword(e.target.value)}
-                          placeholder="••••••••••••"
-                          required
-                          className="w-full pl-10 pr-11 py-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition shadow-xs"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white"
-                        >
-                          {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                        </button>
-                      </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block px-1">
+                      Create Password
+                    </label>
+                    <div className="relative">
+                      <LockKeyhole size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={accountPassword}
+                        onChange={(e) => setAccountPassword(e.target.value)}
+                        placeholder="Min. 8 characters"
+                        required
+                        className="w-full pl-10 pr-10 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-indigo-500 transition shadow-xs"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                      >
+                        {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
                     </div>
+                  </div>
 
-                    <button
-                      type="submit"
-                      disabled={loading || !email || !accountPassword}
-                      className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold text-sm shadow-xl shadow-indigo-600/30 hover:opacity-95 active:scale-98 transition flex items-center justify-center gap-2 disabled:opacity-50 mt-1"
-                    >
-                      {loading ? (
-                        <RefreshCw size={18} className="animate-spin" />
-                      ) : (
-                        <>
-                          <span>Sign In to Vaultix</span>
-                          <ArrowRight size={16} />
-                        </>
-                      )}
-                    </button>
-                  </form>
-                ) : (
-                  
-                  /* REGISTRATION FORM */
-                  <form onSubmit={handleRegisterSubmit} className="space-y-2.5">
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block px-1">
-                        Full Name
-                      </label>
-                      <div className="relative">
-                        <User size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
-                        <input
-                          type="text"
-                          value={fullName}
-                          onChange={(e) => setFullName(e.target.value)}
-                          placeholder="Jane Doe"
-                          required
-                          className="w-full pl-10 pr-3.5 py-2.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-indigo-500 transition shadow-xs"
-                        />
-                      </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block px-1">
+                      Confirm Password
+                    </label>
+                    <div className="relative">
+                      <LockKeyhole size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Repeat password"
+                        required
+                        className="w-full pl-10 pr-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-indigo-500 transition shadow-xs"
+                      />
                     </div>
+                  </div>
 
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block px-1">
-                        Work Email
-                      </label>
-                      <div className="relative">
-                        <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
-                        <input
-                          type="email"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          placeholder="name@company.com"
-                          autoCapitalize="none"
-                          required
-                          className="w-full pl-10 pr-3.5 py-2.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-indigo-500 transition shadow-xs"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block px-1">
-                        Create Password
-                      </label>
-                      <div className="relative">
-                        <LockKeyhole size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
-                        <input
-                          type={showPassword ? 'text' : 'password'}
-                          value={accountPassword}
-                          onChange={(e) => setAccountPassword(e.target.value)}
-                          placeholder="Min. 8 characters"
-                          required
-                          className="w-full pl-10 pr-11 py-2.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-indigo-500 transition shadow-xs"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white"
-                        >
-                          {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block px-1">
-                        Confirm Password
-                      </label>
-                      <div className="relative">
-                        <LockKeyhole size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
-                        <input
-                          type={showPassword ? 'text' : 'password'}
-                          value={confirmPassword}
-                          onChange={(e) => setConfirmPassword(e.target.value)}
-                          placeholder="Repeat password"
-                          required
-                          className="w-full pl-10 pr-3.5 py-2.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-indigo-500 transition shadow-xs"
-                        />
-                      </div>
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={loading || !fullName || !email || !accountPassword || !confirmPassword}
-                      className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold text-sm shadow-xl shadow-indigo-600/30 hover:opacity-95 active:scale-98 transition flex items-center justify-center gap-2 disabled:opacity-50 mt-1"
-                    >
-                      {loading ? (
-                        <RefreshCw size={18} className="animate-spin" />
-                      ) : (
-                        <>
-                          <span>Create Account &amp; Vault</span>
-                          <ArrowRight size={16} />
-                        </>
-                      )}
-                    </button>
-                  </form>
-                )}
-              </div>
-            )}
-          </div>
+                  <button
+                    type="submit"
+                    disabled={loading || !fullName || !email || !accountPassword || !confirmPassword}
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold text-xs sm:text-sm shadow-lg shadow-indigo-600/25 hover:opacity-95 active:scale-98 transition flex items-center justify-center gap-2 disabled:opacity-50 mt-1"
+                  >
+                    {loading ? (
+                      <RefreshCw size={16} className="animate-spin" />
+                    ) : (
+                      <>
+                        <span>Create Account &amp; Vault</span>
+                        <ArrowRight size={15} />
+                      </>
+                    )}
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Bottom Security Guarantee */}
-        <div className="w-full text-center pt-4 pb-2 border-t border-slate-200/80 dark:border-slate-900 mt-6">
+        <div className="w-full text-center mt-5 pt-3 border-t border-slate-200/80 dark:border-slate-900">
           <p className="text-[11px] text-slate-500 flex items-center justify-center gap-1.5 font-medium">
             <ShieldCheck size={13} className="text-emerald-500" />
             <span>AES-256-GCM Zero-Knowledge Encryption</span>
