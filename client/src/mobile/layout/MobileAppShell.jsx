@@ -12,9 +12,9 @@ export default function MobileAppShell({ activeTab, onSelectTab, children, toast
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col relative select-none antialiased">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col relative select-none antialiased transition-colors duration-200">
       {/* Safe Area Top Spacer */}
-      <div className="pt-[env(safe-area-inset-top)] bg-slate-950/80 backdrop-blur-md sticky top-0 z-40" />
+      <div className="pt-[env(safe-area-inset-top)] bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md sticky top-0 z-40 transition-colors duration-200" />
 
       {/* Floating Toast Notification Pill */}
       {toast && (
@@ -32,7 +32,7 @@ export default function MobileAppShell({ activeTab, onSelectTab, children, toast
       {/* Platform Adaptive Bottom Tab Bar */}
       {isIOS ? (
         /* Apple iOS HIG Frosted Glass Tab Bar */
-        <nav className="fixed bottom-0 inset-x-0 z-40 backdrop-blur-2xl bg-slate-950/85 border-t border-slate-800/70 pb-[max(14px,env(safe-area-inset-bottom))] pt-2 select-none shadow-[0_-4px_24px_rgba(0,0,0,0.5)]">
+        <nav className="fixed bottom-0 inset-x-0 z-40 backdrop-blur-2xl bg-white/85 dark:bg-slate-950/85 border-t border-slate-200/80 dark:border-slate-800/70 pb-[max(14px,env(safe-area-inset-bottom))] pt-2 select-none shadow-[0_-4px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_-4px_24px_rgba(0,0,0,0.5)] transition-colors duration-200">
           <div className="max-w-md mx-auto grid grid-cols-5 items-center px-2">
             <TabButton
               id="home"
@@ -78,7 +78,7 @@ export default function MobileAppShell({ activeTab, onSelectTab, children, toast
         </nav>
       ) : (
         /* Android Material 3 Tonal Indicator Tab Bar */
-        <nav className="fixed bottom-0 inset-x-0 z-40 bg-slate-900/95 border-t border-slate-800 pb-[max(10px,env(safe-area-inset-bottom))] pt-2 select-none shadow-[0_-2px_16px_rgba(0,0,0,0.4)]">
+        <nav className="fixed bottom-0 inset-x-0 z-40 bg-white dark:bg-slate-900/95 border-t border-slate-200 dark:border-slate-800 pb-[max(10px,env(safe-area-inset-bottom))] pt-2 select-none shadow-[0_-2px_16px_rgba(0,0,0,0.06)] dark:shadow-[0_-2px_16px_rgba(0,0,0,0.4)] transition-colors duration-200">
           <div className="max-w-md mx-auto grid grid-cols-5 items-center px-1">
             <TabButton
               id="home"
@@ -130,8 +130,8 @@ function TabButton({ icon: Icon, label, active, onClick, ios }) {
         onClick={onClick}
         className={`flex flex-col items-center justify-center gap-1 py-1 transition-colors active:scale-95 ${
           active
-            ? 'text-indigo-400'
-            : 'text-slate-400 hover:text-slate-200'
+            ? 'text-indigo-600 dark:text-indigo-400'
+            : 'text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
         }`}
       >
         <Icon size={20} strokeWidth={active ? 2.5 : 2} />
@@ -149,17 +149,17 @@ function TabButton({ icon: Icon, label, active, onClick, ios }) {
       <div
         className={`flex items-center justify-center px-3.5 py-1 rounded-full transition-all duration-200 ${
           active
-            ? 'bg-indigo-600/30 text-indigo-400'
-            : 'text-slate-400 hover:text-slate-200'
+            ? 'bg-indigo-100 dark:bg-indigo-600/30 text-indigo-600 dark:text-indigo-400'
+            : 'text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
         }`}
       >
         <Icon size={19} strokeWidth={active ? 2.4 : 1.8} />
       </div>
       <span
-        className={`text-[10px] leading-tight ${
+        className={`text-[10px] leading-tight transition-colors ${
           active
-            ? 'font-bold text-white'
-            : 'font-medium text-slate-400'
+            ? 'font-bold text-slate-900 dark:text-white'
+            : 'font-medium text-slate-500 dark:text-slate-400'
         }`}
       >
         {label}

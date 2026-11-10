@@ -71,6 +71,13 @@ function App() {
   useAutoKeySync();
 
   useEffect(() => {
+    // Sync dark class on documentElement for light/dark theme switching
+    if (mode === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+
     if (Capacitor.isNativePlatform()) {
       try {
         CapStatusBar.setStyle({
@@ -78,7 +85,7 @@ function App() {
         });
         if (Capacitor.getPlatform() === 'android') {
           CapStatusBar.setBackgroundColor({
-            color: mode === 'dark' ? '#0f172a' : '#ffffff',
+            color: mode === 'dark' ? '#020617' : '#f8fafc',
           });
         }
       } catch (err) {

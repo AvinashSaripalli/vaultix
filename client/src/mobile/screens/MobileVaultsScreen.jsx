@@ -36,15 +36,16 @@ export default function MobileVaultsScreen({
   return (
     <div className="flex flex-col min-h-full select-none">
       {/* Sticky Top Header & Search */}
-      <div className="px-5 pt-3 pb-2 space-y-2.5 border-b border-slate-800/80 sticky top-0 bg-slate-950/95 backdrop-blur-md z-30">
+      <div className="px-5 pt-3 pb-2 space-y-2.5 border-b border-slate-200 dark:border-slate-800/80 sticky top-0 bg-slate-50/95 dark:bg-slate-950/95 backdrop-blur-md z-30 transition-colors duration-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-slate-900 border border-indigo-500/30 p-1 flex items-center justify-center shadow-sm shrink-0">
-              <img src={vaultixLogo} alt="Vaultix" className="w-full h-full object-contain drop-shadow" />
+            {/* White Squircle Logo Badge */}
+            <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 dark:border-white/10 p-1 flex items-center justify-center shadow-xs shrink-0">
+              <img src={vaultixLogo} alt="Vaultix" className="w-full h-full object-contain" />
             </div>
             <div>
-              <h1 className="text-xl font-black tracking-tight text-white">Vaults</h1>
-              <p className="text-[11px] text-slate-400">{passwords.length} encrypted credentials</p>
+              <h1 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">Vaults</h1>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">{passwords.length} encrypted credentials</p>
             </div>
           </div>
           <button
@@ -61,18 +62,18 @@ export default function MobileVaultsScreen({
 
         {/* Floating Search Pill */}
         <div className="relative">
-          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search credentials, usernames..."
-            className="w-full pl-9 pr-9 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white placeholder-slate-500 outline-none focus:border-indigo-500 transition"
+            className="w-full pl-9 pr-9 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-indigo-500 transition shadow-xs"
           />
           {search && (
             <button
               onClick={() => setSearch('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white"
             >
               <X size={14} />
             </button>
@@ -89,7 +90,7 @@ export default function MobileVaultsScreen({
             className={`px-3 py-1 rounded-full text-[11px] font-bold whitespace-nowrap transition ${
               selectedFilter === 'ALL'
                 ? 'bg-indigo-600 text-white shadow-xs'
-                : 'bg-slate-900 text-slate-400 border border-slate-800'
+                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 shadow-xs'
             }`}
           >
             All ({passwords.length})
@@ -102,7 +103,7 @@ export default function MobileVaultsScreen({
             className={`px-3 py-1 rounded-full text-[11px] font-bold whitespace-nowrap transition ${
               selectedFilter === 'LOGINS'
                 ? 'bg-indigo-600 text-white shadow-xs'
-                : 'bg-slate-900 text-slate-400 border border-slate-800'
+                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 shadow-xs'
             }`}
           >
             Logins
@@ -115,7 +116,7 @@ export default function MobileVaultsScreen({
             className={`px-3 py-1 rounded-full text-[11px] font-bold whitespace-nowrap transition ${
               selectedFilter === 'CARDS'
                 ? 'bg-indigo-600 text-white shadow-xs'
-                : 'bg-slate-900 text-slate-400 border border-slate-800'
+                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 shadow-xs'
             }`}
           >
             Cards
@@ -128,7 +129,7 @@ export default function MobileVaultsScreen({
             className={`px-3 py-1 rounded-full text-[11px] font-bold whitespace-nowrap transition ${
               selectedFilter === 'NOTES'
                 ? 'bg-indigo-600 text-white shadow-xs'
-                : 'bg-slate-900 text-slate-400 border border-slate-800'
+                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 shadow-xs'
             }`}
           >
             Notes
@@ -140,11 +141,11 @@ export default function MobileVaultsScreen({
       <div className="flex-1 px-5 py-3 space-y-2">
         {filtered.length === 0 ? (
           <div className="py-16 text-center space-y-2 text-slate-400">
-            <div className="w-12 h-12 mx-auto rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500">
+            <div className="w-12 h-12 mx-auto rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-500 shadow-xs">
               <Search size={20} />
             </div>
-            <p className="text-xs font-semibold text-slate-300">No matching items</p>
-            <p className="text-[11px] text-slate-500">Try adjusting your search query</p>
+            <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">No matching items</p>
+            <p className="text-[11px] text-slate-400 dark:text-slate-500">Try adjusting your search query</p>
           </div>
         ) : (
           filtered.map((item) => (
@@ -154,18 +155,18 @@ export default function MobileVaultsScreen({
                 hapticLight();
                 onOpenItem(item);
               }}
-              className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-between cursor-pointer active:scale-98 transition shadow-xs"
+              className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between cursor-pointer active:scale-98 transition shadow-xs"
             >
               <div className="flex items-center gap-3 min-w-0 flex-1">
                 <ItemServiceIcon name={item.name} type={item.type} size="md" />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <h4 className="text-xs font-bold text-white truncate">{item.name}</h4>
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">{item.name}</h4>
                     {item.isSensitive && (
-                      <Lock size={11} className="text-amber-400 shrink-0" />
+                      <Lock size={11} className="text-amber-500 dark:text-amber-400 shrink-0" />
                     )}
                   </div>
-                  <p className="text-[11px] text-slate-400 font-mono truncate max-w-[200px]">
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate max-w-[200px]">
                     {item.login || item.folder?.name || 'Login'}
                   </p>
                 </div>
@@ -179,11 +180,11 @@ export default function MobileVaultsScreen({
                     hapticMedium();
                     onQuickCopy(item);
                   }}
-                  className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-indigo-600/30 text-[10px] font-bold text-indigo-400 border border-slate-700/80 active:scale-95 transition"
+                  className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-indigo-50 dark:bg-slate-800 dark:hover:bg-indigo-600/30 text-[10px] font-bold text-indigo-600 dark:text-indigo-400 border border-slate-200 dark:border-slate-700/80 active:scale-95 transition"
                 >
                   Copy
                 </button>
-                <ChevronRight size={16} className="text-slate-500" />
+                <ChevronRight size={16} className="text-slate-400 dark:text-slate-500" />
               </div>
             </div>
           ))

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   Eye,
   EyeOff,
@@ -16,6 +17,8 @@ import {
   ShieldCheck,
   ChevronRight,
   AlertTriangle,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import {
   checkBiometricsAvailable,
@@ -23,6 +26,7 @@ import {
   isBiometricUnlockEnabled,
 } from '../../utils/mobileBiometrics';
 import { hapticMedium, hapticSuccess, hapticLight } from '../../utils/haptics';
+import { toggleTheme } from '../../features/theme/themeSlice';
 import api from '../../services/api';
 import vaultixLogo from '../../assets/Vaultix1.png';
 
@@ -35,6 +39,10 @@ export default function MobileAuthScreen({
   onLogout,
   onResetMasterPassword,
 }) {
+  const dispatch = useDispatch();
+  const { mode } = useSelector((state) => state.theme);
+  const isDark = mode === 'dark';
+
   // If user is already authenticated with email/password, default to 'master' unlock mode.
   // Otherwise, default to 'signin'.
   const [authMode, setAuthMode] = useState(isAuthenticated ? 'master' : 'signin'); // 'signin' | 'register' | 'master'
@@ -300,28 +308,43 @@ export default function MobileAuthScreen({
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between px-6 pt-12 pb-8 select-none relative overflow-x-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col justify-between px-6 pt-12 pb-8 select-none relative overflow-x-hidden transition-colors duration-200">
       
       {/* Background Ambient Glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-indigo-500/10 dark:bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Floating Theme Switcher Button (Top Right) */}
+      <button
+        type="button"
+        onClick={() => {
+          hapticLight();
+          dispatch(toggleTheme());
+        }}
+        aria-label="Toggle dark/light theme"
+        className="absolute top-8 right-6 z-30 w-9 h-9 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center shadow-md active:scale-95 transition"
+        title={isDark ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+      >
+        {isDark ? <Sun size={17} className="text-amber-400" /> : <Moon size={17} className="text-indigo-600" />}
+      </button>
 
       {/* Top Brand Hero */}
       <div className="text-center space-y-3 z-10 pt-2">
-        <div className="w-20 h-20 mx-auto rounded-3xl bg-slate-900/90 border border-indigo-500/30 p-2.5 flex items-center justify-center shadow-2xl shadow-indigo-600/30 active:scale-95 transition-transform duration-200">
+        {/* High-Contrast White Squircle Badge: Makes dark navy shield 100% visible in both light & dark themes */}
+        <div className="w-20 h-20 mx-auto rounded-3xl bg-white p-3 flex items-center justify-center shadow-2xl shadow-indigo-500/25 border border-slate-200/80 dark:border-white/10 active:scale-95 transition-transform duration-200">
           <img
             src={vaultixLogo}
             alt="Vaultix Logo"
-            className="w-full h-full object-contain drop-shadow-md select-none"
+            className="w-full h-full object-contain select-none drop-shadow-xs"
           />
         </div>
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-white flex items-center justify-center gap-1.5">
+          <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white flex items-center justify-center gap-1.5">
             <span>Vaultix</span>
-            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-400 border border-indigo-500/30">
+            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">
               Mobile
             </span>
           </h1>
-          <p className="text-xs text-slate-400 mt-0.5">Zero-Knowledge Encrypted Security</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Zero-Knowledge Encrypted Security</p>
         </div>
       </div>
 
@@ -330,16 +353,16 @@ export default function MobileAuthScreen({
         
         {/* Error Banner */}
         {error && (
-          <div className="p-3.5 rounded-2xl bg-rose-950/70 border border-rose-800/80 text-rose-300 text-xs flex items-start gap-2.5 shadow-lg shadow-rose-950/30 animate-fadeIn">
-            <ShieldAlert size={16} className="shrink-0 mt-0.5 text-rose-400" />
+          <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/70 border border-rose-200 dark:border-rose-800/80 text-rose-700 dark:text-rose-300 text-xs flex items-start gap-2.5 shadow-lg shadow-rose-500/5 dark:shadow-rose-950/30 animate-fadeIn">
+            <ShieldAlert size={16} className="shrink-0 mt-0.5 text-rose-500 dark:text-rose-400" />
             <span className="flex-1 font-medium leading-relaxed">{error}</span>
           </div>
         )}
 
         {/* Success Banner */}
         {successMsg && (
-          <div className="p-3.5 rounded-2xl bg-emerald-950/70 border border-emerald-800/80 text-emerald-300 text-xs flex items-start gap-2.5 shadow-lg shadow-emerald-950/30 animate-fadeIn">
-            <CheckCircle2 size={16} className="shrink-0 mt-0.5 text-emerald-400" />
+          <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-800/80 text-emerald-700 dark:text-emerald-300 text-xs flex items-start gap-2.5 shadow-lg shadow-emerald-500/5 dark:shadow-emerald-950/30 animate-fadeIn">
+            <CheckCircle2 size={16} className="shrink-0 mt-0.5 text-emerald-500 dark:text-emerald-400" />
             <span className="flex-1 font-medium leading-relaxed">{successMsg}</span>
           </div>
         )}
@@ -351,16 +374,16 @@ export default function MobileAuthScreen({
           <div className="space-y-4">
             
             {/* User Avatar Card */}
-            <div className="p-4 rounded-3xl bg-slate-900/90 border border-slate-800/80 flex items-center justify-between shadow-xl">
+            <div className="p-4 rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800/80 flex items-center justify-between shadow-lg shadow-slate-200/50 dark:shadow-none">
               <div className="flex items-center gap-3">
                 <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-500 to-violet-600 text-white font-black text-sm flex items-center justify-center shadow-md">
                   {user?.fullName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'U'}
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white leading-tight">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white leading-tight">
                     {user?.fullName || 'Locked Vault'}
                   </h3>
-                  <p className="text-[11px] text-slate-400 font-mono truncate max-w-[190px]">
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate max-w-[190px]">
                     {user?.email || 'Encrypted Session'}
                   </p>
                 </div>
@@ -373,7 +396,7 @@ export default function MobileAuthScreen({
                     hapticLight();
                     onLogout();
                   }}
-                  className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-bold border border-slate-700/80 active:scale-95 transition"
+                  className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-bold border border-slate-200 dark:border-slate-700/80 active:scale-95 transition"
                 >
                   Switch
                 </button>
@@ -386,7 +409,7 @@ export default function MobileAuthScreen({
                 type="button"
                 onClick={handleBiometricAuth}
                 disabled={loading}
-                className="w-full py-4 rounded-2xl bg-indigo-600/15 border border-indigo-500/30 text-indigo-300 text-xs font-bold flex items-center justify-center gap-2 hover:bg-indigo-600/25 active:scale-98 transition shadow-lg shadow-indigo-950/40"
+                className="w-full py-4 rounded-2xl bg-indigo-50 dark:bg-indigo-600/15 border border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 text-xs font-bold flex items-center justify-center gap-2 hover:bg-indigo-100 dark:hover:bg-indigo-600/25 active:scale-98 transition shadow-lg shadow-indigo-500/5 dark:shadow-indigo-950/40"
               >
                 {bioInfo.type === 'faceId' ? <ScanFace size={20} /> : <Fingerprint size={20} />}
                 <span>Unlock with {bioInfo.label || 'Biometrics'}</span>
@@ -396,11 +419,11 @@ export default function MobileAuthScreen({
             {/* Master Password Input Form */}
             <form onSubmit={handleMasterUnlockSubmit} className="space-y-3">
               <div className="space-y-1">
-                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block px-1">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block px-1">
                   Master Password
                 </label>
                 <div className="relative">
-                  <KeyRound size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <KeyRound size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                   <input
                     type={showMasterPassword ? 'text' : 'password'}
                     value={masterPassword}
@@ -408,12 +431,12 @@ export default function MobileAuthScreen({
                     placeholder="Enter your master password"
                     autoFocus
                     required
-                    className="w-full pl-10 pr-11 py-3.5 rounded-2xl bg-slate-900 border border-slate-800 text-sm text-white placeholder-slate-500 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition"
+                    className="w-full pl-10 pr-11 py-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition shadow-xs"
                   />
                   <button
                     type="button"
                     onClick={() => setShowMasterPassword(!showMasterPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white"
                   >
                     {showMasterPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
@@ -446,7 +469,7 @@ export default function MobileAuthScreen({
                   setRecoverySuccess('');
                   setShowRecoverySheet(true);
                 }}
-                className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold underline underline-offset-4 active:opacity-75 transition"
+                className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 font-semibold underline underline-offset-4 active:opacity-75 transition"
               >
                 Forgot Master Password? Use Recovery Key
               </button>
@@ -461,7 +484,7 @@ export default function MobileAuthScreen({
           <div className="space-y-4">
             
             {/* Mode Switcher Pills */}
-            <div className="flex bg-slate-900 p-1 rounded-2xl border border-slate-800">
+            <div className="flex bg-slate-200/80 dark:bg-slate-900 p-1 rounded-2xl border border-slate-300 dark:border-slate-800">
               <button
                 type="button"
                 onClick={() => {
@@ -472,7 +495,7 @@ export default function MobileAuthScreen({
                 className={`flex-1 py-2 rounded-xl text-xs font-bold transition ${
                   authMode === 'signin'
                     ? 'bg-indigo-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-white'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 Sign In
@@ -487,7 +510,7 @@ export default function MobileAuthScreen({
                 className={`flex-1 py-2 rounded-xl text-xs font-bold transition ${
                   authMode === 'register'
                     ? 'bg-indigo-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-white'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 Create Account
@@ -497,16 +520,16 @@ export default function MobileAuthScreen({
             {/* 2FA Challenge Step */}
             {requires2FA ? (
               <form onSubmit={handleSignInSubmit} className="space-y-4">
-                <div className="p-4 rounded-2xl bg-indigo-950/50 border border-indigo-500/30 text-center space-y-1">
-                  <ShieldCheck size={28} className="mx-auto text-indigo-400 mb-1" />
-                  <h3 className="text-sm font-bold text-white">Two-Factor Authentication</h3>
-                  <p className="text-xs text-slate-300">
+                <div className="p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-500/30 text-center space-y-1">
+                  <ShieldCheck size={28} className="mx-auto text-indigo-600 dark:text-indigo-400 mb-1" />
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Two-Factor Authentication</h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-300">
                     Enter the 6-digit verification code from your authenticator app
                   </p>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block px-1">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block px-1">
                     Security Code
                   </label>
                   <input
@@ -519,7 +542,7 @@ export default function MobileAuthScreen({
                     placeholder="000 000"
                     autoFocus
                     required
-                    className="w-full text-center tracking-[8px] font-mono font-extrabold text-xl py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white outline-none focus:border-indigo-500 transition"
+                    className="w-full text-center tracking-[8px] font-mono font-extrabold text-xl py-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white outline-none focus:border-indigo-500 transition shadow-xs"
                   />
                 </div>
 
@@ -537,7 +560,7 @@ export default function MobileAuthScreen({
                     setRequires2FA(false);
                     setTwoFactorCode('');
                   }}
-                  className="w-full text-xs text-slate-400 hover:text-white font-medium text-center"
+                  className="w-full text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium text-center"
                 >
                   Cancel and return to Sign In
                 </button>
@@ -547,11 +570,11 @@ export default function MobileAuthScreen({
               /* SIGN IN FORM */
               <form onSubmit={handleSignInSubmit} className="space-y-3">
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block px-1">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block px-1">
                     Email Address
                   </label>
                   <div className="relative">
-                    <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                     <input
                       type="email"
                       value={email}
@@ -561,14 +584,14 @@ export default function MobileAuthScreen({
                       autoCorrect="off"
                       keyboardType="email-address"
                       required
-                      className="w-full pl-10 pr-3.5 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-sm text-white placeholder-slate-500 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition"
+                      className="w-full pl-10 pr-3.5 py-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition shadow-xs"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1">
                   <div className="flex justify-between items-center px-1">
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                       Account Password
                     </label>
                     <button
@@ -580,25 +603,25 @@ export default function MobileAuthScreen({
                         setForgotSuccess('');
                         setShowForgotPasswordSheet(true);
                       }}
-                      className="text-[11px] text-indigo-400 font-semibold hover:text-indigo-300 transition"
+                      className="text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold hover:text-indigo-500 transition"
                     >
                       Forgot?
                     </button>
                   </div>
                   <div className="relative">
-                    <LockKeyhole size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <LockKeyhole size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={accountPassword}
                       onChange={(e) => setAccountPassword(e.target.value)}
                       placeholder="••••••••••••"
                       required
-                      className="w-full pl-10 pr-11 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-sm text-white placeholder-slate-500 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition"
+                      className="w-full pl-10 pr-11 py-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition shadow-xs"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white"
                     >
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
@@ -625,28 +648,28 @@ export default function MobileAuthScreen({
               /* REGISTRATION FORM */
               <form onSubmit={handleRegisterSubmit} className="space-y-3">
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block px-1">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block px-1">
                     Full Name
                   </label>
                   <div className="relative">
-                    <User size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <User size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                     <input
                       type="text"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       placeholder="Jane Doe"
                       required
-                      className="w-full pl-10 pr-3.5 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-sm text-white placeholder-slate-500 outline-none focus:border-indigo-500 transition"
+                      className="w-full pl-10 pr-3.5 py-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-indigo-500 transition shadow-xs"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block px-1">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block px-1">
                     Work Email
                   </label>
                   <div className="relative">
-                    <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                     <input
                       type="email"
                       value={email}
@@ -654,29 +677,29 @@ export default function MobileAuthScreen({
                       placeholder="name@company.com"
                       autoCapitalize="none"
                       required
-                      className="w-full pl-10 pr-3.5 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-sm text-white placeholder-slate-500 outline-none focus:border-indigo-500 transition"
+                      className="w-full pl-10 pr-3.5 py-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-indigo-500 transition shadow-xs"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block px-1">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block px-1">
                     Create Password
                   </label>
                   <div className="relative">
-                    <LockKeyhole size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <LockKeyhole size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={accountPassword}
                       onChange={(e) => setAccountPassword(e.target.value)}
                       placeholder="Min. 8 characters"
                       required
-                      className="w-full pl-10 pr-11 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-sm text-white placeholder-slate-500 outline-none focus:border-indigo-500 transition"
+                      className="w-full pl-10 pr-11 py-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-indigo-500 transition shadow-xs"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white"
                     >
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
@@ -684,18 +707,18 @@ export default function MobileAuthScreen({
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block px-1">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block px-1">
                     Confirm Password
                   </label>
                   <div className="relative">
-                    <LockKeyhole size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <LockKeyhole size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Repeat password"
                       required
-                      className="w-full pl-10 pr-3.5 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-sm text-white placeholder-slate-500 outline-none focus:border-indigo-500 transition"
+                      className="w-full pl-10 pr-3.5 py-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-indigo-500 transition shadow-xs"
                     />
                   </div>
                 </div>
@@ -721,7 +744,7 @@ export default function MobileAuthScreen({
       </div>
 
       {/* Bottom Security Guarantee */}
-      <div className="text-center z-10 pt-2 border-t border-slate-900">
+      <div className="text-center z-10 pt-2 border-t border-slate-200 dark:border-slate-900">
         <p className="text-[11px] text-slate-500 flex items-center justify-center gap-1.5 font-medium">
           <ShieldCheck size={13} className="text-emerald-500" />
           <span>AES-256-GCM Zero-Knowledge Encryption</span>
@@ -732,36 +755,36 @@ export default function MobileAuthScreen({
       {/* SHEET 1: FORGOT ACCOUNT PASSWORD */}
       {/* ========================================================= */}
       {showForgotPasswordSheet && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex flex-col justify-end select-none animate-fadeIn">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex flex-col justify-end select-none animate-fadeIn">
           <div className="flex-1" onClick={() => setShowForgotPasswordSheet(false)} />
-          <div className="w-full rounded-t-[32px] bg-slate-900 border-t border-slate-800 p-6 space-y-4 animate-slideUp shadow-2xl">
-            <div className="w-10 h-1 bg-slate-700 rounded-full mx-auto -mt-2 mb-2" />
+          <div className="w-full rounded-t-[32px] bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-6 space-y-4 animate-slideUp shadow-2xl">
+            <div className="w-10 h-1 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto -mt-2 mb-2" />
             
             <div className="flex items-center justify-between pb-1">
-              <h3 className="text-base font-extrabold text-white">Reset Account Password</h3>
+              <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Reset Account Password</h3>
               <button
                 type="button"
                 onClick={() => setShowForgotPasswordSheet(false)}
-                className="w-8 h-8 rounded-xl bg-slate-800 text-slate-400 flex items-center justify-center hover:bg-slate-700"
+                className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700"
               >
                 <X size={16} />
               </button>
             </div>
 
-            <p className="text-xs text-slate-400 leading-relaxed">
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
               Enter your account email. We will send you a single-use secure reset link.
             </p>
 
             {forgotError && (
-              <div className="p-3 rounded-xl bg-rose-950/70 border border-rose-800 text-rose-300 text-xs">
+              <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/70 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs">
                 {forgotError}
               </div>
             )}
 
             {forgotSuccess ? (
-              <div className="p-4 rounded-2xl bg-emerald-950/70 border border-emerald-800 text-center space-y-2">
-                <CheckCircle2 size={24} className="mx-auto text-emerald-400" />
-                <p className="text-xs font-bold text-white">{forgotSuccess}</p>
+              <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-800 text-center space-y-2">
+                <CheckCircle2 size={24} className="mx-auto text-emerald-500 dark:text-emerald-400" />
+                <p className="text-xs font-bold text-slate-900 dark:text-white">{forgotSuccess}</p>
                 <button
                   type="button"
                   onClick={() => setShowForgotPasswordSheet(false)}
@@ -773,7 +796,7 @@ export default function MobileAuthScreen({
             ) : (
               <form onSubmit={handleForgotPasswordSubmit} className="space-y-3">
                 <div className="relative">
-                  <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                   <input
                     type="email"
                     value={forgotEmail}
@@ -781,7 +804,7 @@ export default function MobileAuthScreen({
                     placeholder="name@company.com"
                     autoFocus
                     required
-                    className="w-full pl-10 pr-3.5 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 outline-none focus:border-indigo-500 transition"
+                    className="w-full pl-10 pr-3.5 py-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-indigo-500 transition"
                   />
                 </div>
 
@@ -802,44 +825,46 @@ export default function MobileAuthScreen({
       {/* SHEET 2: EMERGENCY MASTER PASSWORD RECOVERY */}
       {/* ========================================================= */}
       {showRecoverySheet && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xs flex flex-col justify-end select-none animate-fadeIn">
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex flex-col justify-end select-none animate-fadeIn">
           <div className="flex-1" onClick={() => setShowRecoverySheet(false)} />
-          <div className="w-full max-h-[90%] rounded-t-[32px] bg-slate-900 border-t border-slate-800 p-6 space-y-4 overflow-y-auto animate-slideUp shadow-2xl">
-            <div className="w-10 h-1 bg-slate-700 rounded-full mx-auto -mt-2 mb-2" />
+          <div className="w-full max-h-[90%] rounded-t-[32px] bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-6 space-y-4 overflow-y-auto animate-slideUp shadow-2xl">
+            <div className="w-10 h-1 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto -mt-2 mb-2" />
             
             <div className="flex items-center justify-between pb-1">
               <div className="flex items-center gap-2">
-                <img src={vaultixLogo} alt="Vaultix" className="w-7 h-7 object-contain drop-shadow" />
-                <h3 className="text-base font-extrabold text-white">Emergency Key Recovery</h3>
+                <div className="w-8 h-8 rounded-xl bg-white p-1 flex items-center justify-center shadow-sm border border-slate-200 dark:border-white/10">
+                  <img src={vaultixLogo} alt="Vaultix" className="w-full h-full object-contain" />
+                </div>
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Emergency Key Recovery</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setShowRecoverySheet(false)}
-                className="w-8 h-8 rounded-xl bg-slate-800 text-slate-400 flex items-center justify-center hover:bg-slate-700"
+                className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700"
               >
                 <X size={16} />
               </button>
             </div>
 
-            <p className="text-xs text-slate-400 leading-relaxed">
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
               Use your confidential 24-character master recovery key to set a new master password and restore vault access.
             </p>
 
             {recoveryError && (
-              <div className="p-3 rounded-xl bg-rose-950/70 border border-rose-800 text-rose-300 text-xs">
+              <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/70 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs">
                 {recoveryError}
               </div>
             )}
 
             {recoverySuccess ? (
-              <div className="p-4 rounded-2xl bg-emerald-950/70 border border-emerald-800 text-center space-y-2">
-                <CheckCircle2 size={24} className="mx-auto text-emerald-400" />
-                <p className="text-xs font-bold text-white">{recoverySuccess}</p>
+              <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-800 text-center space-y-2">
+                <CheckCircle2 size={24} className="mx-auto text-emerald-500 dark:text-emerald-400" />
+                <p className="text-xs font-bold text-slate-900 dark:text-white">{recoverySuccess}</p>
               </div>
             ) : (
               <form onSubmit={handleRecoverySubmit} className="space-y-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block px-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block px-1">
                     Account Email
                   </label>
                   <input
@@ -848,12 +873,12 @@ export default function MobileAuthScreen({
                     onChange={(e) => setRecoveryEmail(e.target.value)}
                     placeholder="name@company.com"
                     required
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 outline-none focus:border-emerald-500 transition"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-emerald-500 transition"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block px-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block px-1">
                     Emergency Recovery Key
                   </label>
                   <input
@@ -862,12 +887,12 @@ export default function MobileAuthScreen({
                     onChange={(e) => setRecoveryKey(e.target.value.toUpperCase())}
                     placeholder="EL3B-WSTP-K329-..."
                     required
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 font-mono text-xs text-emerald-400 placeholder-slate-500 outline-none focus:border-emerald-500 transition"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-mono text-xs text-emerald-600 dark:text-emerald-400 placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-emerald-500 transition"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block px-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block px-1">
                     New Master Password
                   </label>
                   <input
@@ -876,12 +901,12 @@ export default function MobileAuthScreen({
                     onChange={(e) => setNewMasterPassword(e.target.value)}
                     placeholder="Min. 8 characters"
                     required
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 outline-none focus:border-emerald-500 transition"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-emerald-500 transition"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block px-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block px-1">
                     Confirm New Master Password
                   </label>
                   <input
@@ -890,7 +915,7 @@ export default function MobileAuthScreen({
                     onChange={(e) => setConfirmNewMaster(e.target.value)}
                     placeholder="Repeat new master password"
                     required
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 outline-none focus:border-emerald-500 transition"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-emerald-500 transition"
                   />
                 </div>
 
