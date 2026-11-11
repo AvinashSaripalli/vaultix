@@ -2,38 +2,63 @@ import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Trash2, RotateCcw, X, AlertTriangle, RefreshCw, ShieldAlert } from 'lucide-react';
 import { fetchVaultTrash, restorePassword, fetchPasswordsByVault } from '../../features/vault/vaultSlice';
+import { fetchMyVaultTrash, restoreMyVaultPassword, fetchMyVault } from '../../features/myVault/myVaultSlice';
 import ItemServiceIcon from '../../components/common/ItemServiceIcon';
 import { hapticMedium, hapticSuccess, hapticLight } from '../../utils/haptics';
 
-export default function MobileTrashSheet({ isOpen, onClose }) {
+export default function MobileTrashSheet({
+  isOpen,
+  isPersonalVault = false,
+  selectedVault = null,
+  onClose,
+  onRefresh,
+}) {
   const dispatch = useDispatch();
-  const { selectedVault, trashByVault = {} } = useSelector((state) => state.vault);
+  const { selectedVault: reduxVault, trashByVault = {} } = useSelector((state) => state.vault);
+  const { trash: myVaultTrash = [] } = useSelector((state) => state.myVault);
 
   const [loading, setLoading] = useState(false);
   const [restoringId, setRestoringId] = useState(null);
 
-  const vaultId = selectedVault?.id;
-  const trashItems = vaultId && trashByVault[vaultId] ? trashByVault[vaultId] : [];
+  const vaultId = (selectedVault || reduxVault)?.id;
+  const trashItems = isPersonalVault
+    ? myVaultTrash
+    : (vaultId && trashByVault[vaultId] ? trashByVault[vaultId] : []);
 
   useEffect(() => {
-    if (isOpen && vaultId) {
+    if (isOpen) {
       setLoading(true);
-      dispatch(fetchVaultTrash(vaultId)).finally(() => setLoading(false));
+      if (isPersonalVault) {
+        dispatch(fetchMyVaultTrash()).finally(() => setLoading(false));
+      } else if (vaultId) {
+        dispatch(fetchVaultTrash(vaultId)).finally(() => setLoading(false));
+      } else {
+        setLoading(false);
+      }
     }
-  }, [isOpen, vaultId, dispatch]);
+  }, [isOpen, isPersonalVault, vaultId, dispatch]);
 
   if (!isOpen) return null;
 
   const handleRestore = async (item) => {
-    if (!item?.id || !vaultId) return;
+    if (!item?.id) return;
     setRestoringId(item.id);
     hapticMedium();
 
     try {
-      await dispatch(restorePassword({ passwordId: item.id, vaultId }));
-      hapticSuccess();
-      dispatch(fetchVaultTrash(vaultId));
-      dispatch(fetchPasswordsByVault(vaultId));
+      if (isPersonalVault) {
+        await dispatch(restoreMyVaultPassword(item.id));
+        hapticSuccess();
+        dispatch(fetchMyVaultTrash());
+        dispatch(fetchMyVault());
+        onRefresh?.();
+      } else if (vaultId) {
+        await dispatch(restorePassword({ passwordId: item.id, vaultId }));
+        hapticSuccess();
+        dispatch(fetchVaultTrash(vaultId));
+        dispatch(fetchPasswordsByVault(vaultId));
+        onRefresh?.();
+      }
     } catch {
       // Restore failed
     } finally {

@@ -9,6 +9,8 @@ export default function MobileVaultsScreen({
   folders = [],
   vaults = [],
   selectedVault,
+  personalCount = 0,
+  companyCount = 0,
   unreadCount = 0,
   onSelectVault,
   onOpenItem,
@@ -22,6 +24,9 @@ export default function MobileVaultsScreen({
   const [search, setSearch] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('ALL');
   const [activeFolderId, setActiveFolderId] = useState('ALL');
+
+  const isPersonal = selectedVault?.type === 'PERSONAL';
+  const companyVaults = vaults.filter((v) => v.type !== 'PERSONAL');
 
   const filtered = useMemo(() => {
     let list = passwords;
@@ -71,32 +76,9 @@ export default function MobileVaultsScreen({
             </div>
             <div>
               <h1 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">Vaults</h1>
-              {vaults.length > 1 ? (
-                <div className="flex items-center gap-1">
-                  <select
-                    value={selectedVault?.id || ''}
-                    onChange={(e) => {
-                      const v = vaults.find((vault) => vault.id === e.target.value);
-                      if (v) {
-                        hapticLight();
-                        onSelectVault?.(v);
-                      }
-                    }}
-                    className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 bg-transparent border-none p-0 outline-none cursor-pointer max-w-[140px] truncate"
-                  >
-                    {vaults.map((v) => (
-                      <option key={v.id} value={v.id} className="text-slate-900 bg-white dark:bg-slate-900 dark:text-white">
-                        {v.name}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="text-[10px] text-slate-400">&middot; {passwords.length} items</span>
-                </div>
-              ) : (
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  {selectedVault?.name || 'Company Vault'} &middot; {passwords.length} items
-                </p>
-              )}
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                {selectedVault?.name || (isPersonal ? 'Personal Vault' : 'Company Vault')} &middot; {passwords.length} items
+              </p>
             </div>
           </div>
 
@@ -153,10 +135,83 @@ export default function MobileVaultsScreen({
               className="h-8 px-3 rounded-xl bg-indigo-600 text-white text-xs font-bold inline-flex items-center gap-1 shadow-md shadow-indigo-600/30 active:scale-95 transition ml-1"
             >
               <Plus size={14} />
-              <span>Add</span>
+              <span>New</span>
             </button>
           </div>
         </div>
+
+        {/* Vault Switcher Segmented Control: Personal vs Company */}
+        <div className="grid grid-cols-2 p-1 rounded-2xl bg-slate-200/70 dark:bg-slate-900 border border-slate-300/60 dark:border-slate-800 text-xs font-bold shadow-inner">
+          <button
+            type="button"
+            onClick={() => {
+              hapticMedium();
+              onSelectVault?.('PERSONAL');
+            }}
+            className={`py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all active:scale-95 ${
+              isPersonal
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Lock size={13} className={isPersonal ? 'text-indigo-600 dark:text-indigo-400' : ''} />
+            <span>Personal Vault</span>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+              isPersonal
+                ? 'bg-indigo-50 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+            }`}>
+              {personalCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              hapticMedium();
+              onSelectVault?.('COMPANY');
+            }}
+            className={`py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all active:scale-95 ${
+              !isPersonal
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Building size={13} className={!isPersonal ? 'text-indigo-600 dark:text-indigo-400' : ''} />
+            <span>Company Vault</span>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+              !isPersonal
+                ? 'bg-indigo-50 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+            }`}>
+              {companyCount}
+            </span>
+          </button>
+        </div>
+
+        {/* Sub-switcher for multiple company vaults if present */}
+        {!isPersonal && companyVaults.length > 1 && (
+          <div className="flex items-center gap-1.5 px-1">
+            <span className="text-[10px] text-slate-400 font-semibold">Workspace Vault:</span>
+            <select
+              value={selectedVault?.id || ''}
+              onChange={(e) => {
+                const v = companyVaults.find((vault) => vault.id === e.target.value);
+                if (v) {
+                  hapticLight();
+                  onSelectVault?.(v);
+                }
+              }}
+              className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 bg-transparent border-none p-0 outline-none cursor-pointer max-w-[180px] truncate"
+            >
+              {companyVaults.map((v) => (
+                <option key={v.id} value={v.id} className="text-slate-900 bg-white dark:bg-slate-900 dark:text-white">
+                  {v.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Search Pill */}
         <div className="relative">

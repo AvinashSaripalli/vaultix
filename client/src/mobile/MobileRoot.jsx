@@ -38,6 +38,10 @@ import {
   fetchFoldersByVault,
   deletePassword,
 } from '../features/vault/vaultSlice';
+import {
+  fetchMyVault,
+  deleteMyVaultPassword,
+} from '../features/myVault/myVaultSlice';
 import { fetchSecuritySummary } from '../features/dashboard/dashboardSlice';
 import { verifyMasterPassword } from '../utils/verifyMasterPassword';
 import {
@@ -74,10 +78,20 @@ export default function MobileRoot() {
     folders = [],
   } = useSelector((state) => state.vault);
 
+  const {
+    vault: myVaultObj,
+    passwords: myVaultPasswords = [],
+    folders: myVaultFolders = [],
+  } = useSelector((state) => state.myVault);
+
   const { securitySummary } = useSelector((state) => state.dashboard);
 
   // Tab State
   const [activeTab, setActiveTab] = useState('home');
+
+  // Vault Selection: 'PERSONAL' or 'COMPANY'
+  const [activeVaultType, setActiveVaultType] = useState('PERSONAL');
+  const [selectedVaultId, setSelectedVaultId] = useState('');
 
   // Sheet States
   const [selectedItem, setSelectedItem] = useState(null);
@@ -86,6 +100,28 @@ export default function MobileRoot() {
   const [decryptedFields, setDecryptedFields] = useState({});
   const [toast, setToast] = useState('');
   const [unreadCount, setUnreadCount] = useState(0);
+
+  // Vault objects memoization
+  const personalVault = useMemo(() => {
+    return {
+      id: myVaultObj?.id || 'PERSONAL_VAULT',
+      name: 'Personal Vault',
+      type: 'PERSONAL',
+      slug: 'my-vault',
+    };
+  }, [myVaultObj]);
+
+  const companyVault = useMemo(() => {
+    if (selectedVaultId) {
+      const found = vaults.find((v) => v.id === selectedVaultId);
+      if (found) return found;
+    }
+    return selectedVault || vaults.find((v) => v.type === 'COMPANY') || vaults[0] || null;
+  }, [selectedVaultId, selectedVault, vaults]);
+
+  const currentVault = activeVaultType === 'PERSONAL' ? personalVault : companyVault;
+  const currentPasswords = activeVaultType === 'PERSONAL' ? myVaultPasswords : passwords;
+  const currentFolders = activeVaultType === 'PERSONAL' ? myVaultFolders : folders;
 
   // Item Editor State (Create & Edit)
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -142,9 +178,10 @@ export default function MobileRoot() {
     }
   }, []);
 
-  // Fetch initial vaults, summary, & notifications once master verified
+  // Fetch initial vaults, personal vault, summary, & notifications once master verified
   useEffect(() => {
     if (isAuthenticated && isMasterVerified && token) {
+      dispatch(fetchMyVault());
       dispatch(fetchVaults());
       dispatch(fetchSecuritySummary());
       fetchUnreadNotifications();
@@ -153,7 +190,7 @@ export default function MobileRoot() {
     }
   }, [isAuthenticated, isMasterVerified, token, dispatch, fetchUnreadNotifications]);
 
-  // Select default vault and fetch its items & folders
+  // Select default company vault and fetch its items & folders
   useEffect(() => {
     if (vaults?.length > 0 && isMasterVerified) {
       const targetVault = selectedVault || vaults.find((v) => v.type === 'COMPANY') || vaults[0];
@@ -169,15 +206,27 @@ export default function MobileRoot() {
     }
   }, [vaults, isMasterVerified, dispatch]);
 
-  // Handle switching vaults
-  const handleSelectVault = (vault) => {
-    if (!vault?.id) return;
-    if (vault.slug) {
-      dispatch(fetchVaultBySlug(vault.slug));
+  // Handle switching vaults (Personal vs Company Vaults)
+  const handleSelectVault = (vaultOrType) => {
+    if (!vaultOrType) return;
+    if (vaultOrType === 'PERSONAL' || vaultOrType?.type === 'PERSONAL' || vaultOrType?.id === 'PERSONAL_VAULT') {
+      setActiveVaultType('PERSONAL');
+      dispatch(fetchMyVault());
+      showToast('Switched to Personal Vault');
+      return;
     }
-    dispatch(fetchPasswordsByVault(vault.id));
-    dispatch(fetchFoldersByVault(vault.id));
-    showToast(`Switched to ${vault.name}`);
+
+    setActiveVaultType('COMPANY');
+    const target = typeof vaultOrType === 'object' ? vaultOrType : vaults.find((v) => v.id === vaultOrType);
+    if (target?.id) {
+      setSelectedVaultId(target.id);
+      if (target.slug) {
+        dispatch(fetchVaultBySlug(target.slug));
+      }
+      dispatch(fetchPasswordsByVault(target.id));
+      dispatch(fetchFoldersByVault(target.id));
+      showToast(`Switched to ${target.name}`);
+    }
   };
 
   // Master password unlock handler
@@ -400,7 +449,9 @@ export default function MobileRoot() {
         <MobileHomeScreen
           user={user}
           summary={securitySummary}
-          passwords={passwords}
+          passwords={currentPasswords.length > 0 ? currentPasswords : (myVaultPasswords.length > 0 ? myVaultPasswords : passwords)}
+          personalCount={myVaultPasswords.length}
+          companyCount={passwords.length}
           unreadCount={unreadCount}
           onOpenItem={handleOpenItem}
           onNavigateTab={setActiveTab}
@@ -410,13 +461,14 @@ export default function MobileRoot() {
           onOpenSharedWithMe={() => setIsSharedWithMeOpen(true)}
           onOpenImportExport={() => setIsImportExportOpen(true)}
           onRefresh={() => {
+            dispatch(fetchMyVault());
+            if (companyVault?.id) {
+              dispatch(fetchPasswordsByVault(companyVault.id));
+              dispatch(fetchFoldersByVault(companyVault.id));
+            }
             dispatch(fetchVaults());
             dispatch(fetchSecuritySummary());
             fetchUnreadNotifications();
-            if (selectedVault?.id) {
-              dispatch(fetchPasswordsByVault(selectedVault.id));
-              dispatch(fetchFoldersByVault(selectedVault.id));
-            }
             showToast('Vault Synchronized');
           }}
         />
@@ -425,10 +477,12 @@ export default function MobileRoot() {
       {/* Tab 2: Vaults Screen */}
       {activeTab === 'vaults' && (
         <MobileVaultsScreen
-          passwords={passwords}
-          folders={folders}
+          passwords={currentPasswords}
+          folders={currentFolders}
           vaults={vaults}
-          selectedVault={selectedVault}
+          selectedVault={currentVault}
+          personalCount={myVaultPasswords.length}
+          companyCount={passwords.length}
           unreadCount={unreadCount}
           onSelectVault={handleSelectVault}
           onOpenItem={handleOpenItem}
@@ -493,12 +547,17 @@ export default function MobileRoot() {
           onShare={(item) => handleOpenShareItem(item)}
           onDelete={async (item) => {
             if (window.confirm(`Move "${item.name}" to Trash?`)) {
-              await dispatch(deletePassword(item.id));
+              if (currentVault?.type === 'PERSONAL' || item.vaultId === myVaultObj?.id) {
+                await dispatch(deleteMyVaultPassword(item.id));
+                dispatch(fetchMyVault());
+              } else {
+                await dispatch(deletePassword(item.id));
+                if (currentVault?.id) {
+                  dispatch(fetchPasswordsByVault(currentVault.id));
+                }
+              }
               setSelectedItem(null);
               showToast(`Moved "${item.name}" to Trash`);
-              if (selectedVault?.id) {
-                dispatch(fetchPasswordsByVault(selectedVault.id));
-              }
             }
           }}
         />
@@ -509,6 +568,8 @@ export default function MobileRoot() {
         isOpen={isEditorOpen}
         mode={editorMode}
         item={editingItem}
+        targetVault={currentVault}
+        folders={currentFolders}
         initialDecryptedPassword={editingItem?.decryptedPassword || ''}
         initialDecryptedNote={editingItem?.decryptedNote || ''}
         initialDecryptedFields={editingItem?.decryptedFields || {}}
@@ -520,8 +581,10 @@ export default function MobileRoot() {
           setIsEditorOpen(false);
           setEditingItem(null);
           showToast(editorMode === 'create' ? 'Item Created' : 'Item Updated');
-          if (selectedVault?.id) {
-            dispatch(fetchPasswordsByVault(selectedVault.id));
+          if (currentVault?.type === 'PERSONAL') {
+            dispatch(fetchMyVault());
+          } else if (currentVault?.id) {
+            dispatch(fetchPasswordsByVault(currentVault.id));
           }
         }}
       />
@@ -529,13 +592,32 @@ export default function MobileRoot() {
       {/* Folder Manager Sheet */}
       <MobileFolderManagerSheet
         isOpen={isFolderManagerOpen}
+        isPersonalVault={currentVault?.type === 'PERSONAL'}
+        selectedVault={currentVault}
+        folders={currentFolders}
         onClose={() => setIsFolderManagerOpen(false)}
+        onRefresh={() => {
+          if (currentVault?.type === 'PERSONAL') {
+            dispatch(fetchMyVault());
+          } else if (currentVault?.id) {
+            dispatch(fetchFoldersByVault(currentVault.id));
+          }
+        }}
       />
 
       {/* Trash Recovery Sheet */}
       <MobileTrashSheet
         isOpen={isTrashOpen}
+        isPersonalVault={currentVault?.type === 'PERSONAL'}
+        selectedVault={currentVault}
         onClose={() => setIsTrashOpen(false)}
+        onRefresh={() => {
+          if (currentVault?.type === 'PERSONAL') {
+            dispatch(fetchMyVault());
+          } else if (currentVault?.id) {
+            dispatch(fetchPasswordsByVault(currentVault.id));
+          }
+        }}
       />
 
       {/* Share Credential Sheet */}

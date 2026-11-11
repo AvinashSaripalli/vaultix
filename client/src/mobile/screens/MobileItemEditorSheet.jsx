@@ -23,6 +23,8 @@ import {
   generateItemAesKey,
   encryptValueWithAesKey,
   encryptFieldsWithAesKey,
+  encryptText,
+  encryptFields,
   wrapItemKey,
   unwrapItemKey,
   decryptTextWithAesKey,
@@ -44,6 +46,12 @@ import {
 } from '../../utils/itemTypes';
 import { createPassword, updatePassword, fetchPasswordsByVault } from '../../features/vault/vaultSlice';
 import {
+  createMyVaultPassword,
+  updateMyVaultPassword,
+  createMyVaultFolder,
+  fetchMyVault,
+} from '../../features/myVault/myVaultSlice';
+import {
   setSessionRsaPrivateKey,
   setSessionRsaPublicKey,
 } from '../../features/auth/authSlice';
@@ -61,6 +69,8 @@ export default function MobileItemEditorSheet({
   isOpen,
   mode = 'create', // 'create' | 'edit'
   item = null,
+  targetVault = null,
+  folders: foldersProp = null,
   initialDecryptedPassword = '',
   initialDecryptedNote = '',
   initialDecryptedFields = {},
@@ -75,6 +85,10 @@ export default function MobileItemEditorSheet({
     folders = [],
     actionLoading,
   } = useSelector((state) => state.vault);
+
+  const effectiveVault = targetVault || selectedVault;
+  const effectiveFolders = foldersProp && foldersProp.length > 0 ? foldersProp : folders;
+  const isPersonalVault = effectiveVault?.type === 'PERSONAL' || item?.type === 'PERSONAL' || item?.vaultId === 'PERSONAL_VAULT';
 
   const {
     user,
@@ -264,6 +278,80 @@ export default function MobileItemEditorSheet({
     hapticMedium();
 
     try {
+      if (isPersonalVault) {
+        if (!sessionMasterPassword) {
+          setError('Master password session missing. Please lock and unlock your vault.');
+          setSubmitting(false);
+          return;
+        }
+
+        const isLogin = itemType === 'LOGIN';
+        const encryptedPassword = isLogin && password
+          ? await encryptText(password, sessionMasterPassword, user?.encryptionSalt)
+          : '';
+        const encryptedNote = note
+          ? await encryptText(note, sessionMasterPassword, user?.encryptionSalt)
+          : '';
+
+        const fieldsPayload = { ...fields };
+        if (customFields.length > 0) {
+          fieldsPayload[CUSTOM_FIELDS_KEY] = serializeCustomFields(customFields);
+        }
+        const encryptedFields = await encryptFields(
+          fieldsPayload,
+          sessionMasterPassword,
+          user?.encryptionSalt
+        );
+
+        let targetFolderId = folderId;
+        if (!targetFolderId && effectiveFolders.length > 0) {
+          targetFolderId = effectiveFolders[0].id;
+        }
+
+        if (!targetFolderId) {
+          try {
+            const newFld = await dispatch(createMyVaultFolder({ name: 'Personal' }));
+            if (newFld.payload?.id) {
+              targetFolderId = newFld.payload.id;
+            }
+          } catch {
+            //
+          }
+        }
+
+        const strengthScore = isLogin ? estimateStrength(password) : 5;
+        const breach = isLogin && password ? await checkBreachedPassword(password) : { breached: false };
+        const atRisk = isLogin ? (breach.breached || isPasswordAtRisk(password)) : false;
+
+        const payload = {
+          name: name.trim(),
+          type: itemType,
+          login: isLogin ? login.trim() : '',
+          url: isLogin ? url.trim() : '',
+          encryptedPassword,
+          encryptedNote,
+          encryptedFields,
+          folderId: targetFolderId,
+          isSensitive,
+          strengthScore,
+          atRisk,
+        };
+
+        if (mode === 'edit' && item?.id) {
+          const res = await dispatch(updateMyVaultPassword({ passwordId: item.id, data: payload }));
+          if (res.error) throw new Error(res.error.message || 'Failed to update personal item');
+        } else {
+          const res = await dispatch(createMyVaultPassword(payload));
+          if (res.error) throw new Error(res.error.message || 'Failed to create personal item');
+        }
+
+        dispatch(fetchMyVault());
+        hapticSuccess();
+        onSaved?.();
+        onClose();
+        return;
+      }
+
       let rsaPrivateKey = sessionRsaPrivateKey;
       let rsaPublicKey = sessionRsaPublicKey;
 
@@ -734,8 +822,8 @@ export default function MobileItemEditorSheet({
                 onChange={(e) => setFolderId(e.target.value)}
                 className="w-full pl-10 pr-8 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm text-slate-900 dark:text-white outline-none focus:border-indigo-500 appearance-none transition"
               >
-                <option value="">No Folder (Root Vault)</option>
-                {folders.map((f) => (
+                <option value="">{isPersonalVault && effectiveFolders.length === 0 ? 'Default (Personal)' : 'No Folder (Root Vault)'}</option>
+                {effectiveFolders.map((f) => (
                   <option key={f.id} value={f.id}>
                     {f.name}
                   </option>

@@ -20,6 +20,8 @@ export default function MobileHomeScreen({
   user,
   summary,
   passwords = [],
+  personalCount = 0,
+  companyCount = 0,
   unreadCount = 0,
   onOpenItem,
   onNavigateTab,
@@ -116,6 +118,37 @@ export default function MobileHomeScreen({
             />
           </svg>
           <span className="absolute text-xs font-extrabold text-indigo-600 dark:text-indigo-400">{securityScore}</span>
+        </div>
+      </div>
+
+      {/* Vaults Dual Summary: Personal vs Company */}
+      <div className="grid grid-cols-2 gap-2.5">
+        <div
+          onClick={() => onNavigateTab('vaults')}
+          className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1 shadow-xs cursor-pointer active:scale-98 transition"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-bold">Personal Vault</span>
+            <span className="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xs">
+              <LockKeyhole size={13} />
+            </span>
+          </div>
+          <p className="text-2xl font-extrabold text-slate-900 dark:text-white">{personalCount}</p>
+          <p className="text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold">Private &middot; Master Key</p>
+        </div>
+
+        <div
+          onClick={() => onNavigateTab('vaults')}
+          className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1 shadow-xs cursor-pointer active:scale-98 transition"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-bold">Company Vault</span>
+            <span className="w-6 h-6 rounded-lg bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 flex items-center justify-center text-xs">
+              <Users size={13} />
+            </span>
+          </div>
+          <p className="text-2xl font-extrabold text-slate-900 dark:text-white">{companyCount}</p>
+          <p className="text-[11px] text-violet-600 dark:text-violet-400 font-semibold">Shared Team Vault</p>
         </div>
       </div>
 

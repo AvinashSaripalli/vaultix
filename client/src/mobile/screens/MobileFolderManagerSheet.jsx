@@ -2,44 +2,67 @@ import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Folder, Plus, Trash2, X, RefreshCw, Check } from 'lucide-react';
 import { createFolder, deleteFolder, fetchFoldersByVault } from '../../features/vault/vaultSlice';
+import { createMyVaultFolder, deleteMyVaultFolder, fetchMyVault } from '../../features/myVault/myVaultSlice';
 import { hapticMedium, hapticLight, hapticSuccess } from '../../utils/haptics';
 
-export default function MobileFolderManagerSheet({ isOpen, onClose }) {
+export default function MobileFolderManagerSheet({
+  isOpen,
+  isPersonalVault = false,
+  selectedVault = null,
+  folders: foldersProp = null,
+  onClose,
+  onRefresh,
+}) {
   const dispatch = useDispatch();
-  const { folders = [], selectedVault, actionLoading } = useSelector((state) => state.vault);
+  const { folders = [], selectedVault: reduxSelectedVault, actionLoading } = useSelector((state) => state.vault);
 
   const [newFolderName, setNewFolderName] = useState('');
   const [error, setError] = useState('');
   const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
 
+  const effectiveFolders = foldersProp && foldersProp.length > 0 ? foldersProp : folders;
+  const activeVault = selectedVault || reduxSelectedVault;
+
   if (!isOpen) return null;
 
   const handleCreateFolder = async (e) => {
     e?.preventDefault();
     if (!newFolderName.trim()) return;
-    if (!selectedVault?.id) {
-      setError('No active vault selected.');
-      return;
-    }
 
     setError('');
     setCreating(true);
     hapticMedium();
 
     try {
-      const res = await dispatch(
-        createFolder({
-          name: newFolderName.trim(),
-          vaultId: selectedVault.id,
-        })
-      );
+      if (isPersonalVault) {
+        const res = await dispatch(createMyVaultFolder({ name: newFolderName.trim() }));
+        if (res.error) throw new Error(res.error.message || 'Failed to create personal folder');
+        setNewFolderName('');
+        hapticSuccess();
+        dispatch(fetchMyVault());
+        onRefresh?.();
+      } else {
+        if (!activeVault?.id) {
+          setError('No active vault selected.');
+          setCreating(false);
+          return;
+        }
 
-      if (res.error) throw new Error(res.error.message || 'Failed to create folder');
+        const res = await dispatch(
+          createFolder({
+            name: newFolderName.trim(),
+            vaultId: activeVault.id,
+          })
+        );
 
-      setNewFolderName('');
-      hapticSuccess();
-      dispatch(fetchFoldersByVault(selectedVault.id));
+        if (res.error) throw new Error(res.error.message || 'Failed to create folder');
+
+        setNewFolderName('');
+        hapticSuccess();
+        dispatch(fetchFoldersByVault(activeVault.id));
+        onRefresh?.();
+      }
     } catch (err) {
       setError(err?.message || 'Could not create folder.');
     } finally {
@@ -58,10 +81,18 @@ export default function MobileFolderManagerSheet({ isOpen, onClose }) {
     hapticMedium();
 
     try {
-      await dispatch(deleteFolder(folder.id));
-      hapticSuccess();
-      if (selectedVault?.id) {
-        dispatch(fetchFoldersByVault(selectedVault.id));
+      if (isPersonalVault) {
+        await dispatch(deleteMyVaultFolder(folder.id));
+        hapticSuccess();
+        dispatch(fetchMyVault());
+        onRefresh?.();
+      } else {
+        await dispatch(deleteFolder(folder.id));
+        hapticSuccess();
+        if (activeVault?.id) {
+          dispatch(fetchFoldersByVault(activeVault.id));
+        }
+        onRefresh?.();
       }
     } catch {
       setError('Failed to delete folder.');
@@ -131,15 +162,15 @@ export default function MobileFolderManagerSheet({ isOpen, onClose }) {
           {/* Folders List */}
           <div className="space-y-2 pt-2">
             <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-1">
-              Existing Folders ({folders.length})
+              Existing Folders ({effectiveFolders.length})
             </h3>
 
-            {folders.length === 0 ? (
+            {effectiveFolders.length === 0 ? (
               <div className="py-8 text-center text-slate-400 text-xs">
                 No folders created yet. Create one above to organize your credentials.
               </div>
             ) : (
-              folders.map((f) => (
+              effectiveFolders.map((f) => (
                 <div
                   key={f.id}
                   className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between"
