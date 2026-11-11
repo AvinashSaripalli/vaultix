@@ -168,10 +168,10 @@ function Topbar() {
     <div className="h-[calc(3.75rem+env(safe-area-inset-top))] sm:h-[72px] pt-[env(safe-area-inset-top)] bg-[var(--bg-topbar)] border-b border-[var(--border-primary)] flex items-center justify-between px-3.5 sm:px-6 lg:px-8 transition-colors duration-200">
       {/* Left side: branding/avatar + title */}
       <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-        {/* Tablet drawer toggle (hidden on mobile phones where bottom nav is active) */}
+        {/* Mobile & Tablet drawer toggle */}
         <button
           onClick={toggleMobileSidebar}
-          className="hidden md:flex lg:hidden h-9 w-9 sm:h-10 sm:w-10 rounded-xl border border-[var(--border-primary)] bg-[var(--bg-card)] items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors shrink-0"
+          className="flex lg:hidden h-9 w-9 sm:h-10 sm:w-10 rounded-xl border border-[var(--border-primary)] bg-[var(--bg-card)] items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors shrink-0"
           title="Open navigation menu"
           aria-label="Open navigation menu"
         >
