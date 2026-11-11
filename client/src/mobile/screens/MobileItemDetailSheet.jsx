@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import ItemServiceIcon from '../../components/common/ItemServiceIcon';
 import { hapticMedium, hapticLight } from '../../utils/haptics';
-import { parseCustomFields } from '../../utils/itemTypes';
+import { parseCustomFields, CUSTOM_FIELDS_KEY } from '../../utils/itemTypes';
 import api from '../../services/api';
 
 export default function MobileItemDetailSheet({
@@ -53,6 +53,18 @@ export default function MobileItemDetailSheet({
     }
   }, [showActivity, item?.id]);
 
+  // Merge fields
+  const fields = {
+    ...(item?.fields || {}),
+    ...(decryptedFields || {}),
+  };
+
+  const customFieldsList = useMemo(() => {
+    if (!item) return [];
+    const raw = fields?.[CUSTOM_FIELDS_KEY] || item.customFields || item.encryptedCustomFields || [];
+    return parseCustomFields(raw);
+  }, [fields, item]);
+
   if (!item) return null;
 
   const itemType = item.type || 'LOGIN';
@@ -68,16 +80,6 @@ export default function MobileItemDetailSheet({
   const displayPassword = revealed
     ? decryptedPassword || item.password || '••••••••••••'
     : '••••••••••••••••';
-
-  // Merge fields
-  const fields = {
-    ...(item.fields || {}),
-    ...(decryptedFields || {}),
-  };
-
-  const customFieldsList = useMemo(() => {
-    return parseCustomFields(item.customFields || item.encryptedCustomFields || []);
-  }, [item]);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex flex-col justify-end select-none animate-fadeIn">
@@ -120,7 +122,7 @@ export default function MobileItemDetailSheet({
                 type="button"
                 onClick={() => {
                   hapticLight();
-                  onEdit(item);
+                  onEdit(item, decryptedPassword, decryptedNote, fields);
                 }}
                 className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition"
                 title="Edit item"

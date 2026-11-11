@@ -44,7 +44,9 @@ import {
   decryptPrivateKey,
   unwrapItemKey,
   decryptTextWithAesKey,
+  decryptFieldsWithAesKey,
   decryptText,
+  decryptFields,
   MASTER_VERIFIER_STORAGE_KEY,
   isEncryptedFormat,
 } from '../utils/crypto';
@@ -80,6 +82,8 @@ export default function MobileRoot() {
   // Sheet States
   const [selectedItem, setSelectedItem] = useState(null);
   const [decryptedPassword, setDecryptedPassword] = useState('');
+  const [decryptedNote, setDecryptedNote] = useState('');
+  const [decryptedFields, setDecryptedFields] = useState({});
   const [toast, setToast] = useState('');
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -246,31 +250,51 @@ export default function MobileRoot() {
     showToast('Vault Locked');
   };
 
-  // Decrypt password on item select
+  // Decrypt password, notes, and typed fields on item select
   const handleOpenItem = async (item) => {
     setSelectedItem(item);
     setDecryptedPassword('');
+    setDecryptedNote('');
+    setDecryptedFields({});
 
-    if (!item?.encryptedPassword) return;
+    if (!item) return;
 
     try {
+      let pwd = '';
+      let nt = '';
+      let flds = {};
+
       if (item.myWrappedKey && sessionRsaPrivateKey) {
         const aesKeyJwk = await unwrapItemKey(item.myWrappedKey, sessionRsaPrivateKey);
-        const original = await decryptTextWithAesKey(item.encryptedPassword, aesKeyJwk);
-        setDecryptedPassword(original);
-        return;
+        if (item.encryptedPassword) {
+          pwd = await decryptTextWithAesKey(item.encryptedPassword, aesKeyJwk);
+        }
+        if (item.encryptedNote) {
+          nt = await decryptTextWithAesKey(item.encryptedNote, aesKeyJwk);
+        }
+        if (item.encryptedFields) {
+          flds = await decryptFieldsWithAesKey(item.encryptedFields, aesKeyJwk);
+        }
+      } else if (sessionMasterPassword) {
+        if (item.encryptedPassword) {
+          pwd = await decryptText(item.encryptedPassword, sessionMasterPassword, user?.encryptionSalt);
+        }
+        if (item.encryptedNote) {
+          nt = await decryptText(item.encryptedNote, sessionMasterPassword, user?.encryptionSalt);
+        }
+        if (item.encryptedFields) {
+          flds = await decryptFields(item.encryptedFields, sessionMasterPassword, user?.encryptionSalt);
+        }
       }
-    } catch {
-      // fallback to master password
-    }
 
-    try {
-      if (sessionMasterPassword) {
-        const original = await decryptText(item.encryptedPassword, sessionMasterPassword);
-        setDecryptedPassword(original);
-      }
-    } catch {
-      setDecryptedPassword('');
+      setDecryptedPassword(pwd || item.password || '');
+      setDecryptedNote(nt || item.note || item.notes || '');
+      setDecryptedFields(flds || item.fields || {});
+    } catch (err) {
+      console.warn('handleOpenItem decryption error:', err);
+      setDecryptedPassword(item.password || '');
+      setDecryptedNote(item.note || item.notes || '');
+      setDecryptedFields(item.fields || {});
     }
   };
 
@@ -290,7 +314,7 @@ export default function MobileRoot() {
         const aesKeyJwk = await unwrapItemKey(item.myWrappedKey, sessionRsaPrivateKey);
         pwd = await decryptTextWithAesKey(item.encryptedPassword, aesKeyJwk);
       } else if (sessionMasterPassword) {
-        pwd = await decryptText(item.encryptedPassword, sessionMasterPassword);
+        pwd = await decryptText(item.encryptedPassword, sessionMasterPassword, user?.encryptionSalt);
       }
 
       if (pwd) {
@@ -310,9 +334,18 @@ export default function MobileRoot() {
     setIsEditorOpen(true);
   };
 
-  const handleOpenEditItem = (item) => {
+  const handleOpenEditItem = (item, pwd, nt, flds) => {
     hapticMedium();
-    setEditingItem(item);
+    const resolvedPwd = pwd !== undefined ? pwd : decryptedPassword;
+    const resolvedNt = nt !== undefined ? nt : decryptedNote;
+    const resolvedFlds = flds !== undefined ? flds : decryptedFields;
+
+    setEditingItem({
+      ...item,
+      decryptedPassword: resolvedPwd,
+      decryptedNote: resolvedNt,
+      decryptedFields: resolvedFlds,
+    });
     setEditorMode('edit');
     setSelectedItem(null);
     setIsEditorOpen(true);
@@ -449,12 +482,14 @@ export default function MobileRoot() {
         <MobileItemDetailSheet
           item={selectedItem}
           decryptedPassword={decryptedPassword}
+          decryptedNote={decryptedNote}
+          decryptedFields={decryptedFields}
           onClose={() => setSelectedItem(null)}
           onCopyText={(text, label) => {
             secureCopyText(text, label);
             showToast(`${label} Copied`);
           }}
-          onEdit={(item) => handleOpenEditItem(item)}
+          onEdit={(item, pwd, nt, flds) => handleOpenEditItem(item, pwd, nt, flds)}
           onShare={(item) => handleOpenShareItem(item)}
           onDelete={async (item) => {
             if (window.confirm(`Move "${item.name}" to Trash?`)) {
@@ -474,7 +509,9 @@ export default function MobileRoot() {
         isOpen={isEditorOpen}
         mode={editorMode}
         item={editingItem}
-        initialDecryptedPassword={editingItem?.id === selectedItem?.id ? decryptedPassword : ''}
+        initialDecryptedPassword={editingItem?.decryptedPassword || ''}
+        initialDecryptedNote={editingItem?.decryptedNote || ''}
+        initialDecryptedFields={editingItem?.decryptedFields || {}}
         onClose={() => {
           setIsEditorOpen(false);
           setEditingItem(null);

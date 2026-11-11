@@ -24,6 +24,11 @@ import {
   encryptValueWithAesKey,
   encryptFieldsWithAesKey,
   wrapItemKey,
+  unwrapItemKey,
+  decryptTextWithAesKey,
+  decryptFieldsWithAesKey,
+  decryptText,
+  decryptFields,
   decryptPrivateKey,
 } from '../../utils/crypto';
 import { getWrapRecipients, wrapItemKeysForUsers } from '../../utils/keyWrapping';
@@ -34,6 +39,7 @@ import {
   ITEM_TYPES,
   emptyTypeFields,
   serializeCustomFields,
+  parseCustomFields,
   CUSTOM_FIELDS_KEY,
 } from '../../utils/itemTypes';
 import { createPassword, updatePassword, fetchPasswordsByVault } from '../../features/vault/vaultSlice';
@@ -57,6 +63,7 @@ export default function MobileItemEditorSheet({
   item = null,
   initialDecryptedPassword = '',
   initialDecryptedNote = '',
+  initialDecryptedFields = {},
   onClose,
   onSaved,
 }) {
@@ -111,34 +118,108 @@ export default function MobileItemEditorSheet({
 
   // Populate data when opening in edit mode
   useEffect(() => {
-    if (isOpen) {
-      setError('');
-      if (mode === 'edit' && item) {
-        setItemType(item.type || 'LOGIN');
-        setName(item.name || '');
-        setLogin(item.login || '');
-        setPassword(initialDecryptedPassword || item.password || '');
-        setUrl(item.url || '');
-        setNote(initialDecryptedNote || item.note || '');
-        setFolderId(item.folderId || '');
-        setIsSensitive(Boolean(item.isSensitive));
-        setFields(item.fields || emptyTypeFields(item.type || 'LOGIN'));
-        setCustomFields(item.customFields || []);
-      } else {
-        // Reset for create mode
-        setItemType('LOGIN');
-        setName('');
-        setLogin('');
-        setPassword('');
-        setUrl('');
-        setNote('');
-        setFolderId(selectedFolderId || (folders[0]?.id || ''));
-        setIsSensitive(false);
-        setFields(emptyTypeFields('LOGIN'));
-        setCustomFields([]);
+    if (!isOpen) return;
+    setError('');
+
+    if (mode === 'edit' && item) {
+      setItemType(item.type || 'LOGIN');
+      setName(item.name || '');
+      setLogin(item.login || '');
+      setUrl(item.url || '');
+      setFolderId(item.folderId || '');
+      setIsSensitive(Boolean(item.isSensitive));
+
+      const incomingFields =
+        initialDecryptedFields && Object.keys(initialDecryptedFields).length > 0
+          ? initialDecryptedFields
+          : item.decryptedFields || item.fields || {};
+
+      const { [CUSTOM_FIELDS_KEY]: customRaw, ...typedFields } = incomingFields;
+      setFields({ ...emptyTypeFields(item.type || 'LOGIN'), ...typedFields });
+
+      const initialCustom = customRaw || item.customFields || item.encryptedCustomFields;
+      setCustomFields(parseCustomFields(initialCustom || []));
+
+      const initialPw = initialDecryptedPassword || item.decryptedPassword || item.password || '';
+      const initialNt = initialDecryptedNote || item.decryptedNote || item.note || item.notes || '';
+      setPassword(initialPw);
+      setNote(initialNt);
+
+      // Self-healing: if password, note, or typed fields are still empty, decrypt them on the fly
+      const needsPw = item.encryptedPassword && !initialPw;
+      const needsNt = item.encryptedNote && !initialNt;
+      const needsFlds = item.encryptedFields && Object.keys(typedFields).length === 0;
+
+      if (needsPw || needsNt || needsFlds) {
+        (async () => {
+          try {
+            let pwd = '';
+            let nt = '';
+            let flds = {};
+
+            if (item.myWrappedKey && sessionRsaPrivateKey) {
+              try {
+                const aesKeyJwk = await unwrapItemKey(item.myWrappedKey, sessionRsaPrivateKey);
+                if (needsPw && item.encryptedPassword) pwd = await decryptTextWithAesKey(item.encryptedPassword, aesKeyJwk);
+                if (needsNt && item.encryptedNote) nt = await decryptTextWithAesKey(item.encryptedNote, aesKeyJwk);
+                if (needsFlds && item.encryptedFields) flds = await decryptFieldsWithAesKey(item.encryptedFields, aesKeyJwk);
+              } catch (wrapErr) {
+                console.warn('unwrapItemKey failed in editor, attempting master password fallback:', wrapErr);
+              }
+            }
+
+            if ((!pwd && needsPw) || (!nt && needsNt) || (Object.keys(flds).length === 0 && needsFlds)) {
+              if (sessionMasterPassword) {
+                if (needsPw && !pwd && item.encryptedPassword) {
+                  pwd = await decryptText(item.encryptedPassword, sessionMasterPassword, user?.encryptionSalt);
+                }
+                if (needsNt && !nt && item.encryptedNote) {
+                  nt = await decryptText(item.encryptedNote, sessionMasterPassword, user?.encryptionSalt);
+                }
+                if (needsFlds && Object.keys(flds).length === 0 && item.encryptedFields) {
+                  flds = await decryptFields(item.encryptedFields, sessionMasterPassword, user?.encryptionSalt);
+                }
+              }
+            }
+
+            if (pwd) setPassword(pwd);
+            if (nt) setNote(nt);
+            if (flds && Object.keys(flds).length > 0) {
+              const { [CUSTOM_FIELDS_KEY]: cRaw, ...tFields } = flds;
+              setFields((prev) => ({ ...prev, ...tFields }));
+              if (cRaw) setCustomFields(parseCustomFields(cRaw));
+            }
+          } catch (err) {
+            console.warn('MobileItemEditorSheet self-decrypt error:', err);
+          }
+        })();
       }
+    } else {
+      // Reset for create mode
+      setItemType('LOGIN');
+      setName('');
+      setLogin('');
+      setPassword('');
+      setUrl('');
+      setNote('');
+      setFolderId(selectedFolderId || (folders[0]?.id || ''));
+      setIsSensitive(false);
+      setFields(emptyTypeFields('LOGIN'));
+      setCustomFields([]);
     }
-  }, [isOpen, mode, item, initialDecryptedPassword, initialDecryptedNote, selectedFolderId, folders]);
+  }, [
+    isOpen,
+    mode,
+    item,
+    initialDecryptedPassword,
+    initialDecryptedNote,
+    initialDecryptedFields,
+    selectedFolderId,
+    folders,
+    sessionRsaPrivateKey,
+    sessionMasterPassword,
+    user?.encryptionSalt,
+  ]);
 
   if (!isOpen) return null;
 
@@ -562,8 +643,8 @@ export default function MobileItemEditorSheet({
                   </label>
                   <input
                     type="text"
-                    value={fields.expiration || ''}
-                    onChange={(e) => setFields({ ...fields, expiration: e.target.value })}
+                    value={fields.expiration || fields.expiry || fields.expiryDate || ''}
+                    onChange={(e) => setFields({ ...fields, expiration: e.target.value, expiry: e.target.value, expiryDate: e.target.value })}
                     placeholder="12/28"
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm text-slate-900 dark:text-white outline-none focus:border-indigo-500 text-center font-mono"
                   />

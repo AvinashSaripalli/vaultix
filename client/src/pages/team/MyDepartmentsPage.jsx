@@ -139,10 +139,6 @@ function MyDepartmentsPage() {
     fetchDepartments();
   }, [fetchDepartments]);
 
-  if (['SUPER_ADMIN', 'ADMIN'].includes(user?.role)) {
-    return <Navigate to="/departments" replace />;
-  }
-
   const tree = useMemo(() => buildTree(departments), [departments]);
   const selectedDept = departments.find((d) => d.id === selectedDeptId) || null;
 
@@ -176,6 +172,10 @@ function MyDepartmentsPage() {
       .map((node) => ({ ...node, children: pruneHidden(node.children) }));
 
   const visibleTree = useMemo(() => pruneHidden(tree), [tree, search]);
+
+  if (['SUPER_ADMIN', 'ADMIN'].includes(user?.role)) {
+    return <Navigate to="/departments" replace />;
+  }
 
   const openDepartment = (id) => setSelectedDeptId(id);
   const closeDrawer = () => setSelectedDeptId(null);
