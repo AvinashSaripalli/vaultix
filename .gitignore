@@ -11,3 +11,15 @@ coverage
 
 playwright-report/
 test-results/
+
+# Archives & Documentation Exports (keep repo lightweight)
+*.zip
+*.docx
+*.pdf
+DOCUMENTATION_GALLERY.html
+Vaultix_Documentation.html
+docs_archive/
+
+# Step-by-step screenshots (banners remain tracked)
+screenshots/0*.png
+screenshots/[1-4]*.png
