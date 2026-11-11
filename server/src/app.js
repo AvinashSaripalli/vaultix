@@ -6,6 +6,7 @@ const morgan = require('morgan');
 const path = require('path');
 
 const { globalLimiter } = require('./utils/rateLimiters');
+const { swaggerUi, swaggerSpec, swaggerUiOptions } = require('./docs/swagger');
 
 const authRoutes = require('./routes/authRoutes');
 const vaultRoutes = require('./routes/vaultRoutes');
@@ -42,14 +43,16 @@ app.use(
     hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
     contentSecurityPolicy: {
       directives: {
-        // The API only returns JSON, so forbid loading any content.
-        defaultSrc: ["'none'"],
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "https:"],
         frameAncestors: ["'self'", "https://www.karnsphere.com"],
       },
     },
     crossOriginEmbedderPolicy: false,
     referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
-    crossOriginResourcePolicy: { policy: 'same-origin' },
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
   })
 );
 
@@ -96,6 +99,15 @@ app.use(express.json({ limit: '1mb' }));
 app.get('/api/health', (req, res) => {
   res.json({ message: 'API is running' });
 });
+
+// ─── SWAGGER OPENAPI DOCUMENTATION ───────────────────────────────────────────
+app.get('/api-docs.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, swaggerUiOptions));
+app.get('/docs', (req, res) => res.redirect('/api-docs'));
+app.get('/swagger', (req, res) => res.redirect('/api-docs'));
 
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
