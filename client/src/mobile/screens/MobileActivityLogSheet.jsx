@@ -1,13 +1,37 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Activity, X, Search, RefreshCw, Filter, ShieldCheck, KeyRound, Folder, User } from 'lucide-react';
+import { Activity, X, Search, RefreshCw, Filter, ShieldCheck, KeyRound, Folder, User, Globe } from 'lucide-react';
 import { fetchActivityLogs } from '../../features/vault/vaultSlice';
 import { hapticLight, hapticMedium } from '../../utils/haptics';
+import {
+  formatItemAction,
+  getActionBadge,
+  getActionIcon,
+  resolveItemType,
+  resolveFieldLabel,
+} from '../../utils/activityActionFormatter';
 
 function formatTimestamp(ts) {
   if (!ts) return '';
   const d = new Date(ts);
   return `${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+}
+
+function getLogTitle(log) {
+  const m = log?.metadata;
+  return (
+    m?.currentName ||
+    m?.name ||
+    m?.historicalName ||
+    m?.newName ||
+    m?.previousName ||
+    m?.folderName ||
+    m?.vaultName ||
+    m?.departmentName ||
+    log?.itemName ||
+    (log?.targetType === 'PasswordEntry' ? 'Credential Item' : log?.targetType) ||
+    'Vault Item'
+  );
 }
 
 export default function MobileActivityLogSheet({ isOpen, onClose }) {
@@ -32,12 +56,23 @@ export default function MobileActivityLogSheet({ isOpen, onClose }) {
 
     if (!search.trim()) return list;
     const q = search.toLowerCase();
-    return list.filter(
-      (l) =>
-        (l.itemName || '').toLowerCase().includes(q) ||
-        (l.action || '').toLowerCase().includes(q) ||
-        (l.user?.fullName || '').toLowerCase().includes(q)
-    );
+    return list.filter((l) => {
+      const title = getLogTitle(l).toLowerCase();
+      const action = (l.action || '').toLowerCase();
+      const formattedAction = formatItemAction(l.action, l.metadata, l).toLowerCase();
+      const user = (l.user?.fullName || l.user?.email || l.userName || '').toLowerCase();
+      const domain = (l.metadata?.domain || '').toLowerCase();
+      const login = (l.metadata?.login || l.metadata?.username || '').toLowerCase();
+
+      return (
+        title.includes(q) ||
+        action.includes(q) ||
+        formattedAction.includes(q) ||
+        user.includes(q) ||
+        domain.includes(q) ||
+        login.includes(q)
+      );
+    });
   }, [activityLogs, search, filterAction]);
 
   if (!isOpen) return null;
@@ -84,7 +119,7 @@ export default function MobileActivityLogSheet({ isOpen, onClose }) {
           </div>
 
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
-            {['ALL', 'CREATE', 'UPDATE', 'DELETE', 'VIEW', 'SHARE'].map((action) => (
+            {['ALL', 'CREATE', 'UPDATE', 'DELETE', 'VIEW', 'AUTOFILL', 'SHARE'].map((action) => (
               <button
                 key={action}
                 type="button"
@@ -116,33 +151,86 @@ export default function MobileActivityLogSheet({ isOpen, onClose }) {
               No audit records match your filter.
             </div>
           ) : (
-            filteredLogs.map((log) => (
-              <div
-                key={log.id}
-                className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-start gap-3"
-              >
-                <div className="w-8 h-8 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5">
-                  <Activity size={15} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400">
-                      {log.action}
-                    </span>
-                    <span className="text-[10px] text-slate-400">
-                      {formatTimestamp(log.createdAt)}
-                    </span>
+            filteredLogs.map((log) => {
+              const effectiveItemType = log.metadata?.itemType || resolveItemType(log);
+              const actionLabel = formatItemAction(log.action, { ...log.metadata, itemType: effectiveItemType }, log);
+              const badgeClass = getActionBadge(log.action, effectiveItemType);
+              const icon = getActionIcon(log.action, effectiveItemType, log.metadata?.fieldName);
+              const title = getLogTitle(log);
+              const isAutofill = log.action === 'AUTOFILL_PASSWORD';
+              const isExtension = log.metadata?.clientSource === 'EXTENSION' || isAutofill;
+              const domain = log.metadata?.domain;
+              const accountLogin = log.metadata?.login || log.metadata?.username;
+              const fieldName = log.metadata?.fieldName;
+              const fieldLabel = fieldName ? resolveFieldLabel(fieldName, effectiveItemType) : null;
+
+              return (
+                <div
+                  key={log.id}
+                  className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-start gap-3 transition"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5">
+                    {icon}
                   </div>
-                  <h4 className="text-xs font-bold text-slate-900 dark:text-white mt-1 truncate">
-                    {log.itemName || log.details || 'Vault Mutation'}
-                  </h4>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-                    by <span className="font-semibold text-slate-700 dark:text-slate-300">{log.user?.fullName || log.userName || 'System'}</span>
-                    {log.ipAddress && ` • ${log.ipAddress}`}
-                  </p>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${badgeClass}`}>
+                          {actionLabel}
+                        </span>
+                        {isExtension && (
+                          <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
+                            Extension
+                          </span>
+                        )}
+                        {fieldLabel && (
+                          <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200/60 dark:bg-sky-900/30 dark:text-sky-300">
+                            Field: {fieldLabel}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-slate-400">
+                        {formatTimestamp(log.createdAt)}
+                      </span>
+                    </div>
+
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-white mt-1.5 truncate">
+                      {title}
+                    </h4>
+
+                    {/* Context details: domain, username, move, share */}
+                    {(domain || accountLogin || log.metadata?.moved || log.metadata?.sharedWithName) && (
+                      <div className="flex flex-wrap items-center gap-2 text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                        {domain && (
+                          <span className="font-mono text-indigo-600 dark:text-indigo-400 font-semibold flex items-center gap-1">
+                            <Globe size={11} className="shrink-0" />
+                            {domain}
+                          </span>
+                        )}
+                        {accountLogin && (
+                          <span>
+                            Account: <span className="font-medium text-slate-700 dark:text-slate-300">{accountLogin}</span>
+                          </span>
+                        )}
+                        {log.metadata?.moved && log.metadata?.fromFolderName && log.metadata?.toFolderName && (
+                          <span className="text-amber-600 dark:text-amber-400 font-medium">
+                            Moved: {log.metadata.fromFolderName} → {log.metadata.toFolderName}
+                          </span>
+                        )}
+                        {log.metadata?.sharedWithName && (
+                          <span>Shared with {log.metadata.sharedWithName}</span>
+                        )}
+                      </div>
+                    )}
+
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                      by <span className="font-semibold text-slate-700 dark:text-slate-300">{log.user?.fullName || log.userName || 'System'}</span>
+                      {log.ipAddress && ` • ${log.ipAddress}`}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
