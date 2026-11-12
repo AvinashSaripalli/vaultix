@@ -36,6 +36,7 @@ import {
   serializeCustomFields,
   parseCustomFields,
   CUSTOM_FIELDS_KEY,
+  getItemTypeMeta,
 } from '../../utils/itemTypes';
 import { luhnCheck, validateExpiry, validateCVV, validatePIN } from '../../utils/cardValidation';
 
@@ -391,11 +392,16 @@ function EditPasswordModal() {
         >
           <div className="flex items-start justify-between gap-3 mb-5 sm:mb-6">
             <div className="min-w-0">
-              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">
-                Edit Password
-              </h2>
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">
+                  Edit Item
+                </h2>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                  {getItemTypeMeta(formData.type || 'LOGIN')?.label || 'Login'}
+                </span>
+              </div>
               <p className="text-xs sm:text-sm text-slate-500 mt-1 dark:text-slate-400 truncate">
-                Update password details in {currentFolder?.name || 'folder'}
+                Update details for &ldquo;{formData.name || 'item'}&rdquo; in {currentFolder?.name || 'folder'}
               </p>
             </div>
 
@@ -438,6 +444,7 @@ function EditPasswordModal() {
               }}
               folders={folders}
               showFolderSelect={true}
+              showTypeSelector={false}
               showConfirmPassword={formData.type === 'LOGIN'}
               passwordFieldName="encryptedPassword"
               noteFieldName="encryptedNote"
@@ -458,7 +465,7 @@ function EditPasswordModal() {
                 disabled={actionLoading}
                 className="w-full sm:w-auto px-6 py-2.5 sm:py-3 rounded-xl bg-indigo-600 text-white text-sm font-medium disabled:opacity-50"
               >
-                {actionLoading ? 'Updating...' : 'Update Password'}
+                {actionLoading ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           </form>

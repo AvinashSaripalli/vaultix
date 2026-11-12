@@ -22,6 +22,7 @@ import {
   serializeCustomFields,
   parseCustomFields,
   CUSTOM_FIELDS_KEY,
+  getItemTypeMeta,
 } from '../../utils/itemTypes';
 import { luhnCheck, validateExpiry, validateCVV, validatePIN } from '../../utils/cardValidation';
 
@@ -280,12 +281,17 @@ function EditMyVaultPasswordModal({
         >
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-              Edit Password
-            </h2>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                Edit Item
+              </h2>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                {getItemTypeMeta(formData.type || 'LOGIN')?.label || 'Login'}
+              </span>
+            </div>
 
             <p className="text-sm text-slate-500 mt-1 dark:text-slate-400">
-              Update password details in Personal Vault
+              Update details for &ldquo;{formData.name || 'item'}&rdquo; in Personal Vault
             </p>
           </div>
 
@@ -318,6 +324,7 @@ function EditMyVaultPasswordModal({
             onChangeCustomFields={(fields) => updateField('customFields', fields)}
             folders={folders}
             showFolderSelect={true}
+            showTypeSelector={false}
             showConfirmPassword={false}
             passwordFieldName="encryptedPassword"
             noteFieldName="encryptedNote"

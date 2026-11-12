@@ -43,6 +43,7 @@ import {
   serializeCustomFields,
   parseCustomFields,
   CUSTOM_FIELDS_KEY,
+  getItemTypeMeta,
 } from '../../utils/itemTypes';
 import { createPassword, updatePassword, fetchPasswordsByVault } from '../../features/vault/vaultSlice';
 import {
@@ -472,9 +473,16 @@ export default function MobileItemEditorSheet({
           >
             Cancel
           </button>
-          <h2 className="text-sm font-black text-slate-900 dark:text-white">
-            {mode === 'edit' ? 'Edit Item' : 'New Item'}
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-black text-slate-900 dark:text-white">
+              {mode === 'edit' ? 'Edit Item' : 'New Item'}
+            </h2>
+            {mode === 'edit' && (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                {TYPES.find((t) => t.id === itemType)?.label || getItemTypeMeta(itemType)?.label || itemType}
+              </span>
+            )}
+          </div>
           <button
             type="button"
             onClick={handleSubmit}
@@ -495,36 +503,61 @@ export default function MobileItemEditorSheet({
             </div>
           )}
 
-          {/* Item Type Picker Pills */}
-          <div>
-            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block px-1 mb-1.5">
-              Category
-            </label>
-            <div className="grid grid-cols-4 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/70 rounded-2xl border border-slate-200 dark:border-slate-800">
-              {TYPES.map((t) => {
-                const IconComponent = t.icon;
-                const active = itemType === t.id;
-                return (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => {
-                      hapticLight();
-                      setItemType(t.id);
-                    }}
-                    className={`py-2 px-1 rounded-xl text-[11px] font-bold flex flex-col items-center gap-1 transition ${
-                      active
-                        ? 'bg-indigo-600 text-white shadow-xs'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                    }`}
-                  >
-                    <IconComponent size={14} />
-                    <span>{t.label}</span>
-                  </button>
-                );
-              })}
+          {/* Item Type / Category: selectable only when creating */}
+          {mode === 'create' ? (
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block px-1 mb-1.5">
+                Category
+              </label>
+              <div className="grid grid-cols-4 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/70 rounded-2xl border border-slate-200 dark:border-slate-800">
+                {TYPES.map((t) => {
+                  const IconComponent = t.icon;
+                  const active = itemType === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => {
+                        hapticLight();
+                        setItemType(t.id);
+                      }}
+                      className={`py-2 px-1 rounded-xl text-[11px] font-bold flex flex-col items-center gap-1 transition ${
+                        active
+                          ? 'bg-indigo-600 text-white shadow-xs'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      <IconComponent size={14} />
+                      <span>{t.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-slate-100/70 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Category</span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 text-xs font-bold">
+                  {(() => {
+                    const matchedType = TYPES.find((t) => t.id === itemType);
+                    const IconComp = matchedType?.icon || KeyRound;
+                    const label = matchedType?.label || getItemTypeMeta(itemType)?.label || itemType;
+                    return (
+                      <>
+                        <IconComp size={13} />
+                        <span>{label}</span>
+                      </>
+                    );
+                  })()}
+                </span>
+              </div>
+              <span className="text-[10px] font-medium text-slate-400 flex items-center gap-1">
+                <Lock size={11} className="text-slate-400" />
+                <span>Locked</span>
+              </span>
+            </div>
+          )}
 
           {/* Item Name */}
           <div className="space-y-1">
