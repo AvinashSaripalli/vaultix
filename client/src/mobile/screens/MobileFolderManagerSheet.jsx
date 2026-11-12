@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Folder, Plus, Trash2, X, RefreshCw, Check } from 'lucide-react';
+import { Folder, Plus, Trash2, X, RefreshCw, Check, Share2, Users, Pencil } from 'lucide-react';
+import api from '../../services/api';
 import { createFolder, deleteFolder, fetchFoldersByVault } from '../../features/vault/vaultSlice';
 import { createMyVaultFolder, deleteMyVaultFolder, fetchMyVault } from '../../features/myVault/myVaultSlice';
 import { hapticMedium, hapticLight, hapticSuccess } from '../../utils/haptics';
@@ -10,18 +11,29 @@ export default function MobileFolderManagerSheet({
   isPersonalVault = false,
   selectedVault = null,
   folders: foldersProp = null,
+  passwords: passwordsProp = [],
   onClose,
   onRefresh,
+  onOpenShare,
+  onOpenMembers,
+  onSelectFolder,
 }) {
   const dispatch = useDispatch();
-  const { folders = [], selectedVault: reduxSelectedVault, actionLoading } = useSelector((state) => state.vault);
+  const { folders = [], selectedVault: reduxSelectedVault, passwords: reduxPasswords = [] } = useSelector((state) => state.vault);
+  const { passwords: myVaultPasswords = [] } = useSelector((state) => state.myVault);
 
   const [newFolderName, setNewFolderName] = useState('');
   const [error, setError] = useState('');
   const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [editingFolderId, setEditingFolderId] = useState(null);
+  const [editingName, setEditingName] = useState('');
+  const [savingRename, setSavingRename] = useState(false);
 
   const effectiveFolders = foldersProp && foldersProp.length > 0 ? foldersProp : folders;
+  const effectivePasswords = isPersonalVault
+    ? (passwordsProp.length > 0 ? passwordsProp : myVaultPasswords)
+    : (passwordsProp.length > 0 ? passwordsProp : reduxPasswords);
   const activeVault = selectedVault || reduxSelectedVault;
 
   if (!isOpen) return null;
@@ -101,6 +113,36 @@ export default function MobileFolderManagerSheet({
     }
   };
 
+  const handleSaveRename = async (folder) => {
+    if (!editingName.trim() || editingName.trim() === folder.name) {
+      setEditingFolderId(null);
+      return;
+    }
+
+    setSavingRename(true);
+    setError('');
+    hapticMedium();
+
+    try {
+      if (isPersonalVault) {
+        await api.put(`/my-vault/folders/${folder.id}`, { name: editingName.trim() });
+        dispatch(fetchMyVault());
+      } else {
+        await api.put(`/folders/${folder.id}`, { name: editingName.trim() });
+        if (activeVault?.id) {
+          dispatch(fetchFoldersByVault(activeVault.id));
+        }
+      }
+      hapticSuccess();
+      setEditingFolderId(null);
+      onRefresh?.();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to rename folder');
+    } finally {
+      setSavingRename(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex flex-col justify-end select-none animate-fadeIn">
       {/* Backdrop */}
@@ -115,11 +157,19 @@ export default function MobileFolderManagerSheet({
             <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
               <Folder size={16} />
             </div>
-            <h2 className="text-sm font-black text-slate-900 dark:text-white">Manage Folders</h2>
+            <div>
+              <h2 className="text-sm font-black text-slate-900 dark:text-white">
+                {isPersonalVault ? 'Personal Folders' : 'Company Folders'}
+              </h2>
+              <p className="text-[10px] text-slate-400">
+                {activeVault?.name || (isPersonalVault ? 'Personal Vault' : 'Company Vault')} &middot; {effectiveFolders.length} folders
+              </p>
+            </div>
           </div>
           <button
             type="button"
             onClick={onClose}
+            aria-label="Close folder manager"
             className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center"
           >
             <X size={16} />
@@ -144,7 +194,7 @@ export default function MobileFolderManagerSheet({
                 type="text"
                 value={newFolderName}
                 onChange={(e) => setNewFolderName(e.target.value)}
-                placeholder="New folder name..."
+                placeholder={`New ${isPersonalVault ? 'personal' : 'company'} folder name...`}
                 required
                 className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-indigo-500 transition"
               />
@@ -162,35 +212,129 @@ export default function MobileFolderManagerSheet({
           {/* Folders List */}
           <div className="space-y-2 pt-2">
             <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-1">
-              Existing Folders ({effectiveFolders.length})
+              Folders ({effectiveFolders.length})
             </h3>
 
             {effectiveFolders.length === 0 ? (
               <div className="py-8 text-center text-slate-400 text-xs">
-                No folders created yet. Create one above to organize your credentials.
+                No folders created yet. Create one above to organize credentials.
               </div>
             ) : (
-              effectiveFolders.map((f) => (
-                <div
-                  key={f.id}
-                  className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <Folder size={16} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
-                    <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                      {f.name}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteFolder(f)}
-                    disabled={deletingId === f.id}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition active:scale-95"
+              effectiveFolders.map((f) => {
+                const itemCount = effectivePasswords.filter((p) => p.folderId === f.id).length;
+                const isEditing = editingFolderId === f.id;
+
+                return (
+                  <div
+                    key={f.id}
+                    className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2 transition"
                   >
-                    {deletingId === f.id ? <RefreshCw size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                  </button>
-                </div>
-              ))
+                    <div className="flex items-center justify-between gap-2">
+                      <div
+                        className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer"
+                        onClick={() => {
+                          if (!isEditing && onSelectFolder) {
+                            hapticLight();
+                            onSelectFolder(f.id);
+                            onClose();
+                          }
+                        }}
+                      >
+                        <Folder size={16} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editingName}
+                            onChange={(e) => setEditingName(e.target.value)}
+                            className="flex-1 px-2 py-1 rounded-lg border border-indigo-500 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-white outline-none"
+                            autoFocus
+                          />
+                        ) : (
+                          <div className="min-w-0">
+                            <span className="text-xs font-bold text-slate-900 dark:text-white truncate block">
+                              {f.name}
+                            </span>
+                            <span className="text-[10px] text-slate-400">
+                              {itemCount} {itemCount === 1 ? 'item' : 'items'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex items-center gap-1 shrink-0">
+                        {isEditing ? (
+                          <button
+                            type="button"
+                            onClick={() => handleSaveRename(f)}
+                            disabled={savingRename}
+                            className="p-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition"
+                            title="Save Rename"
+                          >
+                            {savingRename ? <RefreshCw size={13} className="animate-spin" /> : <Check size={13} />}
+                          </button>
+                        ) : (
+                          <>
+                            {/* Rename Folder */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                hapticLight();
+                                setEditingFolderId(f.id);
+                                setEditingName(f.name);
+                              }}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                              title="Rename folder"
+                            >
+                              <Pencil size={13} />
+                            </button>
+
+                            {/* Company Vault Exclusive: Members & Share */}
+                            {!isPersonalVault && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    hapticLight();
+                                    onOpenMembers?.(f);
+                                  }}
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition"
+                                  title="Folder members & permissions"
+                                >
+                                  <Users size={13} />
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    hapticLight();
+                                    onOpenShare?.(f);
+                                  }}
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition"
+                                  title="Share folder"
+                                >
+                                  <Share2 size={13} />
+                                </button>
+                              </>
+                            )}
+
+                            {/* Delete Folder */}
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteFolder(f)}
+                              disabled={deletingId === f.id}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
+                              title="Delete folder"
+                            >
+                              {deletingId === f.id ? <RefreshCw size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
             )}
           </div>
 

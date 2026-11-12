@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, Plus, ChevronRight, X, Lock, Folder, Trash2, Building, ShieldCheck, ChevronDown, Bell, Share2 } from 'lucide-react';
+import { Search, Plus, ChevronRight, X, Lock, Folder, Trash2, Building, ShieldCheck, ChevronDown, Bell, Share2, Users } from 'lucide-react';
 import ItemServiceIcon from '../../components/common/ItemServiceIcon';
 import { hapticLight, hapticMedium } from '../../utils/haptics';
 import vaultixLogo from '../../assets/Vaultix1.png';
@@ -20,13 +20,26 @@ export default function MobileVaultsScreen({
   onOpenTrash,
   onOpenNotifications,
   onOpenSharedWithMe,
+  onOpenShareFolder,
+  onOpenFolderMembers,
+  selectedFolderId: controlledFolderId,
+  onSelectFolderId,
 }) {
   const [search, setSearch] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('ALL');
-  const [activeFolderId, setActiveFolderId] = useState('ALL');
+  const [internalFolderId, setInternalFolderId] = useState('ALL');
+
+  const activeFolderId = controlledFolderId !== undefined ? controlledFolderId : internalFolderId;
+  const setActiveFolderId = (id) => {
+    setInternalFolderId(id);
+    onSelectFolderId?.(id);
+  };
 
   const isPersonal = selectedVault?.type === 'PERSONAL';
   const companyVaults = vaults.filter((v) => v.type !== 'PERSONAL');
+  const activeFolder = activeFolderId !== 'ALL' && activeFolderId !== 'NO_FOLDER'
+    ? folders.find((f) => f.id === activeFolderId)
+    : null;
 
   const filtered = useMemo(() => {
     let list = passwords;
@@ -287,6 +300,7 @@ export default function MobileVaultsScreen({
             </button>
             {folders.map((f) => {
               const active = activeFolderId === f.id;
+              const count = passwords.filter((p) => p.folderId === f.id).length;
               return (
                 <button
                   key={f.id}
@@ -297,12 +311,13 @@ export default function MobileVaultsScreen({
                   }}
                   className={`px-2.5 py-0.5 rounded-lg text-[10px] font-semibold whitespace-nowrap flex items-center gap-1 transition ${
                     active
-                      ? 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900'
+                      ? 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900 shadow-xs'
                       : 'text-slate-500 dark:text-slate-400 hover:text-slate-900'
                   }`}
                 >
                   <Folder size={11} />
                   <span>{f.name}</span>
+                  <span className="opacity-70 text-[9px]">({count})</span>
                 </button>
               );
             })}
@@ -312,6 +327,74 @@ export default function MobileVaultsScreen({
 
       {/* Item List */}
       <div className="flex-1 px-5 py-3 space-y-2">
+        {/* Active Folder Banner */}
+        {activeFolder && (
+          <div className="p-3 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 flex items-center justify-between gap-2 animate-fadeIn mb-1">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <Folder size={15} />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] uppercase font-bold text-indigo-600 dark:text-indigo-400">
+                    Folder
+                  </span>
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-indigo-100 dark:bg-indigo-900/60 font-bold text-indigo-700 dark:text-indigo-300">
+                    {filtered.length} {filtered.length === 1 ? 'item' : 'items'}
+                  </span>
+                </div>
+                <h3 className="text-xs font-black text-slate-900 dark:text-white truncate">
+                  {activeFolder.name}
+                </h3>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1 shrink-0">
+              {/* If Company Vault: Members and Share shortcuts */}
+              {!isPersonal && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      hapticLight();
+                      onOpenFolderMembers?.(activeFolder);
+                    }}
+                    className="px-2 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 flex items-center gap-1 text-[11px] font-bold active:scale-95 transition shadow-xs"
+                    title="Folder Members"
+                  >
+                    <Users size={12} />
+                    <span>Members</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      hapticLight();
+                      onOpenShareFolder?.(activeFolder);
+                    }}
+                    className="px-2 py-1.5 rounded-lg bg-indigo-600 text-white flex items-center gap-1 text-[11px] font-bold shadow-xs active:scale-95 transition"
+                    title="Share Folder"
+                  >
+                    <Share2 size={12} />
+                    <span>Share</span>
+                  </button>
+                </>
+              )}
+
+              {/* Close/Reset Active Folder */}
+              <button
+                type="button"
+                onClick={() => {
+                  hapticLight();
+                  setActiveFolderId('ALL');
+                }}
+                className="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white flex items-center justify-center transition"
+                title="Exit folder view"
+              >
+                <X size={15} />
+              </button>
+            </div>
+          </div>
+        )}
         {filtered.length === 0 ? (
           <div className="py-16 text-center space-y-2 text-slate-400">
             <div className="w-12 h-12 mx-auto rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-500 shadow-xs">

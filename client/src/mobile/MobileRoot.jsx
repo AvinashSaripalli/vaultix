@@ -7,6 +7,8 @@ import MobileVaultsScreen from './screens/MobileVaultsScreen';
 import MobileItemDetailSheet from './screens/MobileItemDetailSheet';
 import MobileItemEditorSheet from './screens/MobileItemEditorSheet';
 import MobileFolderManagerSheet from './screens/MobileFolderManagerSheet';
+import MobileShareFolderSheet from './screens/MobileShareFolderSheet';
+import MobileFolderMembersSheet from './screens/MobileFolderMembersSheet';
 import MobileTrashSheet from './screens/MobileTrashSheet';
 import MobileShareSheet from './screens/MobileShareSheet';
 import MobileSharedWithMeSheet from './screens/MobileSharedWithMeSheet';
@@ -131,6 +133,13 @@ export default function MobileRoot() {
   // Folders & Trash Sheets
   const [isFolderManagerOpen, setIsFolderManagerOpen] = useState(false);
   const [isTrashOpen, setIsTrashOpen] = useState(false);
+  const [selectedFolderId, setSelectedFolderId] = useState('ALL');
+
+  // Folder Sharing & Members Sheets
+  const [isShareFolderOpen, setIsShareFolderOpen] = useState(false);
+  const [sharingFolder, setSharingFolder] = useState(null);
+  const [isFolderMembersOpen, setIsFolderMembersOpen] = useState(false);
+  const [viewingMembersFolder, setViewingMembersFolder] = useState(null);
 
   // Sharing & Notifications Sheets
   const [isShareOpen, setIsShareOpen] = useState(false);
@@ -209,6 +218,7 @@ export default function MobileRoot() {
   // Handle switching vaults (Personal vs Company Vaults)
   const handleSelectVault = (vaultOrType) => {
     if (!vaultOrType) return;
+    setSelectedFolderId('ALL');
     if (vaultOrType === 'PERSONAL' || vaultOrType?.type === 'PERSONAL' || vaultOrType?.id === 'PERSONAL_VAULT') {
       setActiveVaultType('PERSONAL');
       dispatch(fetchMyVault());
@@ -406,6 +416,18 @@ export default function MobileRoot() {
     setIsShareOpen(true);
   };
 
+  const handleOpenShareFolder = (folder) => {
+    hapticMedium();
+    setSharingFolder(folder);
+    setIsShareFolderOpen(true);
+  };
+
+  const handleOpenFolderMembers = (folder) => {
+    hapticMedium();
+    setViewingMembersFolder(folder);
+    setIsFolderMembersOpen(true);
+  };
+
   // If user is not yet master verified, show dedicated mobile auth / unlock screen
   if (!isAuthenticated || !isMasterVerified) {
     return (
@@ -492,6 +514,10 @@ export default function MobileRoot() {
           onOpenTrash={() => setIsTrashOpen(true)}
           onOpenNotifications={() => setIsNotificationsOpen(true)}
           onOpenSharedWithMe={() => setIsSharedWithMeOpen(true)}
+          onOpenShareFolder={handleOpenShareFolder}
+          onOpenFolderMembers={handleOpenFolderMembers}
+          selectedFolderId={selectedFolderId}
+          onSelectFolderId={setSelectedFolderId}
         />
       )}
 
@@ -595,13 +621,51 @@ export default function MobileRoot() {
         isPersonalVault={currentVault?.type === 'PERSONAL'}
         selectedVault={currentVault}
         folders={currentFolders}
+        passwords={currentPasswords}
         onClose={() => setIsFolderManagerOpen(false)}
+        onOpenShare={handleOpenShareFolder}
+        onOpenMembers={handleOpenFolderMembers}
+        onSelectFolder={(folderId) => {
+          setSelectedFolderId(folderId);
+          setActiveTab('vaults');
+        }}
         onRefresh={() => {
           if (currentVault?.type === 'PERSONAL') {
             dispatch(fetchMyVault());
           } else if (currentVault?.id) {
             dispatch(fetchFoldersByVault(currentVault.id));
           }
+        }}
+      />
+
+      {/* Share Folder Sheet */}
+      <MobileShareFolderSheet
+        isOpen={isShareFolderOpen}
+        folder={sharingFolder}
+        vaultId={currentVault?.id}
+        onClose={() => {
+          setIsShareFolderOpen(false);
+          setSharingFolder(null);
+        }}
+        onSuccess={(msg) => {
+          showToast(msg || 'Folder shared successfully');
+          if (currentVault?.id) {
+            dispatch(fetchFoldersByVault(currentVault.id));
+          }
+        }}
+      />
+
+      {/* Folder Members Sheet */}
+      <MobileFolderMembersSheet
+        isOpen={isFolderMembersOpen}
+        folder={viewingMembersFolder}
+        onClose={() => {
+          setIsFolderMembersOpen(false);
+          setViewingMembersFolder(null);
+        }}
+        onOpenShare={(f) => {
+          setIsFolderMembersOpen(false);
+          handleOpenShareFolder(f);
         }}
       />
 

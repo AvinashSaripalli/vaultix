@@ -59,6 +59,8 @@ test.describe('Vaultix Dedicated Mobile Interface (<MobileRoot />)', () => {
               name: 'Jira Enterprise',
               login: 'eng@vaultix.pro',
               type: 'LOGIN',
+              folderId: 'cf-1',
+              folder: { id: 'cf-1', name: 'DevOps' },
               password: 'CompanySecretPass2026!',
               encryptedPassword: 'CompanySecretPass2026!',
               url: 'https://jira.vaultix.pro',
@@ -75,6 +77,83 @@ test.describe('Vaultix Dedicated Mobile Interface (<MobileRoot />)', () => {
           body: JSON.stringify([
             { id: 'cf-1', name: 'DevOps', parentId: null },
           ]),
+        });
+      }
+
+      if (url.includes('/users/shareable')) {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([
+            { id: 'user-3', fullName: 'Carol Colleague', email: 'carol@vaultix.pro' },
+          ]),
+        });
+      }
+
+      if (url.includes('/keypair/') && url.includes('/public')) {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ publicKey: 'mock-public-key' }),
+        });
+      }
+
+      if (url.includes('/passwords/batch-wrap') && method === 'POST') {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ success: true }),
+        });
+      }
+
+      if (url.includes('/folders/') && url.includes('/share') && method === 'POST') {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ success: true, message: 'Folder shared successfully' }),
+        });
+      }
+
+      if (url.endsWith('/folders') && method === 'POST') {
+        const body = JSON.parse(route.request().postData() || '{}');
+        return route.fulfill({
+          status: 201,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            id: 'cf-new',
+            name: body.name || 'New Company Folder',
+            vaultId: body.vaultId || 'cv-1',
+            createdAt: new Date().toISOString(),
+          }),
+        });
+      }
+
+      if (url.match(/\/folders\/[a-zA-Z0-9_-]+$/) && method === 'GET') {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            id: 'cf-1',
+            name: 'DevOps',
+            vaultId: 'cv-1',
+            vault: {
+              id: 'cv-1',
+              name: 'Engineering Vault',
+              userId: 'user-owner',
+              owner: { id: 'user-owner', fullName: 'Alice Owner', email: 'owner@vaultix.pro' },
+            },
+            owner: { id: 'user-owner', fullName: 'Alice Owner', email: 'owner@vaultix.pro' },
+            permissions: [
+              {
+                id: 'perm-1',
+                userId: 'user-2',
+                accessLevel: 'READ_WRITE',
+                user: { id: 'user-2', fullName: 'Bob Engineer', email: 'bob@vaultix.pro' },
+              },
+            ],
+            departmentMembers: [],
+            workspaceAdmins: [],
+          }),
         });
       }
 
@@ -349,5 +428,65 @@ test.describe('Vaultix Dedicated Mobile Interface (<MobileRoot />)', () => {
     await expect(page.locator('h1:has-text("Security Health")')).toBeVisible();
     await expect(page.locator('text=Live vulnerability audit across your credentials')).toBeVisible();
     await expect(page.locator('text=Score: 94 / 100')).toBeVisible();
+  });
+
+  test('should manage company vault folders, view folder items, inspect members, and share folder', async ({ page }) => {
+    await setupMobileAuthSession(page);
+    await page.goto('/?view=mobile');
+
+    // Unlock vault
+    await page.locator('input[placeholder="Enter your master password"]').fill('MasterPass2026!');
+    await page.locator('button[type="submit"]:has-text("Unlock Encrypted Vault")').click();
+
+    // 1. Navigate to Vaults tab in bottom navigation
+    await page.locator('nav button:has-text("Vaults")').click();
+    await expect(page.locator('h1:has-text("Vaults")')).toBeVisible();
+
+    // 2. Switch to Company Vault
+    const companyVaultBtn = page.locator('button:has-text("Company Vault")');
+    await expect(companyVaultBtn).toBeVisible();
+    await companyVaultBtn.click();
+    await expect(page.locator('h4:has-text("Jira Enterprise")')).toBeVisible();
+
+    // 3. Click DevOps folder filter pill
+    const folderPill = page.locator('button:has-text("DevOps")');
+    await expect(folderPill).toBeVisible();
+    await folderPill.click();
+
+    // 4. Verify Active Folder Banner appears
+    await expect(page.locator('h3:has-text("DevOps")')).toBeVisible();
+    await expect(page.getByText('1 item', { exact: true })).toBeVisible();
+
+    // 5. Open Folder Members sheet
+    await page.locator('button[title="Folder Members"]').click();
+    await expect(page.locator('h2:has-text("Folder Members")')).toBeVisible();
+    await expect(page.locator('span:has-text("Alice Owner")')).toBeVisible();
+    await expect(page.locator('span:has-text("Vault Owner")')).toBeVisible();
+    await expect(page.locator('span:has-text("Bob Engineer")')).toBeVisible();
+
+    // 6. Click "Add" in Folder Members sheet to open Share Folder Sheet
+    await page.locator('button:has-text("Add")').click();
+    await expect(page.locator('h2:has-text("Share Folder")')).toBeVisible();
+    await expect(page.locator('button:has-text("Carol Colleague")')).toBeVisible();
+
+    // Select Carol Colleague
+    await page.locator('button:has-text("Carol Colleague")').click();
+
+    // Close Share Sheet
+    await page.locator('button[aria-label="Close share sheet"]').click();
+    await expect(page.locator('h2:has-text("Share Folder")')).not.toBeVisible();
+
+    // 7. Test Folder Manager Sheet
+    await page.locator('button[title="Manage Folders"]').click();
+    await expect(page.locator('h2:has-text("Company Folders")')).toBeVisible();
+    await expect(page.locator('.animate-slideUp').getByText('DevOps', { exact: true })).toBeVisible();
+
+    // Create a new folder
+    await page.locator('input[placeholder*="folder name"]').fill('New Mobile Folder');
+    await page.locator('form button[type="submit"]:has-text("Add")').click();
+
+    // Close Folder Manager Sheet
+    await page.locator('button[aria-label="Close folder manager"]').click();
+    await expect(page.locator('h2:has-text("Company Folders")')).not.toBeVisible();
   });
 });
