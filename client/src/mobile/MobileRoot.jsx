@@ -22,6 +22,7 @@ import MobileDepartmentsSheet from './screens/MobileDepartmentsSheet';
 import MobilePoliciesSheet from './screens/MobilePoliciesSheet';
 import MobileImportExportSheet from './screens/MobileImportExportSheet';
 import MobileProfileSheet from './screens/MobileProfileSheet';
+import MobileVerifyMasterPasswordSheet from './screens/MobileVerifyMasterPasswordSheet';
 import MobileGeneratorScreen from './screens/MobileGeneratorScreen';
 import MobileHealthScreen from './screens/MobileHealthScreen';
 import MobileSettingsScreen from './screens/MobileSettingsScreen';
@@ -102,6 +103,12 @@ export default function MobileRoot() {
   const [decryptedFields, setDecryptedFields] = useState({});
   const [toast, setToast] = useState('');
   const [unreadCount, setUnreadCount] = useState(0);
+
+  // Sensitive items verification state (5-min TTL grace period)
+  const [isVerifyMasterOpen, setIsVerifyMasterOpen] = useState(false);
+  const [verifyingItem, setVerifyingItem] = useState(null);
+  const [pendingSensitiveAction, setPendingSensitiveAction] = useState(null);
+  const [verifiedAtMap, setVerifiedAtMap] = useState({}); // itemId -> timestamp
 
   // Vault objects memoization
   const personalVault = useMemo(() => {
@@ -357,32 +364,75 @@ export default function MobileRoot() {
     }
   };
 
+  // Sensitive Item Verification (5-minute TTL grace period)
+  const isItemRecentlyVerified = useCallback((item) => {
+    if (!item?.id) return false;
+    const ts = verifiedAtMap[item.id];
+    if (!ts) return false;
+    return Date.now() - ts < 5 * 60 * 1000;
+  }, [verifiedAtMap]);
+
+  const handleRequireSensitiveVerify = useCallback((item, callback) => {
+    if (!item?.isSensitive || isItemRecentlyVerified(item)) {
+      callback?.();
+      return;
+    }
+    setVerifyingItem(item);
+    setPendingSensitiveAction(() => callback);
+    setIsVerifyMasterOpen(true);
+  }, [isItemRecentlyVerified]);
+
+  const handleSensitiveVerifySuccess = useCallback((verifiedPassword) => {
+    if (verifyingItem?.id) {
+      setVerifiedAtMap((prev) => ({ ...prev, [verifyingItem.id]: Date.now() }));
+    }
+    setIsVerifyMasterOpen(false);
+    const cb = pendingSensitiveAction;
+    setPendingSensitiveAction(null);
+    setVerifyingItem(null);
+    showToast('Master Password Verified');
+    if (cb) {
+      cb();
+    }
+  }, [verifyingItem, pendingSensitiveAction, showToast]);
+
   // Quick copy from item list
   const handleQuickCopy = async (item) => {
-    if (!item?.encryptedPassword) {
-      if (item?.login) {
-        secureCopyText(item.login, 'Username');
-        showToast('Username Copied');
+    if (!item) return;
+
+    const doCopy = async () => {
+      if (!item?.encryptedPassword) {
+        if (item?.login) {
+          secureCopyText(item.login, 'Username');
+          showToast('Username Copied');
+        }
+        return;
       }
+
+      try {
+        let pwd = '';
+        if (item.myWrappedKey && sessionRsaPrivateKey) {
+          const aesKeyJwk = await unwrapItemKey(item.myWrappedKey, sessionRsaPrivateKey);
+          pwd = await decryptTextWithAesKey(item.encryptedPassword, aesKeyJwk);
+        } else if (sessionMasterPassword) {
+          pwd = await decryptText(item.encryptedPassword, sessionMasterPassword, user?.encryptionSalt);
+        }
+
+        if (pwd) {
+          secureCopyText(pwd, 'Password');
+          showToast(`Copied ${item.name} password`);
+        }
+      } catch {
+        showToast('Could not decrypt password');
+      }
+    };
+
+    if (item.isSensitive && !isItemRecentlyVerified(item)) {
+      handleRequireSensitiveVerify(item, doCopy);
       return;
     }
 
-    try {
-      let pwd = '';
-      if (item.myWrappedKey && sessionRsaPrivateKey) {
-        const aesKeyJwk = await unwrapItemKey(item.myWrappedKey, sessionRsaPrivateKey);
-        pwd = await decryptTextWithAesKey(item.encryptedPassword, aesKeyJwk);
-      } else if (sessionMasterPassword) {
-        pwd = await decryptText(item.encryptedPassword, sessionMasterPassword, user?.encryptionSalt);
-      }
-
-      if (pwd) {
-        secureCopyText(pwd, 'Password');
-        showToast(`Copied ${item.name} password`);
-      }
-    } catch {
-      showToast('Could not decrypt password');
-    }
+    await doCopy();
   };
 
   // Modal Triggers
@@ -564,6 +614,8 @@ export default function MobileRoot() {
           decryptedPassword={decryptedPassword}
           decryptedNote={decryptedNote}
           decryptedFields={decryptedFields}
+          isItemRecentlyVerified={isItemRecentlyVerified}
+          onRequireVerify={handleRequireSensitiveVerify}
           onClose={() => setSelectedItem(null)}
           onCopyText={(text, label) => {
             secureCopyText(text, label);
@@ -762,6 +814,18 @@ export default function MobileRoot() {
       <MobileProfileSheet
         isOpen={isProfileOpen}
         onClose={() => setIsProfileOpen(false)}
+      />
+
+      {/* Sensitive Items Master Password Re-prompt Sheet */}
+      <MobileVerifyMasterPasswordSheet
+        isOpen={isVerifyMasterOpen}
+        item={verifyingItem}
+        onClose={() => {
+          setIsVerifyMasterOpen(false);
+          setVerifyingItem(null);
+          setPendingSensitiveAction(null);
+        }}
+        onVerified={handleSensitiveVerifySuccess}
       />
     </MobileAppShell>
   );

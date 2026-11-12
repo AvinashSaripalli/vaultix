@@ -18,6 +18,7 @@ import {
   Activity,
   ChevronDown,
   ChevronUp,
+  Lock,
 } from 'lucide-react';
 import ItemServiceIcon from '../../components/common/ItemServiceIcon';
 import { hapticMedium, hapticLight } from '../../utils/haptics';
@@ -34,9 +35,31 @@ export default function MobileItemDetailSheet({
   onEdit,
   onDelete,
   onShare,
+  isItemRecentlyVerified,
+  onRequireVerify,
 }) {
   const [revealed, setRevealed] = useState(false);
   const [copiedField, setCopiedField] = useState(null);
+
+  useEffect(() => {
+    setRevealed(false);
+  }, [item?.id]);
+
+  const checkSensitiveVerification = (callback) => {
+    if (!item?.isSensitive) {
+      callback?.();
+      return;
+    }
+    if (isItemRecentlyVerified && isItemRecentlyVerified(item)) {
+      callback?.();
+      return;
+    }
+    if (onRequireVerify) {
+      onRequireVerify(item, callback);
+    } else {
+      callback?.();
+    }
+  };
 
   // Item Activity History
   const [showActivity, setShowActivity] = useState(false);
@@ -122,7 +145,9 @@ export default function MobileItemDetailSheet({
                 type="button"
                 onClick={() => {
                   hapticLight();
-                  onEdit(item, decryptedPassword, decryptedNote, fields);
+                  checkSensitiveVerification(() => {
+                    onEdit(item, decryptedPassword, decryptedNote, fields);
+                  });
                 }}
                 className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition"
                 title="Edit item"
@@ -168,6 +193,12 @@ export default function MobileItemDetailSheet({
               {itemType}
             </span>
           </div>
+          {item.isSensitive && (
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 mt-2.5 rounded-full text-[11px] font-bold bg-amber-500/10 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30">
+              <Lock size={12} className="shrink-0" />
+              <span>Protected Sensitive Item</span>
+            </div>
+          )}
         </div>
 
         {/* 1. LOGIN TYPE DETAILS */}
@@ -214,7 +245,11 @@ export default function MobileItemDetailSheet({
                   type="button"
                   onClick={() => {
                     hapticLight();
-                    setRevealed(!revealed);
+                    if (!revealed) {
+                      checkSensitiveVerification(() => setRevealed(true));
+                    } else {
+                      setRevealed(false);
+                    }
                   }}
                   className="p-1.5 rounded-lg bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 active:scale-95 transition shadow-xs"
                   title={revealed ? 'Hide' : 'Show'}
@@ -224,7 +259,11 @@ export default function MobileItemDetailSheet({
 
                 <button
                   type="button"
-                  onClick={() => handleCopy('password', decryptedPassword || item.password, 'Password')}
+                  onClick={() => {
+                    checkSensitiveVerification(() => {
+                      handleCopy('password', decryptedPassword || item.password, 'Password');
+                    });
+                  }}
                   className={`px-2.5 py-1 rounded-lg text-xs font-bold inline-flex items-center gap-1 transition active:scale-95 ${
                     copiedField === 'password'
                       ? 'bg-emerald-600 text-white shadow-xs'
@@ -300,15 +339,29 @@ export default function MobileItemDetailSheet({
               <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   type="button"
-                  onClick={() => setRevealed(!revealed)}
-                  className="p-1.5 rounded-lg bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
+                  onClick={() => {
+                    if (!revealed) {
+                      checkSensitiveVerification(() => setRevealed(true));
+                    } else {
+                      setRevealed(false);
+                    }
+                  }}
+                  title={revealed ? 'Hide' : 'Show'}
+                  aria-label={revealed ? 'Hide card number' : 'Show card number'}
+                  className="p-1.5 rounded-lg bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 active:scale-95 transition"
                 >
                   {revealed ? <EyeOff size={14} /> : <Eye size={14} />}
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleCopy('cardnum', fields.cardNumber || item.cardNumber, 'Card Number')}
-                  className="px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-600 text-white shadow-xs"
+                  onClick={() => {
+                    checkSensitiveVerification(() => {
+                      handleCopy('cardnum', fields.cardNumber || item.cardNumber, 'Card Number');
+                    });
+                  }}
+                  title="Copy Card Number"
+                  aria-label="Copy Card Number"
+                  className="px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-600 text-white shadow-xs active:scale-95 transition"
                 >
                   {copiedField === 'cardnum' ? <Check size={12} /> : <Copy size={12} />}
                 </button>
@@ -337,7 +390,11 @@ export default function MobileItemDetailSheet({
                 {(fields.cvv || item.cvv) && (
                   <button
                     type="button"
-                    onClick={() => handleCopy('cvv', fields.cvv || item.cvv, 'CVV')}
+                    onClick={() => {
+                      checkSensitiveVerification(() => {
+                        handleCopy('cvv', fields.cvv || item.cvv, 'CVV');
+                      });
+                    }}
                     className="p-1.5 rounded-lg bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border border-slate-200 dark:border-slate-700"
                   >
                     {copiedField === 'cvv' ? <Check size={12} /> : <Copy size={12} />}
@@ -357,16 +414,37 @@ export default function MobileItemDetailSheet({
               </span>
               <button
                 type="button"
-                onClick={() => handleCopy('note', decryptedNote || item.note || item.notes, 'Note')}
+                onClick={() => {
+                  checkSensitiveVerification(() => {
+                    handleCopy('note', decryptedNote || item.note || item.notes, 'Note');
+                  });
+                }}
                 className="px-2.5 py-1 rounded-lg text-xs font-bold bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border border-slate-200 dark:border-slate-700 shadow-xs inline-flex items-center gap-1"
               >
                 {copiedField === 'note' ? <Check size={12} /> : <Copy size={12} />}
                 <span>{copiedField === 'note' ? 'Copied' : 'Copy'}</span>
               </button>
             </div>
-            <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 font-mono text-xs text-slate-800 dark:text-slate-200 whitespace-pre-wrap select-all leading-relaxed max-h-48 overflow-y-auto">
-              {decryptedNote || item.note || item.notes || 'No note contents.'}
-            </div>
+            {item.isSensitive && !isItemRecentlyVerified?.(item) && !revealed ? (
+              <div
+                onClick={() => checkSensitiveVerification(() => setRevealed(true))}
+                className="p-6 rounded-xl bg-amber-500/5 border border-dashed border-amber-500/30 flex flex-col items-center justify-center gap-2 cursor-pointer active:scale-[0.99] transition text-center"
+              >
+                <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400">
+                  <Lock size={16} />
+                </div>
+                <span className="text-xs font-bold text-amber-700 dark:text-amber-400">
+                  Sensitive Note Hidden
+                </span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Tap to verify Master Password and view
+                </span>
+              </div>
+            ) : (
+              <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 font-mono text-xs text-slate-800 dark:text-slate-200 whitespace-pre-wrap select-all leading-relaxed max-h-48 overflow-y-auto">
+                {decryptedNote || item.note || item.notes || 'No note contents.'}
+              </div>
+            )}
           </div>
         )}
 
@@ -435,7 +513,11 @@ export default function MobileItemDetailSheet({
                 </div>
                 <button
                   type="button"
-                  onClick={() => handleCopy('id-doc', fields.passportNumber || fields.nationalId, 'ID Number')}
+                  onClick={() => {
+                    checkSensitiveVerification(() => {
+                      handleCopy('id-doc', fields.passportNumber || fields.nationalId, 'ID Number');
+                    });
+                  }}
                   className="p-1 rounded bg-white dark:bg-slate-800 text-indigo-600"
                 >
                   <Copy size={12} />

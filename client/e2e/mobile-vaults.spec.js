@@ -26,6 +26,14 @@ test.describe('Vaultix Dedicated Mobile Interface (<MobileRoot />)', () => {
       }
 
       if (url.includes('/auth/verify-master-password')) {
+        const body = JSON.parse(route.request().postData() || '{}');
+        if (body.masterPassword && body.masterPassword !== 'MasterPass2026!') {
+          return route.fulfill({
+            status: 401,
+            contentType: 'application/json',
+            body: JSON.stringify({ message: 'Invalid master password' }),
+          });
+        }
         return route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -64,6 +72,19 @@ test.describe('Vaultix Dedicated Mobile Interface (<MobileRoot />)', () => {
               password: 'CompanySecretPass2026!',
               encryptedPassword: 'CompanySecretPass2026!',
               url: 'https://jira.vaultix.pro',
+              updatedAt: new Date().toISOString(),
+            },
+            {
+              id: 'cpw-2',
+              name: 'ICICI Bank Card',
+              login: 'icici-user',
+              type: 'CARD',
+              cardNumber: '4532 8901 2345 6789',
+              cvv: '891',
+              cardholderName: 'Vaultix Admin',
+              isSensitive: true,
+              password: 'CardPin2026!',
+              encryptedPassword: 'CardPin2026!',
               updatedAt: new Date().toISOString(),
             },
           ]),
@@ -488,5 +509,76 @@ test.describe('Vaultix Dedicated Mobile Interface (<MobileRoot />)', () => {
     // Close Folder Manager Sheet
     await page.locator('button[aria-label="Close folder manager"]').click();
     await expect(page.locator('h2:has-text("Company Folders")')).not.toBeVisible();
+  });
+
+  test('should protect sensitive items: require master password to reveal and copy secret fields, and grant 5-min TTL grace period', async ({ page }) => {
+    await setupMobileAuthSession(page);
+    await page.goto('/?view=mobile');
+
+    // 1. Unlock vault
+    await page.locator('input[placeholder="Enter your master password"]').fill('MasterPass2026!');
+    await page.locator('button[type="submit"]:has-text("Unlock Encrypted Vault")').click();
+
+    // 2. Navigate to Vaults tab in bottom navigation
+    await page.locator('nav button:has-text("Vaults")').click();
+    await expect(page.locator('h1:has-text("Vaults")')).toBeVisible();
+
+    // 3. Switch to Company Vault
+    await page.locator('button:has-text("Company Vault")').click();
+    await expect(page.locator('h4:has-text("ICICI Bank Card")')).toBeVisible();
+
+    // 4. Verify quick copy on sensitive item prompts Master Password sheet
+    const iciciCard = page.locator('div.cursor-pointer', { has: page.locator('h4:has-text("ICICI Bank Card")') });
+    await expect(iciciCard).toBeVisible();
+    const quickCopyBtn = iciciCard.locator('button[aria-label="Copy"]');
+    await quickCopyBtn.click();
+
+    // Verify verify master password sheet opens
+    await expect(page.locator('h2:has-text("Master Password Required")')).toBeVisible();
+    await expect(page.locator('text="ICICI Bank Card" is a protected item.')).toBeVisible();
+
+    // Dismiss sheet via Cancel
+    await page.locator('.animate-slideUp button:has-text("Cancel")').click();
+    await expect(page.locator('h2:has-text("Master Password Required")')).not.toBeVisible();
+
+    // 5. Click on ICICI Bank Card to open MobileItemDetailSheet
+    await page.locator('h4:has-text("ICICI Bank Card")').click();
+    await expect(page.locator('h2:has-text("ICICI Bank Card")')).toBeVisible();
+
+    // 6. Verify Protected Sensitive Item badge appears
+    await expect(page.locator('text=Protected Sensitive Item')).toBeVisible();
+
+    // 7. Verify secret fields are masked
+    await expect(page.getByText('•••• •••• •••• ••••', { exact: true })).toBeVisible();
+
+    // 8. Click the Eye icon on Card Number to reveal
+    const revealCardBtn = page.locator('button[aria-label="Show card number"]');
+    await revealCardBtn.click();
+
+    // Verify verify master password sheet opens
+    await expect(page.locator('h2:has-text("Master Password Required")')).toBeVisible();
+
+    // Test entering wrong password
+    const verifyInput = page.locator('.animate-slideUp input[placeholder="Enter your master password"]');
+    await verifyInput.fill('WrongPassword123');
+    await page.locator('.animate-slideUp button[type="submit"]:has-text("Verify & Unlock")').click();
+    await expect(page.locator('text=Invalid master password. Please try again.')).toBeVisible();
+
+    // Enter correct password and unlock
+    await verifyInput.fill('MasterPass2026!');
+    await page.locator('.animate-slideUp button[type="submit"]:has-text("Verify & Unlock")').click();
+
+    // 9. Verify sheet dismisses and Card Number is revealed
+    await expect(page.locator('h2:has-text("Master Password Required")')).not.toBeVisible();
+    await expect(page.locator('text=4532 8901 2345 6789')).toBeVisible();
+
+    // 10. Verify 5-minute TTL grace period: clicking Copy button for Card Number does NOT re-prompt
+    const copyCardBtn = page.locator('button[aria-label="Copy Card Number"]');
+    await copyCardBtn.click();
+    await expect(page.locator('h2:has-text("Master Password Required")')).not.toBeVisible();
+
+    // Close detail sheet
+    await page.locator('button:has-text("Back")').click();
+    await expect(page.locator('h2:has-text("ICICI Bank Card")')).not.toBeVisible();
   });
 });
