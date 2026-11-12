@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { User, Lock, KeyRound, ShieldAlert, Check, AlertTriangle, Eye, EyeOff, X, RefreshCw, Copy } from 'lucide-react';
-import { updateProfile, changePassword, changeMasterPassword } from '../../features/auth/authSlice';
+import { User, Lock, KeyRound, ShieldAlert, Check, AlertTriangle, Eye, EyeOff, X, RefreshCw, Copy, ShieldCheck } from 'lucide-react';
+import { updateProfile, changePassword, changeMasterPassword, setSessionRsaPrivateKey } from '../../features/auth/authSlice';
 import { hapticMedium, hapticSuccess, hapticLight } from '../../utils/haptics';
+import { generateRecoveryKey, encryptPrivateKey, decryptPrivateKey } from '../../utils/crypto';
+import { setupRecoveryKey } from '../../services/api';
 import api from '../../services/api';
 
 export default function MobileProfileSheet({ isOpen, onClose }) {
   const dispatch = useDispatch();
-  const { user } = useSelector((state) => state.auth);
+  const { user, sessionMasterPassword, sessionRsaPrivateKey } = useSelector((state) => state.auth);
 
   const [activeTab, setActiveTab] = useState('info'); // 'info' | 'security' | 'recovery'
   const [error, setError] = useState('');
@@ -30,6 +32,17 @@ export default function MobileProfileSheet({ isOpen, onClose }) {
   // Emergency Recovery Key
   const [recoveryKey, setRecoveryKey] = useState('');
   const [copiedKey, setCopiedKey] = useState(false);
+  const [hasExistingKey, setHasExistingKey] = useState(Boolean(user?.hasRecoveryKey));
+
+  useEffect(() => {
+    if (isOpen) {
+      api.get('/auth/me').then((res) => {
+        if (typeof res.data?.hasRecoveryKey === 'boolean') {
+          setHasExistingKey(res.data.hasRecoveryKey);
+        }
+      }).catch(() => {});
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -117,13 +130,39 @@ export default function MobileProfileSheet({ isOpen, onClose }) {
   const handleGenerateRecoveryKey = async () => {
     setSaving(true);
     setError('');
+    setSuccess('');
     hapticMedium();
     try {
-      const res = await api.post('/recovery-key/generate');
-      setRecoveryKey(res.data?.recoveryKey || '');
+      let privKey = sessionRsaPrivateKey;
+      if (!privKey && sessionMasterPassword) {
+        try {
+          const kpRes = await api.get('/keypair');
+          if (kpRes.data?.encryptedPrivateKey) {
+            privKey = await decryptPrivateKey(
+              kpRes.data.encryptedPrivateKey,
+              sessionMasterPassword,
+              kpRes.data.salt || user?.encryptionSalt
+            );
+            dispatch(setSessionRsaPrivateKey(privKey));
+          }
+        } catch (kpErr) {
+          console.warn('Failed to load keypair in MobileProfileSheet:', kpErr);
+        }
+      }
+
+      if (!privKey) {
+        throw new Error('Please unlock your encrypted vault first to generate a recovery key.');
+      }
+
+      const key = generateRecoveryKey();
+      const escrow = await encryptPrivateKey(privKey, key, user?.encryptionSalt);
+      await setupRecoveryKey(key, escrow);
+      setRecoveryKey(key);
+      setHasExistingKey(true);
       hapticSuccess();
+      setSuccess('Emergency Recovery Key created successfully! Keep it in a secure location.');
     } catch (err) {
-      setError(err.response?.data?.message || 'Could not generate recovery key');
+      setError(err.response?.data?.message || err.message || 'Could not generate recovery key');
     } finally {
       setSaving(false);
     }
@@ -348,7 +387,7 @@ export default function MobileProfileSheet({ isOpen, onClose }) {
               {recoveryKey ? (
                 <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3">
                   <span className="text-[10px] font-bold uppercase text-slate-400 block">Your Active Recovery Key</span>
-                  <p className="text-sm font-mono font-bold tracking-wider text-slate-900 dark:text-white select-all break-all">
+                  <p className="text-sm font-mono font-bold tracking-wider text-indigo-600 dark:text-indigo-400 select-all break-all">
                     {recoveryKey}
                   </p>
                   <button
@@ -363,16 +402,34 @@ export default function MobileProfileSheet({ isOpen, onClose }) {
                     {copiedKey ? <Check size={14} /> : <Copy size={14} />}
                     <span>{copiedKey ? 'Copied to Clipboard' : 'Copy Recovery Key'}</span>
                   </button>
+                  <button
+                    type="button"
+                    onClick={handleGenerateRecoveryKey}
+                    disabled={saving}
+                    className="w-full py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition"
+                  >
+                    {saving ? 'Generating...' : 'Generate a New Recovery Key'}
+                  </button>
                 </div>
               ) : (
-                <button
-                  type="button"
-                  onClick={handleGenerateRecoveryKey}
-                  disabled={saving}
-                  className="w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold text-xs active:scale-98 transition shadow-md shadow-indigo-600/20"
-                >
-                  {saving ? 'Generating...' : 'View / Generate Emergency Recovery Key'}
-                </button>
+                <div className="space-y-3">
+                  {hasExistingKey && (
+                    <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/40 flex items-center gap-2.5">
+                      <ShieldCheck size={18} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <p className="text-[11px] font-semibold text-emerald-800 dark:text-emerald-300">
+                        An Emergency Recovery Key is currently active for your account. You can generate a new one at any time.
+                      </p>
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleGenerateRecoveryKey}
+                    disabled={saving}
+                    className="w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold text-xs active:scale-98 transition shadow-md shadow-indigo-600/20"
+                  >
+                    {saving ? 'Generating Key...' : hasExistingKey ? 'Generate New Recovery Key' : 'Generate Emergency Recovery Key'}
+                  </button>
+                </div>
               )}
             </div>
           )}
