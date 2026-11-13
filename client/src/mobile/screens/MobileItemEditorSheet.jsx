@@ -44,6 +44,7 @@ import {
   parseCustomFields,
   CUSTOM_FIELDS_KEY,
   getItemTypeMeta,
+  isSensitiveDefault,
 } from '../../utils/itemTypes';
 import { createPassword, updatePassword, fetchPasswordsByVault } from '../../features/vault/vaultSlice';
 import {
@@ -520,6 +521,9 @@ export default function MobileItemEditorSheet({
                       onClick={() => {
                         hapticLight();
                         setItemType(t.id);
+                        if (mode === 'create') {
+                          setIsSensitive(isSensitiveDefault(t.id));
+                        }
                       }}
                       className={`py-2 px-1 rounded-xl text-[11px] font-bold flex flex-col items-center gap-1 transition ${
                         active
@@ -920,6 +924,66 @@ export default function MobileItemEditorSheet({
                 </button>
               </div>
             ))}
+          </div>
+
+          {/* Security & Re-prompt Protection */}
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 space-y-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block px-1">
+              Security &amp; Protection
+            </span>
+            <div
+              onClick={() => {
+                hapticLight();
+                setIsSensitive(!isSensitive);
+              }}
+              className={`p-3.5 rounded-2xl border transition-all cursor-pointer select-none flex items-center justify-between gap-3 active:scale-[0.99] ${
+                isSensitive
+                  ? 'bg-amber-500/10 dark:bg-amber-500/15 border-amber-300 dark:border-amber-700/60 shadow-xs'
+                  : 'bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800'
+              }`}
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                    isSensitive
+                      ? 'bg-amber-100 dark:bg-amber-950 text-amber-600 dark:text-amber-400'
+                      : 'bg-slate-200/70 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                  }`}
+                >
+                  <Lock size={16} />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                      Master Password Re-prompt
+                    </span>
+                    {isSensitive && (
+                      <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300">
+                        Protected
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
+                    Require master password or biometrics to view, copy, or edit this item
+                  </p>
+                </div>
+              </div>
+
+              {/* Mobile Toggle Switch */}
+              <div
+                role="switch"
+                aria-checked={Boolean(isSensitive)}
+                className={`w-11 h-6 rounded-full transition-colors relative shrink-0 p-0.5 ${
+                  isSensitive ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-700'
+                }`}
+              >
+                <div
+                  className={`w-5 h-5 rounded-full bg-white shadow-xs transition-transform transform ${
+                    isSensitive ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </div>
+            </div>
           </div>
 
         </div>

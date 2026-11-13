@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Eye, EyeOff, Sparkles, FolderDown, SlidersHorizontal, RefreshCw } from 'lucide-react';
+import { Eye, EyeOff, Sparkles, FolderDown, SlidersHorizontal, RefreshCw, Lock } from 'lucide-react';
 import ItemFields from '../myVault/ItemFields';
 import CustomFieldsInput from './CustomFieldsInput';
 import PasswordStrengthBar from './PasswordStrengthBar';
@@ -392,19 +392,56 @@ function ItemFormFields({
         />
       </div>
 
-      {/* Sensitive Item Toggle */}
-      <div className="pt-1">
-        <label className="flex items-center gap-2 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={Boolean(formData.isSensitive)}
-            onChange={(e) => onChange('isSensitive', e.target.checked)}
-            className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 dark:border-slate-600 dark:bg-slate-700"
+      {/* Sensitive Item Toggle (Master Password Re-prompt) */}
+      <div
+        onClick={() => onChange('isSensitive', !formData.isSensitive)}
+        className={`p-3.5 rounded-2xl border transition-all cursor-pointer select-none flex items-center justify-between gap-3 ${
+          formData.isSensitive
+            ? 'bg-amber-500/5 dark:bg-amber-500/10 border-amber-300 dark:border-amber-700/60 shadow-xs'
+            : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+        }`}
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <div
+            className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+              formData.isSensitive
+                ? 'bg-amber-100 dark:bg-amber-950/80 text-amber-600 dark:text-amber-400'
+                : 'bg-slate-200/70 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
+            }`}
+          >
+            <Lock size={16} />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-bold text-slate-900 dark:text-white">
+                Master Password Re-prompt
+              </span>
+              {formData.isSensitive && (
+                <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300">
+                  Protected
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
+              Require master password or biometrics to view, copy, or edit this item
+            </p>
+          </div>
+        </div>
+
+        {/* Toggle Switch */}
+        <div
+          role="switch"
+          aria-checked={Boolean(formData.isSensitive)}
+          className={`w-11 h-6 rounded-full transition-colors relative shrink-0 p-0.5 ${
+            formData.isSensitive ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-600'
+          }`}
+        >
+          <div
+            className={`w-5 h-5 rounded-full bg-white shadow-xs transition-transform transform ${
+              formData.isSensitive ? 'translate-x-5' : 'translate-x-0'
+            }`}
           />
-          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-            Require master password verification to view / reveal
-          </span>
-        </label>
+        </div>
       </div>
     </div>
   );
