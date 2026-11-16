@@ -41,14 +41,22 @@ const TYPE_STYLES = {
   RECOVERY_CODE: 'bg-teal-50 text-teal-600 dark:bg-teal-900/20 dark:text-teal-400',
 };
 
-function ItemTypeBadge({ type }) {
+function ItemTypeBadge({ type, size = 'sm' }) {
   const meta = getItemTypeMeta(type);
   const Icon = TYPE_ICONS[type] || KeyRound;
   const style = TYPE_STYLES[type] || TYPE_STYLES.LOGIN;
 
+  const isXs = size === 'xs';
+
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium shrink-0 ${style}`}>
-      <Icon size={12} />
+    <span
+      className={`inline-flex items-center shrink-0 ${
+        isXs
+          ? 'gap-1 px-1.5 py-0.2 rounded-md text-[10px] font-medium'
+          : 'gap-1 px-2 py-0.5 rounded-full text-xs font-medium'
+      } ${style}`}
+    >
+      <Icon size={isXs ? 10 : 11} />
       {meta.label}
     </span>
   );

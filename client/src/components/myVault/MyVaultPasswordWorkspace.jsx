@@ -96,22 +96,24 @@ function MyVaultPasswordWorkspace({
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-[280px_1fr] 2xl:grid-cols-[320px_1fr] min-h-[500px] lg:min-h-[600px] divide-y xl:divide-y-0 xl:divide-x divide-slate-200 dark:divide-slate-700 min-w-0">
           {/* Left Side */}
-          <div className={`p-3.5 sm:p-5 bg-slate-50/50 dark:bg-slate-800/50 min-w-0 ${selectedPasswordId ? 'hidden xl:block' : 'block'}`}>
-            <div className="relative mb-5">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <div className={`p-3 sm:p-4 bg-slate-50/50 dark:bg-slate-800/50 min-w-0 ${selectedPasswordId ? 'hidden xl:block' : 'block'}`}>
+            <div className="relative mb-3">
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search items..."
-                className="w-full border border-slate-300 rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600"
+                className="w-full h-9 border border-slate-300 rounded-xl pl-8.5 pr-3 text-xs sm:text-sm outline-none bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600"
               />
             </div>
 
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Items</h2>
-              <span className="text-xs font-semibold text-slate-500 bg-slate-200/70 dark:bg-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-full">
-                {groupedPasswords.length}
-              </span>
+            <div className="flex items-center justify-between mb-2 px-1 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span>NAME</span>
+                <span className="text-slate-400 dark:text-slate-500 font-semibold normal-case">
+                  ({groupedPasswords.length})
+                </span>
+              </div>
             </div>
 
             {groupedPasswords.length === 0 ? (
@@ -120,7 +122,7 @@ function MyVaultPasswordWorkspace({
                 <p className="text-sm">No matching items</p>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {groupedPasswords.map((group) => {
                   const firstItem = group.items[0];
                   const meta = getItemTypeMeta(firstItem?.type);
@@ -130,34 +132,34 @@ function MyVaultPasswordWorkspace({
                     <button
                       key={group.name}
                       onClick={() => handleSelect(firstItem.id)}
-                      className={`w-full text-left rounded-2xl border p-3.5 sm:p-4 transition-all active:scale-[0.99] flex items-center gap-3.5 min-w-0 ${
+                      className={`w-full text-left rounded-xl border p-2 sm:px-2.5 sm:py-2 transition-all active:scale-[0.99] flex items-center gap-2.5 min-w-0 ${
                         active
                           ? 'bg-indigo-50/90 border-indigo-200 shadow-sm dark:bg-indigo-900/25 dark:border-indigo-800'
                           : 'bg-white border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-slate-700 shadow-xs'
                       }`}
                     >
-                      <ItemServiceIcon name={group.name} type={firstItem?.type} size="md" />
+                      <ItemServiceIcon name={group.name} type={firstItem?.type} size="sm" />
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 min-w-0">
-                          <h3 className="font-bold text-slate-900 truncate flex items-center gap-1.5 flex-1 dark:text-slate-100 min-w-0 text-sm sm:text-base">
+                          <h3 className="font-semibold text-slate-900 truncate flex items-center gap-1.5 flex-1 dark:text-slate-100 min-w-0 text-xs sm:text-sm">
                             {group.name}
                           </h3>
                           {firstItem?.isSensitive && (
-                            <Lock size={12} className="text-emerald-600 shrink-0 dark:text-emerald-400" />
+                            <Lock size={11} className="text-emerald-600 shrink-0 dark:text-emerald-400" />
                           )}
                         </div>
-                        <div className="flex items-center gap-2 mt-1 min-w-0">
-                          <p className="text-xs text-slate-500 truncate dark:text-slate-400 min-w-0 flex-1 font-mono">
+                        <div className="flex items-center gap-2 mt-0.5 min-w-0">
+                          <p className="text-[11px] text-slate-500 truncate dark:text-slate-400 min-w-0 flex-1 font-mono">
                             {group.items.length > 1
                               ? `${group.items.length} accounts`
                               : firstItem?.login || meta.label}
                           </p>
-                          <ItemTypeBadge type={firstItem?.type} />
+                          <ItemTypeBadge type={firstItem?.type} size="xs" />
                         </div>
                       </div>
 
-                      <ChevronRight size={18} className="text-slate-300 dark:text-slate-600 shrink-0" />
+                      <ChevronRight size={15} className="text-slate-300 dark:text-slate-600 shrink-0" />
                     </button>
                   );
                 })}

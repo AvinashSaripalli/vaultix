@@ -120,54 +120,34 @@ function PasswordListPanel() {
   }, [paginatedGroups, selectedFolderId, dispatch]);
 
   return (
-    <div className="bg-white p-3.5 sm:p-5 border-r border-slate-200 dark:bg-slate-800 dark:border-slate-700 flex flex-col justify-between min-h-[640px] min-w-0">
+    <div className="bg-white p-3 sm:p-4 border-r border-slate-200 dark:bg-slate-800 dark:border-slate-700 flex flex-col justify-between min-h-[640px] min-w-0">
       <div>
-        <div className="relative mb-3.5">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+        <div className="relative mb-3">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             placeholder="Search items..."
             value={searchTerm}
             onChange={(e) => dispatch(setSearchTerm(e.target.value))}
-            className="w-full h-10 sm:h-11 rounded-xl sm:rounded-2xl border border-slate-200 bg-slate-50 pl-9 pr-4 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:bg-slate-800/50 dark:border-slate-700"
+            className="w-full h-9 rounded-xl border border-slate-200 bg-slate-50 pl-8.5 pr-3 text-xs sm:text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:bg-slate-800/50 dark:border-slate-700"
           />
         </div>
 
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-          <div className="min-w-0">
-            <p className="text-lg sm:text-xl font-bold text-slate-900 leading-tight dark:text-slate-100 truncate">
-              {totalGroups} item{totalGroups !== 1 ? 's' : ''}
-            </p>
-            {totalGroups > 0 && !isAll && (
-              <p className="text-xs text-slate-500 mt-0.5 dark:text-slate-400">
-                Showing {startIndex + 1}–{endIndex} of {totalGroups}
-              </p>
-            )}
+        <div className="flex items-center justify-between mb-2 px-1 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span>NAME</span>
+            <span className="text-slate-400 dark:text-slate-500 font-semibold normal-case">
+              ({totalGroups})
+            </span>
           </div>
-
-          {totalGroups > 5 && (
-            <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-              <span className="hidden sm:inline">Per page:</span>
-              <select
-                value={pageSize}
-                onChange={(e) => {
-                  setPageSize(Number(e.target.value));
-                  setCurrentPage(1);
-                }}
-                className="h-8 rounded-xl border border-slate-200 bg-slate-50 px-2 text-xs font-semibold text-slate-700 outline-none hover:border-slate-300 dark:border-slate-700 dark:bg-slate-700 dark:text-slate-200 cursor-pointer"
-              >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-              </select>
-            </div>
+          {totalGroups > 0 && !isAll && (
+            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-normal lowercase">
+              {startIndex + 1}–{endIndex} of {totalGroups}
+            </span>
           )}
         </div>
 
-        <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2.5 px-1">
-          NAME
-        </div>
-
-        <div className="space-y-2.5">
+        <div className="space-y-1.5">
           {paginatedGroups.map((group) => {
             const active = group.items.some(
               (item) => item.id === selectedPasswordId
@@ -182,41 +162,41 @@ function PasswordListPanel() {
                   hapticLight();
                   dispatch(selectPassword(firstItem.id));
                 }}
-                className={`w-full text-left p-3 sm:px-4 sm:py-3.5 rounded-2xl border transition-all active:scale-[0.99] flex items-center gap-3 sm:gap-3.5 min-w-0 ${
+                className={`w-full text-left p-2 sm:px-2.5 sm:py-2 rounded-xl border transition-all active:scale-[0.99] flex items-center gap-2.5 min-w-0 ${
                   active
                     ? 'bg-indigo-50/90 border-indigo-200 shadow-sm dark:bg-indigo-900/25 dark:border-indigo-800'
                     : 'bg-white border-slate-200/90 hover:border-slate-300 hover:bg-slate-50/80 dark:bg-slate-800 dark:border-slate-700/80 dark:hover:border-slate-600 dark:hover:bg-slate-700/60 shadow-xs'
                 }`}
               >
-                <ItemServiceIcon name={group.name} type={firstItem?.type} size="md" />
+                <ItemServiceIcon name={group.name} type={firstItem?.type} size="sm" />
 
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm sm:text-[15px] font-bold text-slate-900 dark:text-slate-100 truncate">
+                  <div className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
                     {group.name}
                   </div>
 
-                  <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 min-w-0">
-                    <span className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate flex-1 min-w-0">
                       {group.items.length > 1
                         ? `${group.items.length} accounts`
                         : firstItem?.login || meta.label}
                     </span>
                     {!selectedFolderId && (
                       <span
-                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-amber-50 text-amber-800 border border-amber-200/80 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60 truncate max-w-[110px] shrink-0"
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-amber-50 text-amber-800 border border-amber-200/80 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60 truncate max-w-[100px] shrink-0"
                         title={firstItem?.folder?.name || folders.find((f) => f.id === firstItem?.folderId)?.name || 'Vault Root'}
                       >
-                        <Folder size={10} className="text-amber-600 dark:text-amber-400 shrink-0" />
+                        <Folder size={9} className="text-amber-600 dark:text-amber-400 shrink-0" />
                         <span className="truncate">
                           {firstItem?.folder?.name || folders.find((f) => f.id === firstItem?.folderId)?.name || 'Vault Root'}
                         </span>
                       </span>
                     )}
-                    <ItemTypeBadge type={firstItem?.type} />
+                    <ItemTypeBadge type={firstItem?.type} size="xs" />
                   </div>
                 </div>
 
-                <ChevronRight size={18} className="text-slate-300 dark:text-slate-600 shrink-0" />
+                <ChevronRight size={15} className="text-slate-300 dark:text-slate-600 shrink-0" />
               </button>
             );
           })}

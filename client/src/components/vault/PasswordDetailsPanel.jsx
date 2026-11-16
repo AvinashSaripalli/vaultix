@@ -548,13 +548,13 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
       </div>
 
       {/* Desktop Header */}
-      <div className="hidden md:flex mb-5 sm:mb-8 flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 min-w-0">
+      <div className="hidden md:flex mb-4 sm:mb-6 flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 min-w-0">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-3.5 min-w-0">
-            <ItemServiceIcon name={selectedPassword.name} type={selectedPassword.type} size="md" />
+          <div className="flex items-center gap-3 min-w-0">
+            <ItemServiceIcon name={selectedPassword.name} type={selectedPassword.type} size="sm" />
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2.5 flex-wrap min-w-0">
-                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100 truncate">
+              <div className="flex items-center gap-2 flex-wrap min-w-0">
+                <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-900 dark:text-slate-100 truncate">
                   {selectedPassword.name}
                 </h2>
                 <ItemTypeBadge type={selectedPassword.type} />
@@ -565,7 +565,7 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
                   </span>
                 )}
               </div>
-              <p className="text-xs sm:text-sm text-slate-500 mt-1 dark:text-slate-400">
+              <p className="text-xs text-slate-500 mt-0.5 dark:text-slate-400">
                 {sameNamePasswords.length > 1
                   ? `${sameNamePasswords.length} accounts in ${selectedFolder?.name || 'Company Vault'}`
                   : `${getItemTypeMeta(selectedPassword.type).label} in ${selectedFolder?.name || 'Company Vault'}`}

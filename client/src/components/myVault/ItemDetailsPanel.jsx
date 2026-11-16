@@ -808,13 +808,13 @@ function ItemDetailsPanel({
       </div>
 
       {/* Desktop Header */}
-      <div className="hidden md:flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 mb-5 sm:mb-6 min-w-0">
+      <div className="hidden md:flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 mb-4 sm:mb-6 min-w-0">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-3.5 min-w-0">
-            <ItemServiceIcon name={item.name} type={item.type} size="md" />
+          <div className="flex items-center gap-3 min-w-0">
+            <ItemServiceIcon name={item.name} type={item.type} size="sm" />
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2.5 flex-wrap min-w-0">
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100 truncate">
+              <div className="flex items-center gap-2 flex-wrap min-w-0">
+                <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-900 dark:text-slate-100 truncate">
                   {item.name}
                 </h1>
                 <ItemTypeBadge type={item.type} />
@@ -825,7 +825,7 @@ function ItemDetailsPanel({
                   </span>
                 )}
               </div>
-              <p className="text-slate-500 mt-1.5 text-xs sm:text-sm dark:text-slate-400">
+              <p className="text-slate-500 mt-0.5 text-xs dark:text-slate-400">
                 {effectiveGroupItems.length > 1
                   ? `${effectiveGroupItems.length} accounts in Personal Vault`
                   : `${typeMeta.label} in Personal Vault`}
