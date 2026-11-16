@@ -385,23 +385,94 @@
     return false;
   }
 
+  function isSearchOrFilterField(el) {
+    if (!el || el.tagName !== 'INPUT') return false;
+
+    // 1. Explicit search input type
+    const type = (el.type || '').toLowerCase();
+    if (type === 'search') return true;
+
+    // 2. ARIA roles and attributes used by search boxes, comboboxes, and dropdown pickers
+    const role = (el.getAttribute('role') || '').toLowerCase();
+    if (['searchbox', 'search', 'combobox'].includes(role)) return true;
+
+    const ariaAutocomplete = (el.getAttribute('aria-autocomplete') || '').toLowerCase();
+    if (['list', 'both'].includes(ariaAutocomplete)) return true;
+
+    const ariaHasPopup = (el.getAttribute('aria-haspopup') || '').toLowerCase();
+    if (['listbox', 'menu', 'tree'].includes(ariaHasPopup)) return true;
+
+    // 3. Autocomplete attribute explicitly set to search
+    const ac = (el.getAttribute('autocomplete') || '').toLowerCase();
+    if (ac === 'search') return true;
+
+    // 4. Identifiers (id, name, placeholder, aria-label, class) containing search/filter/lookup/picker keywords
+    const idName = `${el.id} ${el.name} ${el.placeholder || ''} ${el.getAttribute('aria-label') || ''} ${el.className || ''}`.toLowerCase();
+    if (/\b(search|query|find|filter|lookup|picker|selector|q)\b/i.test(idName)) return true;
+    if (/(?:user|member|employee|task|project|dept)[-_]?(?:search|find|filter|picker|lookup|select)/i.test(idName)) return true;
+    if (/(?:search|find|filter|lookup|select)[-_]?(?:user|member|employee|task|project|dept|box|input|field|bar|query)/i.test(idName)) return true;
+
+    // 5. Container context: element lives inside a known search bar, filter container, or popup picker
+    try {
+      const container = el.closest(
+        '[role="search"], form[role="search"], [role="combobox"], [role="listbox"], ' +
+        '.search-box, .search-container, .filter-container, .main-ui-filter, .popup-window, ' +
+        '.ui-select-search, .select2-search, .chosen-search, .dropdown-menu, ' +
+        '[class*="search-"], [class*="filter-"]'
+      );
+      if (container) {
+        const hasPasswordInside = container.querySelector('input[type="password"]');
+        if (!hasPasswordInside) return true;
+      }
+    } catch {
+      /* ignore DOM query errors */
+    }
+
+    // 6. Label text context
+    const labelText = getFieldLabelText(el).toLowerCase();
+    if (/\b(search|find|filter|lookup)\b/i.test(labelText)) {
+      if (!/username|user\s*id|login/i.test(labelText)) return true;
+    }
+
+    return false;
+  }
+
   function isUsernameField(el) {
     if (!el || el.tagName !== 'INPUT' || !isVisible(el)) return false;
     if (isCaptchaOrOtpField(el)) return false;
+    if (isSearchOrFilterField(el)) return false;
 
     const type = (el.type || '').toLowerCase();
-    if (['password', 'hidden', 'submit', 'checkbox', 'radio'].includes(type)) return false;
+    if (['password', 'hidden', 'submit', 'button', 'checkbox', 'radio', 'search'].includes(type)) return false;
     if (type === 'email' || type === 'tel') return true;
     if (type !== 'text' && type !== '') return false;
 
+    // 1. Explicit HTML autocomplete attribute
     const ac = (el.getAttribute('autocomplete') || '').toLowerCase();
     if (ac.includes('username') || ac.includes('email') || ac.includes('login')) return true;
 
     const idName = `${el.id} ${el.name} ${el.placeholder || ''} ${el.getAttribute('aria-label') || ''}`.toLowerCase();
-    if (/user|login|email|account|customer|custid|netbanking|userid|member|fldlogin/i.test(idName)) return true;
+    
+    // 2. Strict identifier matching with word boundaries (avoids 'user' matching 'search users')
+    if (/\b(username|user_name|login_id|user_id|userid|custid|customer_id|netbanking|fldlogin|member_id|memberid)\b/i.test(idName)) return true;
+    if (/\b(login|email|account_number|acc_num)\b/i.test(idName) && !/\b(forgot|reset|search|filter)\b/i.test(idName)) return true;
+    if (/^(user|login|email)$/i.test((el.name || '').trim()) || /^(user|login|email)$/i.test((el.id || '').trim())) return true;
 
+    // 3. Label text with word boundaries
     const labelText = getFieldLabelText(el).toLowerCase();
-    if (/user|user\s*name|login|email|account|customer|cust\s*id|netbanking|user\s*id/i.test(labelText)) return true;
+    if (/\b(username|user\s*name|login\s*id|user\s*id|email\s*address|customer\s*id|cust\s*id|netbanking)\b/i.test(labelText)) {
+      if (!/\b(search|find|filter)\b/i.test(labelText)) return true;
+    }
+
+    // 4. Form Context: If there is an actual password input in the same form or container,
+    // and this text input precedes it with user/login/email/account clues, it's the username field
+    const form = el.form || el.closest('form, [role="dialog"], .modal') || null;
+    const pw = form ? findPasswordInput(form) : findPasswordInput();
+    if (pw && el !== pw && (el.compareDocumentPosition(pw) & Node.DOCUMENT_POSITION_FOLLOWING)) {
+      if (/user|login|email|account|member/i.test(idName) || /user|login|email|account/i.test(labelText)) {
+        return true;
+      }
+    }
 
     return false;
   }
@@ -409,6 +480,7 @@
   function isCredField(el) {
     if (!el || el.tagName !== 'INPUT' || !isVisible(el)) return false;
     if (isCaptchaOrOtpField(el)) return false;
+    if (isSearchOrFilterField(el)) return false;
 
     const type = (el.type || '').toLowerCase();
     if (type === 'password' || type === 'email' || type === 'tel') return true;
@@ -926,12 +998,6 @@
 
       shadow.appendChild(inFieldIcon);
       positionInFieldIcon();
-    }
-
-    // Auto-open on focus if matching credentials exist
-    if (autoOpenedFor !== fieldEl && creds.length > 0 && unlocked) {
-      autoOpenedFor = fieldEl;
-      openDropdown(creds, unlocked);
     }
   }
 
