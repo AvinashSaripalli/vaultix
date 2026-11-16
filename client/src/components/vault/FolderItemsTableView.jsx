@@ -166,10 +166,10 @@ export default function FolderItemsTableView({ onAddPassword }) {
           <table className="w-full text-left border-collapse min-w-[640px]">
             <thead>
               <tr className="border-b border-slate-200/80 dark:border-slate-700/80 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider bg-slate-50/60 dark:bg-slate-750/40">
-                <th className="py-3 px-4 sm:px-6 w-[34%]">NAME</th>
-                <th className="py-3 px-4 sm:px-6 w-[28%]">LOGIN</th>
+                <th className="py-3 px-4 sm:px-6 w-[30%]">NAME</th>
+                <th className="py-3 px-4 sm:px-6 w-[24%]">LOGIN</th>
                 <th className="py-3 px-4 sm:px-6 w-[26%]">URL</th>
-                <th className="py-3 px-4 sm:px-6 w-[12%]">TAGS</th>
+                <th className="py-3 px-4 sm:px-6 w-[20%]">TAGS</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
@@ -253,20 +253,24 @@ export default function FolderItemsTableView({ onAddPassword }) {
                     </td>
 
                     {/* TAGS */}
-                    <td className="py-3 px-4 sm:px-6 text-sm">
+                    <td className="py-3 px-4 sm:px-6 text-sm min-w-0">
                       {tagNames.length > 0 ? (
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          {tagNames.slice(0, 3).map((tag) => (
+                        <div
+                          className="flex items-center gap-1.5 flex-nowrap min-w-0"
+                          title={tagNames.join(', ')}
+                        >
+                          <span
+                            className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-slate-650 truncate max-w-[120px] sm:max-w-[150px]"
+                            title={tagNames[0]}
+                          >
+                            {tagNames[0]}
+                          </span>
+                          {tagNames.length > 1 && (
                             <span
-                              key={tag}
-                              className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-slate-650"
+                              className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 border border-indigo-200/70 dark:border-indigo-800 shrink-0 cursor-help hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition"
+                              title={tagNames.slice(1).join(', ')}
                             >
-                              {tag}
-                            </span>
-                          ))}
-                          {tagNames.length > 3 && (
-                            <span className="text-[10px] text-slate-400">
-                              +{tagNames.length - 3}
+                              +{tagNames.length - 1}
                             </span>
                           )}
                         </div>
