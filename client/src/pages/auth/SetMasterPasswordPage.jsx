@@ -24,7 +24,7 @@ import {
   validateConfirmPassword,
   validateHint,
 } from '../../utils/validation';
-import logo from '../../assets/Vaultix.png';
+import BrandLogo from '../../components/common/BrandLogo';
 import bgImage from '../../assets/auth-bg.png';
 
 function SetMasterPasswordPage() {
@@ -128,11 +128,7 @@ function SetMasterPasswordPage() {
 
       <div className="relative z-10 min-h-screen max-w-[1450px] mx-auto grid grid-cols-1 lg:grid-cols-[1fr_440px] items-center gap-8 px-4 sm:px-6 lg:px-10 py-6 sm:py-8 lg:py-0">
         <div className="max-w-[800px] hidden lg:block">
-          <img
-            src={logo}
-            alt="Vaultix"
-            className="w-64 mb-10"
-          />
+          <BrandLogo className="w-64 mb-10" />
 
           <div className="inline-flex items-center gap-2 rounded-full bg-blue-100/80 dark:bg-blue-900/30 px-4 py-2 text-sm font-semibold text-blue-700 dark:text-blue-400 mb-6">
             <ShieldCheck size={16} />
@@ -179,7 +175,7 @@ function SetMasterPasswordPage() {
           }}
         >
           <div className="lg:hidden flex justify-center mb-4">
-            <img src={logo} alt="Vaultix" className="w-40" />
+            <BrandLogo className="w-40" />
           </div>
           {recoveryKey ? (
             <div className="space-y-4">

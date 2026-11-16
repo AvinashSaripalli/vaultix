@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { MailCheck, ShieldCheck, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { verifyEmail, requestEmailVerification } from '../../features/auth/authSlice';
-import logo from '../../assets/Vaultix.png';
+import BrandLogo from '../../components/common/BrandLogo';
 import bgImage from '../../assets/auth-bg.png';
 
 function VerifyEmailPage() {
@@ -90,7 +90,7 @@ function VerifyEmailPage() {
         <div className="w-full max-w-[480px]">
           <div className="bg-white/88 dark:bg-slate-800/90 backdrop-blur-md rounded-2xl sm:rounded-[32px] shadow-[0_20px_60px_rgba(37,99,235,0.14)] border border-white dark:border-slate-600 p-5 sm:p-7 md:p-9 text-center">
             <div className="flex justify-center mb-5">
-              <img src={logo} alt="Vaultix" className="w-36 sm:w-44" />
+              <BrandLogo className="w-36 sm:w-44" />
             </div>
 
             <div className="flex justify-center mb-4">{config.icon}</div>

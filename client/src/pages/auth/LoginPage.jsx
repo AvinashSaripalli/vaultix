@@ -10,7 +10,7 @@ import {
   generateWebAuthnAuthOptions,
   completeWebAuthnAuthentication,
 } from '../../utils/webauthnAuth';
-import logo from '../../assets/Vaultix.png';
+import BrandLogo from '../../components/common/BrandLogo';
 import bgImage from '../../assets/auth-bg.png';
 
 function LoginPage() {
@@ -175,7 +175,7 @@ function LoginPage() {
 
       <div className="relative z-10 min-h-screen max-w-[1450px] mx-auto grid grid-cols-1 lg:grid-cols-[1fr_430px] items-center gap-8 px-4 sm:px-6 lg:px-10 py-6 sm:py-8 lg:py-0">
         <div className="max-w-[780px] hidden lg:block">
-          <img src={logo} alt="Vaultix" className="w-64 mb-10" />
+          <BrandLogo className="w-64 mb-10" />
 
           <h1 className="text-6xl font-black leading-[1.05] tracking-[-2px] text-[#020617] dark:text-white">
             Secure password management for your business.
@@ -198,7 +198,7 @@ function LoginPage() {
           subtitle={requires2FA ? 'Enter your 2FA code to continue' : 'Login to access your secure vault.'}
         >
           <div className="lg:hidden flex justify-center mb-4">
-            <img src={logo} alt="Vaultix" className="w-40" />
+            <BrandLogo className="w-40" />
           </div>
 
           {error && <ErrorBox message={error} />}
