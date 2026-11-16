@@ -25,12 +25,12 @@ export default function ItemServiceIcon({ name = '', type = 'LOGIN', size = 'sm'
 
   const sizeClasses = {
     xs: 'w-6 h-6 rounded-md text-[11px] font-bold',
-    sm: 'w-7 h-7 rounded-lg text-xs font-bold',
-    md: 'w-8 h-8 sm:w-9 sm:h-9 rounded-xl text-sm font-bold shadow-xs',
-    lg: 'w-11 h-11 sm:w-12 sm:h-12 rounded-2xl text-base sm:text-lg font-bold shadow-md',
-  }[size] || 'w-7 h-7 rounded-lg text-xs font-bold';
+    sm: 'w-8 h-8 rounded-xl text-xs sm:text-sm font-bold',
+    md: 'w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl text-sm sm:text-base font-bold shadow-xs',
+    lg: 'w-12 h-12 sm:w-14 sm:h-14 rounded-2xl text-lg sm:text-xl font-bold shadow-md',
+  }[size] || 'w-8 h-8 rounded-xl text-xs sm:text-sm font-bold';
 
-  const iconSize = size === 'lg' ? 20 : size === 'md' ? 16 : size === 'sm' ? 13 : size === 'xs' ? 11 : 13;
+  const iconSize = size === 'lg' ? 22 : size === 'md' ? 18 : size === 'sm' ? 15 : size === 'xs' ? 12 : 15;
 
   const renderIcon = () => {
     switch (type) {

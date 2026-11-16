@@ -147,7 +147,7 @@ function PasswordListPanel() {
           )}
         </div>
 
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           {paginatedGroups.map((group) => {
             const active = group.items.some(
               (item) => item.id === selectedPasswordId
@@ -162,7 +162,7 @@ function PasswordListPanel() {
                   hapticLight();
                   dispatch(selectPassword(firstItem.id));
                 }}
-                className={`w-full text-left p-2 sm:px-2.5 sm:py-2 rounded-xl border transition-all active:scale-[0.99] flex items-center gap-2.5 min-w-0 ${
+                className={`w-full text-left p-2.5 sm:px-3 sm:py-2.5 rounded-xl border transition-all active:scale-[0.99] flex items-center gap-3 min-w-0 ${
                   active
                     ? 'bg-indigo-50/90 border-indigo-200 shadow-sm dark:bg-indigo-900/25 dark:border-indigo-800'
                     : 'bg-white border-slate-200/90 hover:border-slate-300 hover:bg-slate-50/80 dark:bg-slate-800 dark:border-slate-700/80 dark:hover:border-slate-600 dark:hover:bg-slate-700/60 shadow-xs'
@@ -171,12 +171,12 @@ function PasswordListPanel() {
                 <ItemServiceIcon name={group.name} type={firstItem?.type} size="sm" />
 
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+                  <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
                     {group.name}
                   </div>
 
-                  <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 mt-1 min-w-0">
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate flex-1 min-w-0">
                       {group.items.length > 1
                         ? `${group.items.length} accounts`
                         : firstItem?.login || meta.label}
@@ -196,7 +196,7 @@ function PasswordListPanel() {
                   </div>
                 </div>
 
-                <ChevronRight size={15} className="text-slate-300 dark:text-slate-600 shrink-0" />
+                <ChevronRight size={16} className="text-slate-300 dark:text-slate-600 shrink-0" />
               </button>
             );
           })}

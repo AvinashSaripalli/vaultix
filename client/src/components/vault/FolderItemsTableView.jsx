@@ -166,10 +166,10 @@ export default function FolderItemsTableView({ onAddPassword }) {
           <table className="w-full text-left border-collapse min-w-[640px]">
             <thead>
               <tr className="border-b border-slate-200/80 dark:border-slate-700/80 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider bg-slate-50/60 dark:bg-slate-750/40">
-                <th className="py-2.5 px-3.5 sm:px-5 w-[34%]">NAME</th>
-                <th className="py-2.5 px-3.5 sm:px-5 w-[28%]">LOGIN</th>
-                <th className="py-2.5 px-3.5 sm:px-5 w-[26%]">URL</th>
-                <th className="py-2.5 px-3.5 sm:px-5 w-[12%]">TAGS</th>
+                <th className="py-3 px-4 sm:px-6 w-[34%]">NAME</th>
+                <th className="py-3 px-4 sm:px-6 w-[28%]">LOGIN</th>
+                <th className="py-3 px-4 sm:px-6 w-[26%]">URL</th>
+                <th className="py-3 px-4 sm:px-6 w-[12%]">TAGS</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
@@ -193,8 +193,8 @@ export default function FolderItemsTableView({ onAddPassword }) {
                     className="hover:bg-slate-50/90 dark:hover:bg-slate-700/50 transition-colors cursor-pointer group"
                   >
                     {/* NAME */}
-                    <td className="py-2.5 px-3.5 sm:px-5 min-w-0">
-                      <div className="flex items-center gap-2.5 min-w-0">
+                    <td className="py-3 px-4 sm:px-6 min-w-0">
+                      <div className="flex items-center gap-3 min-w-0">
                         <ItemServiceIcon name={group.name} type={firstItem?.type} size="sm" />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
@@ -221,7 +221,7 @@ export default function FolderItemsTableView({ onAddPassword }) {
                     </td>
 
                     {/* LOGIN */}
-                    <td className="py-2.5 px-3.5 sm:px-5 text-sm text-slate-600 dark:text-slate-300 font-mono">
+                    <td className="py-3 px-4 sm:px-6 text-sm text-slate-600 dark:text-slate-300 font-mono">
                       {firstItem?.login ? (
                         <div className="flex items-center gap-1.5 min-w-0">
                           <span className="truncate max-w-[220px]" title={firstItem.login}>
@@ -239,7 +239,7 @@ export default function FolderItemsTableView({ onAddPassword }) {
                     </td>
 
                     {/* URL */}
-                    <td className="py-2.5 px-3.5 sm:px-5 text-sm">
+                    <td className="py-3 px-4 sm:px-6 text-sm">
                       {firstItem?.url ? (
                         <span
                           className="text-blue-600 dark:text-blue-400 group-hover:underline truncate block max-w-[240px]"
@@ -253,7 +253,7 @@ export default function FolderItemsTableView({ onAddPassword }) {
                     </td>
 
                     {/* TAGS */}
-                    <td className="py-2.5 px-3.5 sm:px-5 text-sm">
+                    <td className="py-3 px-4 sm:px-6 text-sm">
                       {tagNames.length > 0 ? (
                         <div className="flex items-center gap-1.5 flex-wrap">
                           {tagNames.slice(0, 3).map((tag) => (
