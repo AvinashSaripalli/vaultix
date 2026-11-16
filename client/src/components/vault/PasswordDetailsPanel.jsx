@@ -17,6 +17,7 @@ import {
   RefreshCw,
   KeyRound,
   Share2,
+  X,
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import api from '../../services/api';
@@ -587,6 +588,21 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
             >
               <Plus size={15} />
               <span>Add Login</span>
+            </button>
+          )}
+
+          {onBackToList && (
+            <button
+              type="button"
+              onClick={() => {
+                hapticLight();
+                onBackToList();
+              }}
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 inline-flex items-center justify-center text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition shadow-xs cursor-pointer"
+              title="Close details (return to table view)"
+              aria-label="Close details"
+            >
+              <X size={18} />
             </button>
           )}
         </div>

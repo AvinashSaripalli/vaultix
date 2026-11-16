@@ -103,13 +103,8 @@ function PasswordListPanel() {
       return;
     }
 
-    const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768;
-
-    // On mobile (< 768px), keep selectedPasswordId as null when returning to the list
+    // If no password is selected, stay on the unselected state (full-width table view)
     if (!selectedPasswordId) {
-      if (isDesktop) {
-        dispatch(selectPassword(paginatedGroups[0].items[0].id));
-      }
       return;
     }
 
@@ -117,9 +112,9 @@ function PasswordListPanel() {
       group.items.some((item) => item.id === selectedPasswordId)
     );
 
-    // If current selected password is not on this page, select the first on desktop or return to list on mobile
+    // If current selected password is not on this page (or was deleted/restored), reset selection
     if (!stillVisible) {
-      dispatch(selectPassword(isDesktop ? paginatedGroups[0].items[0].id : null));
+      dispatch(selectPassword(null));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paginatedGroups, selectedFolderId, dispatch]);
@@ -166,6 +161,10 @@ function PasswordListPanel() {
               </select>
             </div>
           )}
+        </div>
+
+        <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2.5 px-1">
+          NAME
         </div>
 
         <div className="space-y-2.5">

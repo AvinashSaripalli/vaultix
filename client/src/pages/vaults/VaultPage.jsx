@@ -5,6 +5,7 @@ import { useParams, useSearchParams, Link } from 'react-router-dom';
 import AppLayout from '../../components/layout/AppLayout';
 import PasswordListPanel from '../../components/vault/PasswordListPanel';
 import PasswordDetailsPanel from '../../components/vault/PasswordDetailsPanel';
+import FolderItemsTableView from '../../components/vault/FolderItemsTableView';
 import AddPasswordModal from '../../components/vault/AddPasswordModal';
 import EditPasswordModal from '../../components/vault/EditPasswordModal';
 import AddFolderModal from '../../components/vault/AddFolderModal';
@@ -1537,23 +1538,32 @@ function VaultPage() {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] lg:grid-cols-[320px_1fr] xl:grid-cols-[360px_1fr] min-h-[640px] divide-y md:divide-y-0 md:divide-x divide-slate-200 dark:divide-slate-700 min-w-0">
-              <div className={`${selectedPasswordId ? 'hidden md:block' : 'block'} min-w-0`}>
-                <PasswordListPanel />
+            !selectedPasswordId ? (
+              <FolderItemsTableView
+                onAddPassword={() => {
+                  setPrefillData(null);
+                  dispatch(openAddPasswordModal());
+                }}
+              />
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] lg:grid-cols-[320px_1fr] xl:grid-cols-[360px_1fr] min-h-[640px] divide-y md:divide-y-0 md:divide-x divide-slate-200 dark:divide-slate-700 min-w-0">
+                <div className="hidden md:block min-w-0">
+                  <PasswordListPanel />
+                </div>
+                <div className="min-w-0">
+                  <PasswordDetailsPanel
+                    onBackToList={() => dispatch(selectPassword(null))}
+                    onShareVault={() => setVaultShareOpen(true)}
+                    onAddLogin={(data) => {
+                      // data can be string (legacy) or {name, url, tags}
+                      const prefill = typeof data === 'string' ? { name: data } : data;
+                      setPrefillData(prefill);
+                      dispatch(openAddPasswordModal());
+                    }}
+                  />
+                </div>
               </div>
-              <div className={`${!selectedPasswordId ? 'hidden md:block' : 'block'} min-w-0`}>
-                <PasswordDetailsPanel
-                  onBackToList={() => dispatch(selectPassword(null))}
-                  onShareVault={() => setVaultShareOpen(true)}
-                  onAddLogin={(data) => {
-                    // data can be string (legacy) or {name, url, tags}
-                    const prefill = typeof data === 'string' ? { name: data } : data;
-                    setPrefillData(prefill);
-                    dispatch(openAddPasswordModal());
-                  }}
-                />
-              </div>
-            </div>
+            )
           )
         )}
       </div>
