@@ -276,7 +276,7 @@ function EditMyVaultPasswordModal({
     <ModalPortal open={open} onClose={handleClose} closeOnEscape={false}>
       <ModalBackdrop onClose={handleClose} disableBackdropClick={true}>
         <div
-          className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl p-6 max-h-[90vh] overflow-y-auto dark:bg-slate-800 my-auto"
+          className="w-full max-w-2xl bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-6 max-h-[90vh] overflow-y-auto my-auto"
           onClick={(e) => e.stopPropagation()}
         >
         <div className="flex items-center justify-between mb-5">

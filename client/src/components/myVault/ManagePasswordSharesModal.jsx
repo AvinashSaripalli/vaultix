@@ -36,7 +36,7 @@ function ManagePasswordSharesModal({ open, password, onClose, onRemoveShare }) {
     <ModalPortal open={open} onClose={onClose}>
       <ModalBackdrop onClose={onClose}>
         <div
-          className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 dark:bg-slate-800 my-auto"
+          className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-6 my-auto"
           onClick={(e) => e.stopPropagation()}
         >
         <div className="flex items-center justify-between mb-5">

@@ -140,7 +140,7 @@ function VerifyMasterPasswordModal({
     <ModalPortal open={open} onClose={handleClose}>
       <ModalBackdrop onClose={handleClose}>
         <div
-          className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 my-auto"
+          className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-6 my-auto"
           onClick={(e) => e.stopPropagation()}
         >
         <div className="mb-5">
@@ -193,7 +193,7 @@ function VerifyMasterPasswordModal({
               onChange={(e) =>
                 setMasterPassword(e.target.value)
               }
-              className="w-full border border-slate-300 dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 rounded-lg px-4 pr-11 py-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              className="w-full border border-slate-300 bg-white text-slate-800 placeholder-slate-400 dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 dark:placeholder-slate-400 rounded-lg px-4 pr-11 py-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/40"
               required
             />
 
@@ -216,7 +216,7 @@ function VerifyMasterPasswordModal({
             <button
               type="button"
               onClick={handleClose}
-              className="px-5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+              className="px-5 py-2.5 rounded-lg border border-slate-300 bg-white dark:bg-slate-800 dark:border-slate-600 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
             >
               Cancel
             </button>

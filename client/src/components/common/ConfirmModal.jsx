@@ -8,7 +8,7 @@ function ConfirmModal({ open, title, message, confirmLabel = 'Delete', cancelLab
     <ModalPortal open={open} onClose={onCancel}>
       <ModalBackdrop onClose={onCancel}>
         <div
-          className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-2xl my-auto"
+          className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-2xl border border-slate-200 dark:border-slate-700 my-auto"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-start justify-between mb-4">

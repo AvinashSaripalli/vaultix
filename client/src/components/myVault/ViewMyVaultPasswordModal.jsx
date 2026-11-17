@@ -182,7 +182,7 @@ function ViewMyVaultPasswordModal({ open, password, onClose }) {
     <ModalPortal open={open} onClose={handleClose}>
       <ModalBackdrop onClose={handleClose}>
         <div
-          className="w-full max-w-lg bg-white rounded-2xl shadow-2xl p-6 dark:bg-slate-800 my-auto max-h-[90vh] flex flex-col"
+          className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-6 my-auto max-h-[90vh] flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}

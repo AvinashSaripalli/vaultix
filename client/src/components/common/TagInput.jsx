@@ -149,7 +149,7 @@ function TagInput({
       <div className="relative">
         <div
           onClick={() => inputRef.current?.focus()}
-          className="flex flex-wrap items-center gap-1.5 border border-slate-300 dark:border-slate-600 dark:bg-slate-700/80 rounded-xl px-3 py-2 min-h-[46px] focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100 dark:focus-within:ring-indigo-900/30 transition cursor-text bg-white"
+          className="flex flex-wrap items-center gap-1.5 border border-slate-300 bg-white rounded-xl px-3 py-2 min-h-[46px] focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100 dark:border-slate-600 dark:bg-slate-700/80 dark:focus-within:ring-indigo-900/30 transition cursor-text"
         >
           {/* Selected Tag Badges */}
           {tags.map((tag) => (

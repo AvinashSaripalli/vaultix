@@ -38,11 +38,11 @@ const handleSubmit = async (e) => {
     <ModalPortal open={isAddFolderModalOpen} onClose={() => dispatch(closeAddFolderModal())}>
       <ModalBackdrop onClose={() => dispatch(closeAddFolderModal())} disableBackdropClick={true}>
         <div
-          className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 dark:bg-slate-800 my-auto"
+          className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-6 my-auto"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold dark:text-slate-100">Create Folder</h2>
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Create Folder</h2>
             <button
               onClick={() => dispatch(closeAddFolderModal())}
               className="text-slate-500 text-xl dark:text-slate-400"
@@ -57,7 +57,7 @@ const handleSubmit = async (e) => {
               placeholder="Folder name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full border border-slate-300 rounded-xl px-4 py-3 outline-none dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600"
+              className="w-full border border-slate-300 bg-white text-slate-800 placeholder-slate-400 rounded-xl px-4 py-3 outline-none dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 dark:placeholder-slate-400"
               required
             />
 
@@ -65,7 +65,7 @@ const handleSubmit = async (e) => {
               <button
                 type="button"
                 onClick={() => dispatch(closeAddFolderModal())}
-                className="px-5 py-3 rounded-xl border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300"
+                className="px-5 py-3 rounded-xl border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 font-medium"
               >
                 Cancel
               </button>

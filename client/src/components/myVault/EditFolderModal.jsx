@@ -22,7 +22,7 @@ function EditFolderModal({ open, folder, onClose, onSubmit }) {
     <ModalPortal open={open} onClose={onClose}>
       <ModalBackdrop onClose={onClose} disableBackdropClick={true}>
         <div
-          className="w-full max-w-sm bg-white rounded-2xl shadow-2xl p-5 dark:bg-slate-800 my-auto"
+          className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-5 my-auto"
           onClick={(e) => e.stopPropagation()}
         >
         <div className="flex items-center justify-between mb-4">
@@ -35,13 +35,13 @@ function EditFolderModal({ open, folder, onClose, onSubmit }) {
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm outline-none dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
+          className="w-full border border-slate-300 bg-white text-slate-800 rounded-xl px-3 py-2 text-sm outline-none dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
         />
 
         <div className="flex justify-end gap-3 mt-5">
           <button
             onClick={onClose}
-            className="px-5 py-2.5 rounded-xl border text-sm border-slate-300 text-slate-700 dark:border-slate-600 dark:text-slate-300"
+            className="px-5 py-2.5 rounded-xl border text-sm border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 font-medium"
           >
             Cancel
           </button>

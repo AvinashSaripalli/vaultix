@@ -51,7 +51,7 @@ function ViewSharedPasswordModal({ open, item, decryptedData, onClose }) {
     <ModalPortal open={open} onClose={onClose}>
       <ModalBackdrop onClose={onClose}>
         <div
-          className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden dark:bg-slate-800 my-auto max-h-[90vh] flex flex-col"
+          className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden my-auto max-h-[90vh] flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
         <div className="px-4 sm:px-6 pt-4 sm:pt-5 pb-4 border-b border-slate-100 dark:border-slate-700 shrink-0">
@@ -163,7 +163,7 @@ function ViewSharedPasswordModal({ open, item, decryptedData, onClose }) {
 
         <div className="px-4 sm:px-6 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between dark:bg-slate-700/50 dark:border-slate-700 shrink-0">
           <p className="text-xs text-slate-400 dark:text-slate-500">Securely shared via Vaultix</p>
-          <button onClick={onClose} className="h-9 px-4 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-white transition-colors dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700">Close</button>
+          <button onClick={onClose} className="h-9 px-4 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700">Close</button>
         </div>
       </div>
       </ModalBackdrop>

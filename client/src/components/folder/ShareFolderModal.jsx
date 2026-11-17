@@ -185,7 +185,7 @@ function ShareFolderModal({ open, onClose, folderId, vaultId }) {
     <ModalPortal open={open} onClose={handleClose}>
       <ModalBackdrop onClose={handleClose} disableBackdropClick={true}>
         <div
-          className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 max-h-[85vh] overflow-y-auto my-auto"
+          className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-6 max-h-[85vh] overflow-y-auto my-auto"
           onClick={(e) => e.stopPropagation()}
         >
         <div className="flex items-center justify-between mb-4">

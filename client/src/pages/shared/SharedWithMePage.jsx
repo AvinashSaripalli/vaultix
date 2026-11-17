@@ -299,7 +299,7 @@ function SharedWithMePage() {
           <ModalPortal open={!!decryptError} onClose={() => setDecryptError('')}>
             <ModalBackdrop onClose={() => setDecryptError('')}>
               <div
-                className="w-full max-w-md bg-white rounded-2xl shadow-2xl dark:bg-slate-800 my-auto"
+                className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 my-auto"
                 onClick={(e) => e.stopPropagation()}
               >
               <div className="px-6 pt-5 pb-4 border-b border-slate-100 dark:border-slate-700">
@@ -314,7 +314,7 @@ function SharedWithMePage() {
               <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 rounded-b-2xl flex justify-end dark:bg-slate-800/50 dark:border-slate-700">
                 <button
                   onClick={() => setDecryptError('')}
-                  className="h-9 px-4 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-white transition-colors dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700"
+                  className="h-9 px-4 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                 >
                   Close
                 </button>

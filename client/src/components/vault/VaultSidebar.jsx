@@ -101,7 +101,7 @@ function VaultSidebar() {
         <Search size={16} className="text-slate-400 dark:text-slate-500" />
         <input
           placeholder="Search"
-          className="bg-transparent outline-none w-full text-sm"
+          className="bg-transparent outline-none w-full text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
         />
       </div>
 

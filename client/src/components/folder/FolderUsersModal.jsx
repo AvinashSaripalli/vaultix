@@ -294,7 +294,7 @@ function FolderUsersModal({ open, onClose, folderId, folderName, onSaved }) {
                 placeholder="Search member..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full h-9 pl-8 pr-3 rounded-lg border border-slate-200 dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 bg-white text-xs outline-none focus:border-indigo-300"
+                className="w-full h-9 pl-8 pr-3 rounded-lg border border-slate-200 bg-white text-slate-800 placeholder-slate-400 dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 dark:placeholder-slate-400 text-xs outline-none focus:border-indigo-300"
               />
             </div>
             <div className="text-xs text-slate-500 dark:text-slate-400 shrink-0">
@@ -360,7 +360,7 @@ function FolderUsersModal({ open, onClose, folderId, folderName, onSaved }) {
                             <select
                               value={item.accessLevel}
                               onChange={(e) => handleAccessChange(item.id, e.target.value)}
-                              className="w-full sm:w-auto appearance-none h-8 rounded-lg border border-slate-200 dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 bg-white pl-3 pr-8 text-xs font-medium text-slate-700 dark:text-slate-300 outline-none hover:border-slate-300 dark:hover:border-slate-600"
+                              className="w-full sm:w-auto appearance-none h-8 rounded-lg border border-slate-200 bg-white text-slate-700 pl-3 pr-8 text-xs font-medium outline-none hover:border-slate-300 dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 dark:hover:border-slate-500"
                             >
                               {ACCESS_OPTIONS.map((option) => (
                                 <option key={option.value} value={option.value}>

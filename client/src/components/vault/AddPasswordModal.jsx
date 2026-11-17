@@ -390,7 +390,7 @@ function AddPasswordModal({ prefill, prefillName, onPrefillConsumed }) {
     <ModalPortal open={isAddPasswordModalOpen} onClose={handleClose} closeOnEscape={false}>
       <ModalBackdrop onClose={handleClose} disableBackdropClick={true}>
         <div
-          className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl p-4 sm:p-6 dark:bg-slate-800 max-h-[92vh] overflow-y-auto my-auto"
+          className="w-full max-w-2xl bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-4 sm:p-6 max-h-[92vh] overflow-y-auto my-auto"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-start justify-between gap-3 mb-5 sm:mb-6">

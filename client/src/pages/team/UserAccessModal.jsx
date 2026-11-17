@@ -200,11 +200,11 @@ export default function UserAccessModal({
     <ModalPortal open={open} onClose={onClose}>
       <ModalBackdrop onClose={onClose}>
         <div
-          className="relative w-full max-w-2xl max-h-[88vh] flex flex-col rounded-3xl bg-white shadow-2xl border border-slate-200/80 dark:bg-slate-850 dark:border-slate-700/80 overflow-hidden"
+          className="relative w-full max-w-2xl max-h-[88vh] flex flex-col rounded-3xl bg-white shadow-2xl border border-slate-200/80 dark:bg-slate-900 dark:border-slate-800 overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           {/* ─── 1. Sleek Profile Header ─── */}
-          <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-850">
+          <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-3.5">
                 <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white font-bold flex items-center justify-center text-base shadow-sm shrink-0">
@@ -255,14 +255,14 @@ export default function UserAccessModal({
                   onClick={fetchAccess}
                   disabled={loading}
                   title="Refresh"
-                  className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+                  className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center transition"
                 >
                   <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                 </button>
                 <button
                   type="button"
                   onClick={onClose}
-                  className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+                  className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center transition"
                 >
                   <X size={16} />
                 </button>
@@ -281,7 +281,7 @@ export default function UserAccessModal({
           </div>
 
           {/* ─── 2. Clean Tabs Navigation ─── */}
-          <div className="px-4 sm:px-6 pt-3 pb-2.5 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-slate-50/50 dark:bg-slate-900/20">
+          <div className="px-4 sm:px-6 pt-3 pb-2.5 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-slate-50/80 dark:bg-slate-950/60">
             <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
               <button
                 type="button"
@@ -289,7 +289,7 @@ export default function UserAccessModal({
                 className={`relative px-3.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-2 whitespace-nowrap ${
                   activeTab === 'ACCESSIBLE'
                     ? 'bg-indigo-600 text-white shadow-xs'
-                    : 'text-slate-600 hover:bg-slate-200/60 dark:text-slate-300 dark:hover:bg-slate-800'
+                    : 'text-slate-600 hover:bg-slate-200/60 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
                 }`}
               >
                 <span>Accessible Folders</span>
@@ -297,7 +297,7 @@ export default function UserAccessModal({
                   className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
                     activeTab === 'ACCESSIBLE'
                       ? 'bg-indigo-700 text-white'
-                      : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
+                      : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
                   }`}
                 >
                   {accessibleFolders.length}
@@ -310,7 +310,7 @@ export default function UserAccessModal({
                 className={`relative px-3.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-2 whitespace-nowrap ${
                   activeTab === 'AVAILABLE'
                     ? 'bg-indigo-600 text-white shadow-xs'
-                    : 'text-slate-600 hover:bg-slate-200/60 dark:text-slate-300 dark:hover:bg-slate-800'
+                    : 'text-slate-600 hover:bg-slate-200/60 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
                 }`}
               >
                 <span>+ Grant New Access</span>
@@ -318,7 +318,7 @@ export default function UserAccessModal({
                   className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
                     activeTab === 'AVAILABLE'
                       ? 'bg-indigo-700 text-white'
-                      : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
+                      : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
                   }`}
                 >
                   {availableFolders.length}
@@ -334,13 +334,13 @@ export default function UserAccessModal({
                 placeholder="Filter folders…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full h-8 pl-8 pr-3 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 shadow-2xs"
+                className="w-full h-8 pl-8 pr-3 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100 dark:placeholder-slate-500 shadow-2xs"
               />
             </div>
           </div>
 
           {/* ─── 3. Content Area ─── */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 min-h-[300px]">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 min-h-[300px] bg-slate-50/40 dark:bg-slate-900">
             {error && (
               <div className="mb-4 p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-700 dark:bg-rose-950/30 dark:border-rose-900/60 dark:text-rose-300">
                 {error}
@@ -364,7 +364,7 @@ export default function UserAccessModal({
                     return (
                       <div
                         key={folder.folderId}
-                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl border border-slate-200/80 bg-white hover:border-slate-300 dark:bg-slate-800/60 dark:border-slate-750 dark:hover:border-slate-700 transition shadow-2xs"
+                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl border border-slate-200/80 bg-white hover:border-slate-300 dark:bg-slate-800 dark:border-slate-750 dark:hover:border-slate-700 transition shadow-2xs"
                       >
                         {/* Folder Info */}
                         <div className="flex items-center gap-3 min-w-0">
@@ -477,7 +477,7 @@ export default function UserAccessModal({
                     return (
                       <div
                         key={folder.folderId}
-                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl border border-slate-200/80 bg-white hover:border-slate-300 dark:bg-slate-800/60 dark:border-slate-750 dark:hover:border-slate-700 transition shadow-2xs"
+                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl border border-slate-200/80 bg-white hover:border-slate-300 dark:bg-slate-800 dark:border-slate-750 dark:hover:border-slate-700 transition shadow-2xs"
                       >
                         {/* Folder Info */}
                         <div className="flex items-center gap-3 min-w-0">
@@ -553,7 +553,7 @@ export default function UserAccessModal({
           </div>
 
           {/* ─── 4. Sleek Footer ─── */}
-          <div className="px-6 py-3.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20 flex items-center justify-between text-xs">
+          <div className="px-6 py-3.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-950/60 flex items-center justify-between text-xs">
             <span className="text-slate-500 dark:text-slate-400 font-medium">
               {accessibleFolders.length} of {allFolders.length} folders accessible
             </span>
