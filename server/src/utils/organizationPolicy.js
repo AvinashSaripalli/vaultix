@@ -3,10 +3,10 @@ const prisma = require('../config/prisma');
 const DEFAULT_POLICY = {
   id: 'default',
   requireTwoFactor: false,
-  maxVaultTimeoutMinutes: null,
-  minMasterPasswordLength: 8,
+  maxVaultTimeoutMinutes: 30,
+  minMasterPasswordLength: 12,
   requireMasterPasswordSpecial: true,
-  clipboardTimeoutSeconds: null,
+  clipboardTimeoutSeconds: 30,
   requireDualAdminApproval: true,
 };
 
