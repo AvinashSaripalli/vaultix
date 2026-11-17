@@ -160,64 +160,102 @@ function PendingInvitationsModal({ open, onClose }) {
             {loading ? (
               <p className="text-slate-500 text-sm dark:text-slate-400">Loading invitations...</p>
             ) : (
-              <div className="max-h-[360px] overflow-y-auto border border-slate-200 rounded-2xl dark:border-slate-700">
-                <table className="w-full">
-                  <thead className="bg-slate-50 sticky top-0 dark:bg-slate-700/50">
-                    <tr className="text-left text-slate-600 dark:text-slate-400">
-                      <th className="px-5 py-4 font-semibold">Email</th>
-                      <th className="px-5 py-4 font-semibold">Role</th>
-                      <th className="px-5 py-4 font-semibold">Invited By</th>
-                      <th className="px-5 py-4 font-semibold">Expires</th>
-                      <th className="px-5 py-4 font-semibold">Status</th>
-                    </tr>
-                  </thead>
+              <div className="max-h-[380px] overflow-y-auto">
+                {/* Mobile View: Cards (< md) */}
+                <div className="block md:hidden space-y-3">
+                  {invitations.map((item) => (
+                    <div
+                      key={item.id}
+                      className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-2xs space-y-2.5"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm truncate font-mono">
+                            {item.email}
+                          </p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                            Invited by: {item.inviter?.fullName || item.inviter?.email || '-'}
+                          </p>
+                        </div>
+                        <RoleBadge role={item.role} />
+                      </div>
 
-                  <tbody>
-                    {invitations.map((item) => (
-                      <tr
-                        key={item.id}
-                        className="border-t border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-700/50"
-                      >
-                        <td className="px-5 py-4 font-medium text-slate-900 dark:text-slate-100">
-                          {item.email}
-                        </td>
+                      <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-100 dark:border-slate-700 text-slate-500 dark:text-slate-400">
+                        <span>Expires: {item.expiresAt ? new Date(item.expiresAt).toLocaleDateString() : '-'}</span>
+                        <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300">
+                          Pending
+                        </span>
+                      </div>
+                    </div>
+                  ))}
 
-                        <td className="px-5 py-4">
-                          <RoleBadge role={item.role} />
-                        </td>
+                  {!invitations.length && (
+                    <div className="p-8 text-center text-sm text-slate-500 dark:text-slate-400 rounded-xl border border-slate-200 dark:border-slate-700">
+                      No pending invitations.
+                    </div>
+                  )}
+                </div>
 
-                        <td className="px-5 py-4 text-slate-600 dark:text-slate-300">
-                          {item.inviter?.fullName ||
-                            item.inviter?.email ||
-                            '-'}
-                        </td>
-
-                        <td className="px-5 py-4 text-slate-600 dark:text-slate-300">
-                          {item.expiresAt
-                            ? new Date(item.expiresAt).toLocaleDateString()
-                            : '-'}
-                        </td>
-
-                        <td className="px-5 py-4">
-                          <span className="inline-flex px-3 py-1 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300">
-                            Pending
-                          </span>
-                        </td>
+                {/* Desktop View: Table (>= md) */}
+                <div className="hidden md:block overflow-x-auto border border-slate-200 rounded-2xl dark:border-slate-700">
+                  <table className="w-full min-w-[500px]">
+                    <thead className="bg-slate-50 sticky top-0 dark:bg-slate-700/50">
+                      <tr className="text-left text-slate-600 dark:text-slate-400 text-xs sm:text-sm">
+                        <th className="px-5 py-4 font-semibold">Email</th>
+                        <th className="px-5 py-4 font-semibold">Role</th>
+                        <th className="px-5 py-4 font-semibold">Invited By</th>
+                        <th className="px-5 py-4 font-semibold">Expires</th>
+                        <th className="px-5 py-4 font-semibold">Status</th>
                       </tr>
-                    ))}
+                    </thead>
 
-                    {!invitations.length && (
-                      <tr>
-                        <td
-                          colSpan="5"
-                          className="px-5 py-10 text-center text-slate-500 dark:text-slate-400"
+                    <tbody>
+                      {invitations.map((item) => (
+                        <tr
+                          key={item.id}
+                          className="border-t border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-700/50"
                         >
-                          No pending invitations.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                          <td className="px-5 py-4 font-medium text-slate-900 dark:text-slate-100 text-sm">
+                            {item.email}
+                          </td>
+
+                          <td className="px-5 py-4">
+                            <RoleBadge role={item.role} />
+                          </td>
+
+                          <td className="px-5 py-4 text-slate-600 dark:text-slate-300 text-sm">
+                            {item.inviter?.fullName ||
+                              item.inviter?.email ||
+                              '-'}
+                          </td>
+
+                          <td className="px-5 py-4 text-slate-600 dark:text-slate-300 text-sm">
+                            {item.expiresAt
+                              ? new Date(item.expiresAt).toLocaleDateString()
+                              : '-'}
+                          </td>
+
+                          <td className="px-5 py-4">
+                            <span className="inline-flex px-3 py-1 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300">
+                              Pending
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+
+                      {!invitations.length && (
+                        <tr>
+                          <td
+                            colSpan="5"
+                            className="px-5 py-10 text-center text-slate-500 dark:text-slate-400 text-sm"
+                          >
+                            No pending invitations.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </div>

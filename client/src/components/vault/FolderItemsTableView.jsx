@@ -162,8 +162,90 @@ export default function FolderItemsTableView({ onAddPassword }) {
           )}
         </div>
       ) : (
-        <div className="flex-1 overflow-x-auto min-w-0">
-          <table className="w-full text-left border-collapse min-w-[640px]">
+        <div className="flex-1 min-w-0 flex flex-col">
+          {/* Mobile View: Cards (< md) */}
+          <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-700/60">
+            {paginatedGroups.map((group) => {
+              const firstItem = group.items[0];
+              const tagNames = Array.from(
+                new Set(
+                  group.items.flatMap((item) =>
+                    (item.tags || []).map((t) => t.tag?.name).filter(Boolean)
+                  )
+                )
+              );
+
+              return (
+                <div
+                  key={group.name}
+                  onClick={() => {
+                    hapticLight();
+                    dispatch(selectPassword(firstItem.id));
+                  }}
+                  className="p-3.5 space-y-2 hover:bg-slate-50/90 dark:hover:bg-slate-700/50 transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <ItemServiceIcon name={group.name} type={firstItem?.type} size="sm" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate">
+                          {group.name}
+                        </span>
+                        {group.items.length > 1 && (
+                          <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800 shrink-0">
+                            {group.items.length} accounts
+                          </span>
+                        )}
+                        {firstItem?.isSensitive && (
+                          <span
+                            className="inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-700 px-1.5 py-0.2 text-[10px] font-semibold dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800 shrink-0"
+                            title="Requires Master Password to view"
+                          >
+                            <Lock size={9} />
+                            <span>Secured</span>
+                          </span>
+                        )}
+                      </div>
+                      {firstItem?.login && (
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate mt-0.5">
+                          {firstItem.login}
+                          {group.items.length > 1 && ` (+${group.items.length - 1})`}
+                        </p>
+                      )}
+                    </div>
+                    <ChevronRight size={16} className="text-slate-400 shrink-0" />
+                  </div>
+
+                  {(firstItem?.url || tagNames.length > 0) && (
+                    <div className="flex items-center justify-between gap-2 text-xs pt-1 border-t border-slate-100 dark:border-slate-700/60">
+                      {firstItem?.url ? (
+                        <span className="text-blue-600 dark:text-blue-400 truncate max-w-[200px]" title={firstItem.url}>
+                          {firstItem.url.replace(/^https?:\/\//i, '')}
+                        </span>
+                      ) : <span />}
+
+                      {tagNames.length > 0 && (
+                        <div className="flex items-center gap-1 flex-wrap shrink-0">
+                          <span className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                            {tagNames[0]}
+                          </span>
+                          {tagNames.length > 1 && (
+                            <span className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
+                              +{tagNames.length - 1}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop View: Table (>= md) */}
+          <div className="hidden md:block overflow-x-auto min-w-0">
+            <table className="w-full text-left border-collapse min-w-[640px]">
             <thead>
               <tr className="border-b border-slate-200/80 dark:border-slate-700/80 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider bg-slate-50/60 dark:bg-slate-750/40">
                 <th className="py-3 px-4 sm:px-6 w-[30%]">NAME</th>
@@ -284,6 +366,7 @@ export default function FolderItemsTableView({ onAddPassword }) {
             </tbody>
           </table>
         </div>
+      </div>
       )}
 
       {/* Pagination Footer */}

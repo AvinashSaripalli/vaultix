@@ -317,9 +317,9 @@ function DashboardPage() {
                   </div>
                 </div>
 
-                <div className="h-[340px]">
+                <div className="h-[260px] sm:h-[340px]">
                   {passwordTrend?.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={340}>
+                    <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={passwordTrend} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--border-primary)" />
                         <XAxis
@@ -404,8 +404,8 @@ function DashboardPage() {
 
                 {/* Large radial chart */}
                 <div className="flex-1 flex items-center justify-center py-4">
-                  <div className="w-full" style={{ height: '280px' }}>
-                    <ResponsiveContainer width="100%" height={280}>
+                  <div className="w-full h-[240px] sm:h-[280px]">
+                    <ResponsiveContainer width="100%" height="100%">
                       <RadialBarChart
                         cx="50%"
                         cy="50%"
@@ -672,58 +672,119 @@ function DashboardPage() {
                   {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-12" />)}
                 </div>
               ) : filteredRecentPasswords?.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[700px]">
-                    <thead>
-                      <tr className="border-t border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/50">
-                        <th className="text-left px-4 sm:px-6 py-3 sm:py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Name</th>
-                        <th className="text-left px-4 sm:px-6 py-3 sm:py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Login</th>
-                        <th className="text-left px-4 sm:px-6 py-3 sm:py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Folder</th>
-                        <th className="text-left px-4 sm:px-6 py-3 sm:py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Added By</th>
-                        <th className="text-center px-4 sm:px-6 py-3 sm:py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Weak</th>
-                        <th className="text-center px-4 sm:px-6 py-3 sm:py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Old</th>
-                        <th className="text-center px-4 sm:px-6 py-3 sm:py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Risk</th>
-                        <th className="text-right px-4 sm:px-6 py-3 sm:py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Updated</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                      {filteredRecentPasswords.map((row) => (
-                        <tr key={row.id} className="hover:bg-slate-50 dark:hover:bg-slate-700 transition">
-                          <td className="px-4 sm:px-6 py-3.5 sm:py-4">
-                            <span className="font-medium text-slate-900 dark:text-slate-100 text-sm">{row.name}</span>
-                          </td>
-                          <td className="px-4 sm:px-6 py-3.5 sm:py-4 text-xs sm:text-sm text-slate-600 dark:text-slate-300">{row.login || '-'}</td>
-                          <td className="px-4 sm:px-6 py-3.5 sm:py-4">
-                            <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2.5 py-1 rounded-lg">
-                              {row.folder?.name || row.vault?.name || '-'}
+                <>
+                  {/* Mobile View: Cards (< md) */}
+                  <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-700/60">
+                    {filteredRecentPasswords.map((row) => (
+                      <div key={row.id} className="p-4 space-y-2.5">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm truncate">
+                              {row.name}
+                            </p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate mt-0.5">
+                              {row.login || '—'}
+                            </p>
+                          </div>
+                          <span className="text-[11px] text-slate-400 dark:text-slate-500 shrink-0">
+                            {formatTimeAgo(row.updatedAt)}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2 flex-wrap text-xs">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-md">
+                            {row.folder?.name || row.vault?.name || 'Vault'}
+                          </span>
+                          {row.createdBy?.fullName && (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-md">
+                              {row.createdBy.fullName}
                             </span>
-                          </td>
-                          <td className="px-4 sm:px-6 py-3.5 sm:py-4">
-                            <span className="inline-flex items-center gap-1 text-xs font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 px-2.5 py-1 rounded-lg">
-                              {row.createdBy?.fullName || row.createdBy?.email || '-'}
+                          )}
+                        </div>
+
+                        {(row.isWeak || row.isOld || row.isAtRisk) ? (
+                          <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                            {row.isWeak && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300 border border-red-200/60 dark:border-red-800">
+                                Weak
+                              </span>
+                            )}
+                            {row.isOld && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 border border-orange-200/60 dark:border-orange-800">
+                                Old
+                              </span>
+                            )}
+                            {row.isAtRisk && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 border border-rose-200/60 dark:border-rose-800">
+                                At Risk
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="pt-1">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800">
+                              Secure
                             </span>
-                          </td>
-                          <td className="px-4 sm:px-6 py-3.5 sm:py-4 text-center">
-                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold ${
-                              row.isWeak ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300'
-                            }`}>{row.isWeak ? 'Yes' : 'No'}</span>
-                          </td>
-                          <td className="px-4 sm:px-6 py-3.5 sm:py-4 text-center">
-                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold ${
-                              row.isOld ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300'
-                            }`}>{row.isOld ? 'Yes' : 'No'}</span>
-                          </td>
-                          <td className="px-4 sm:px-6 py-3.5 sm:py-4 text-center">
-                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold ${
-                              row.isAtRisk ? 'bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-300' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300'
-                            }`}>{row.isAtRisk ? 'Yes' : 'No'}</span>
-                          </td>
-                          <td className="px-4 sm:px-6 py-3.5 sm:py-4 text-right text-xs text-slate-400 dark:text-slate-500">{formatTimeAgo(row.updatedAt)}</td>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Desktop View: Table (>= md) */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <table className="w-full min-w-[700px]">
+                      <thead>
+                        <tr className="border-t border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/50">
+                          <th className="text-left px-4 sm:px-6 py-3 sm:py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Name</th>
+                          <th className="text-left px-4 sm:px-6 py-3 sm:py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Login</th>
+                          <th className="text-left px-4 sm:px-6 py-3 sm:py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Folder</th>
+                          <th className="text-left px-4 sm:px-6 py-3 sm:py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Added By</th>
+                          <th className="text-center px-4 sm:px-6 py-3 sm:py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Weak</th>
+                          <th className="text-center px-4 sm:px-6 py-3 sm:py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Old</th>
+                          <th className="text-center px-4 sm:px-6 py-3 sm:py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Risk</th>
+                          <th className="text-right px-4 sm:px-6 py-3 sm:py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Updated</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                        {filteredRecentPasswords.map((row) => (
+                          <tr key={row.id} className="hover:bg-slate-50 dark:hover:bg-slate-700 transition">
+                            <td className="px-4 sm:px-6 py-3.5 sm:py-4">
+                              <span className="font-medium text-slate-900 dark:text-slate-100 text-sm">{row.name}</span>
+                            </td>
+                            <td className="px-4 sm:px-6 py-3.5 sm:py-4 text-xs sm:text-sm text-slate-600 dark:text-slate-300">{row.login || '-'}</td>
+                            <td className="px-4 sm:px-6 py-3.5 sm:py-4">
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2.5 py-1 rounded-lg">
+                                {row.folder?.name || row.vault?.name || '-'}
+                              </span>
+                            </td>
+                            <td className="px-4 sm:px-6 py-3.5 sm:py-4">
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 px-2.5 py-1 rounded-lg">
+                                {row.createdBy?.fullName || row.createdBy?.email || '-'}
+                              </span>
+                            </td>
+                            <td className="px-4 sm:px-6 py-3.5 sm:py-4 text-center">
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold ${
+                                row.isWeak ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300'
+                              }`}>{row.isWeak ? 'Yes' : 'No'}</span>
+                            </td>
+                            <td className="px-4 sm:px-6 py-3.5 sm:py-4 text-center">
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold ${
+                                row.isOld ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300'
+                              }`}>{row.isOld ? 'Yes' : 'No'}</span>
+                            </td>
+                            <td className="px-4 sm:px-6 py-3.5 sm:py-4 text-center">
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold ${
+                                row.isAtRisk ? 'bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-300' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300'
+                              }`}>{row.isAtRisk ? 'Yes' : 'No'}</span>
+                            </td>
+                            <td className="px-4 sm:px-6 py-3.5 sm:py-4 text-right text-xs text-slate-400 dark:text-slate-500">{formatTimeAgo(row.updatedAt)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               ) : (
                 <div className="text-center py-12 px-6 border-t border-slate-100 dark:border-slate-700">
                   <KeyRound size={32} className="mx-auto text-slate-300 dark:text-slate-600 mb-3" />

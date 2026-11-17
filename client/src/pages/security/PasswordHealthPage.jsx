@@ -385,66 +385,121 @@ function PasswordTable({ passwords, emptyMessage, columns, onNavigateVault }) {
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[600px]">
-        <thead>
-          <tr className="border-b border-slate-200 dark:border-slate-700">
-            <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Name</th>
-            <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Login</th>
-            {columns.includes('strength') && (
-              <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Strength</th>
-            )}
-            {columns.includes('age') && (
-              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Last Updated</th>
-            )}
-            {columns.includes('vault') && (
-              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Vault</th>
-            )}
-            <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Action</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-          {passwords.map((pw) => (
-            <tr key={pw.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition">
-              <td className="px-4 py-3">
-                <span className="font-medium text-sm text-slate-900 dark:text-slate-100">{pw.name}</span>
-                {pw.url && <p className="text-xs text-slate-400 mt-0.5 truncate max-w-[200px]">{pw.url}</p>}
-              </td>
-              <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">{pw.login || '-'}</td>
+    <div>
+      {/* Mobile View: Cards (< md) */}
+      <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-700/60">
+        {passwords.map((pw) => (
+          <div key={pw.id} className="p-4 space-y-2.5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <span className="font-semibold text-sm text-slate-900 dark:text-slate-100 block truncate">
+                  {pw.name}
+                </span>
+                {pw.url && (
+                  <p className="text-xs text-slate-400 mt-0.5 truncate font-mono">
+                    {pw.url.replace(/^https?:\/\//i, '')}
+                  </p>
+                )}
+              </div>
+
+              {pw.vault?.slug && (
+                <button
+                  onClick={() => onNavigateVault?.(pw.vault.slug)}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-400 shrink-0 transition"
+                >
+                  <ExternalLink size={12} />
+                  <span>Vault</span>
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-100 dark:border-slate-700/60">
+              <span className="font-mono truncate pr-2">{pw.login || '—'}</span>
+              {columns.includes('vault') && pw.vault?.name && (
+                <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[11px] font-medium shrink-0">
+                  {pw.vault.name}
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between text-xs pt-1">
               {columns.includes('strength') && (
-                <td className="px-4 py-3 text-center">
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300">
-                    {pw.strengthScore != null ? `Score: ${pw.strengthScore}` : 'Weak'}
-                  </span>
-                </td>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200/60 dark:border-red-800">
+                  {pw.strengthScore != null ? `Strength Score: ${pw.strengthScore}/100` : 'Weak Password'}
+                </span>
               )}
               {columns.includes('age') && (
-                <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">
-                  {pw.updatedAt ? formatTimeAgo(pw.updatedAt) : '-'}
-                </td>
+                <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                  Updated: {pw.updatedAt ? formatTimeAgo(pw.updatedAt) : '—'}
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop View: Table (>= md) */}
+      <div className="hidden md:block overflow-x-auto">
+        <table className="w-full min-w-[600px]">
+          <thead>
+            <tr className="border-b border-slate-200 dark:border-slate-700">
+              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Name</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Login</th>
+              {columns.includes('strength') && (
+                <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Strength</th>
+              )}
+              {columns.includes('age') && (
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Last Updated</th>
               )}
               {columns.includes('vault') && (
-                <td className="px-4 py-3">
-                  <span className="text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2.5 py-1 rounded-lg">
-                    {pw.vault?.name || '-'}
-                  </span>
-                </td>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Vault</th>
               )}
-              <td className="px-4 py-3 text-right">
-                {pw.vault?.slug && (
-                  <button
-                    onClick={() => onNavigateVault?.(pw.vault.slug)}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-400 dark:hover:bg-indigo-900/30 transition"
-                  >
-                    <ExternalLink size={12} />
-                    Go to Vault
-                  </button>
-                )}
-              </td>
+              <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Action</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+            {passwords.map((pw) => (
+              <tr key={pw.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition">
+                <td className="px-4 py-3">
+                  <span className="font-medium text-sm text-slate-900 dark:text-slate-100">{pw.name}</span>
+                  {pw.url && <p className="text-xs text-slate-400 mt-0.5 truncate max-w-[200px]">{pw.url}</p>}
+                </td>
+                <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">{pw.login || '-'}</td>
+                {columns.includes('strength') && (
+                  <td className="px-4 py-3 text-center">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300">
+                      {pw.strengthScore != null ? `Score: ${pw.strengthScore}` : 'Weak'}
+                    </span>
+                  </td>
+                )}
+                {columns.includes('age') && (
+                  <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">
+                    {pw.updatedAt ? formatTimeAgo(pw.updatedAt) : '-'}
+                  </td>
+                )}
+                {columns.includes('vault') && (
+                  <td className="px-4 py-3">
+                    <span className="text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2.5 py-1 rounded-lg">
+                      {pw.vault?.name || '-'}
+                    </span>
+                  </td>
+                )}
+                <td className="px-4 py-3 text-right">
+                  {pw.vault?.slug && (
+                    <button
+                      onClick={() => onNavigateVault?.(pw.vault.slug)}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-400 dark:hover:bg-indigo-900/30 transition"
+                    >
+                      <ExternalLink size={12} />
+                      Go to Vault
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

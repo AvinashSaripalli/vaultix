@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { Navigate } from 'react-router-dom';
 import {
-  Building2, Users, ChevronDown, ChevronUp, Search, X,
+  Building2, Users, ChevronDown, ChevronUp, Search, X, Network, List,
 } from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout';
 import api from '../../services/api';
@@ -101,6 +101,102 @@ function DeptNode({ node, selectedId, collapsed, toggleCollapsed, onSelect }) {
   );
 }
 
+function DeptListItem({ node, selectedId, collapsed, toggleCollapsed, onSelect, depth = 0 }) {
+  const hasChildren = node.children && node.children.length > 0;
+  const isCollapsed = collapsed.has(node.id);
+  const isSelected = selectedId === node.id;
+  const memberCount = node.members?.length || 0;
+
+  return (
+    <div className="space-y-2">
+      <div
+        className={`flex items-center justify-between gap-3 p-3.5 sm:p-4 rounded-2xl border transition-all ${
+          depth > 0 ? 'ml-3 sm:ml-6 border-l-4 border-l-indigo-400 dark:border-l-indigo-500' : ''
+        } ${
+          isSelected
+            ? 'border-indigo-500 ring-2 ring-indigo-500/15 bg-indigo-50/40 dark:bg-indigo-950/20 shadow-xs'
+            : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 hover:border-slate-300 dark:hover:border-slate-600'
+        }`}
+      >
+        <button
+          type="button"
+          onClick={() => onSelect(node.id)}
+          className="flex items-center gap-3 min-w-0 flex-1 text-left"
+        >
+          <div
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+              isSelected
+                ? 'bg-indigo-600 text-white'
+                : 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-400'
+            }`}
+          >
+            <Building2 size={18} />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-bold text-sm sm:text-base text-slate-900 dark:text-slate-100 truncate">
+                {node.name}
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 px-2 py-0.5 text-[11px] font-medium">
+                <Users size={11} />
+                <span>{memberCount}</span>
+              </span>
+              {hasChildren && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 px-2 py-0.5 text-[11px] font-medium">
+                  <span>{node.children.length} sub-depts</span>
+                </span>
+              )}
+            </div>
+            {node.description && (
+              <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5 max-w-md">
+                {node.description}
+              </p>
+            )}
+          </div>
+        </button>
+
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            onClick={() => onSelect(node.id)}
+            className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-950/40 transition"
+          >
+            View
+          </button>
+
+          {hasChildren && (
+            <button
+              type="button"
+              onClick={() => toggleCollapsed(node.id)}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700"
+              title={isCollapsed ? 'Expand sub-departments' : 'Collapse sub-departments'}
+            >
+              {isCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {hasChildren && !isCollapsed && (
+        <div className="space-y-2 pt-1">
+          {node.children.map((child) => (
+            <DeptListItem
+              key={child.id}
+              node={child}
+              selectedId={selectedId}
+              collapsed={collapsed}
+              toggleCollapsed={toggleCollapsed}
+              onSelect={onSelect}
+              depth={depth + 1}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MyDepartmentsPage() {
   const { token, user } = useSelector((state) => state.auth);
 
@@ -111,6 +207,7 @@ function MyDepartmentsPage() {
   const [selectedDeptId, setSelectedDeptId] = useState(null);
   const [collapsed, setCollapsed] = useState(new Set());
   const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useState(() => (typeof window !== 'undefined' && window.innerWidth < 768 ? 'list' : 'tree'));
 
   const authHeaders = useMemo(
     () => ({ headers: { Authorization: `Bearer ${token}` } }),
@@ -205,13 +302,45 @@ function MyDepartmentsPage() {
               </p>
             </div>
 
-            <input
-              type="text"
-              placeholder="Search..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-10 w-full sm:w-48 rounded-xl border border-slate-300 bg-slate-50 px-3 text-sm outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
-            />
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto shrink-0 flex-wrap">
+              {/* View Toggle */}
+              <div className="inline-flex rounded-xl border border-slate-200 dark:border-slate-700 p-0.5 bg-slate-100/80 dark:bg-slate-750 self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('tree')}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                    viewMode === 'tree'
+                      ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-2xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                  title="Diagram tree view"
+                >
+                  <Network size={14} />
+                  <span>Tree</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('list')}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                    viewMode === 'list'
+                      ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-2xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                  title="Collapsible list view (optimized for mobile)"
+                >
+                  <List size={14} />
+                  <span>List</span>
+                </button>
+              </div>
+
+              <input
+                type="text"
+                placeholder="Search..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-10 w-full sm:w-48 rounded-xl border border-slate-300 bg-slate-50 px-3 text-sm outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
+              />
+            </div>
           </div>
         </div>
 
@@ -236,20 +365,36 @@ function MyDepartmentsPage() {
           )}
 
           {!loading && !error && visibleTree.length > 0 && (
-            <div className="org-chart overflow-x-auto pb-2 pt-2">
-              <ul className="min-w-max mx-auto">
+            viewMode === 'list' ? (
+              <div className="space-y-3">
                 {visibleTree.map((root) => (
-                  <DeptNode
+                  <DeptListItem
                     key={root.id}
                     node={root}
                     selectedId={selectedDeptId}
                     collapsed={collapsed}
                     toggleCollapsed={toggleCollapsed}
                     onSelect={openDepartment}
+                    depth={0}
                   />
                 ))}
-              </ul>
-            </div>
+              </div>
+            ) : (
+              <div className="org-chart overflow-x-auto pb-2 pt-2">
+                <ul className="min-w-max mx-auto">
+                  {visibleTree.map((root) => (
+                    <DeptNode
+                      key={root.id}
+                      node={root}
+                      selectedId={selectedDeptId}
+                      collapsed={collapsed}
+                      toggleCollapsed={toggleCollapsed}
+                      onSelect={openDepartment}
+                    />
+                  ))}
+                </ul>
+              </div>
+            )
           )}
         </div>
       </div>

@@ -180,7 +180,133 @@ function TeamManagementPage() {
 
           {!loading && !error && (
             <>
-              <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700">
+              {/* Mobile Card Layout (< md) */}
+              <div className="block md:hidden space-y-3">
+                {paginatedUsers.map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xs space-y-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold shrink-0 ${
+                            item.role === ROLES.SUPER_ADMIN
+                              ? 'bg-amber-100 text-amber-800 border border-amber-300/80 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-700/60'
+                              : item.role === ROLES.ADMIN
+                              ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'
+                              : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
+                          }`}
+                        >
+                          {item.fullName?.charAt(0)?.toUpperCase() || 'U'}
+                        </div>
+
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="font-semibold text-slate-900 truncate dark:text-slate-100 text-sm">
+                              {item.fullName}
+                            </p>
+                            {item.id === user?.id && (
+                              <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600">
+                                You
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-400 truncate dark:text-slate-500">
+                            ID: {item.id}
+                          </p>
+                        </div>
+                      </div>
+
+                      <span
+                        className={`rounded-full px-2.5 py-0.5 text-xs font-semibold shrink-0 ${
+                          item.isActive
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
+                            : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
+                        }`}
+                      >
+                        {item.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-100 dark:border-slate-700/60">
+                      <span className="truncate pr-2 font-mono">{item.email}</span>
+                      <RoleBadge role={item.role} />
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-700/60">
+                      <button
+                        type="button"
+                        onClick={() => setAccessUser(item)}
+                        title="View and manage folder access permissions"
+                        className="flex-1 rounded-xl border border-indigo-200 bg-indigo-50/70 px-3 py-2 text-xs text-indigo-700 hover:bg-indigo-100 dark:border-indigo-900/60 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-900/60 transition inline-flex items-center justify-center gap-1.5 font-medium shadow-xs"
+                      >
+                        <KeyRound size={13} className="shrink-0" />
+                        <span>Access</span>
+                      </button>
+
+                      {isSuperAdmin(item) && !isSuperAdmin(user) ? (
+                        <button
+                          type="button"
+                          disabled
+                          title="Only a Super Admin can edit a Super Admin account"
+                          className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-400 dark:border-slate-700 dark:text-slate-600 cursor-not-allowed opacity-60"
+                        >
+                          Protected
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            navigate(`/team-management/edit/${item.id}`)
+                          }
+                          className="flex-1 rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700 transition"
+                        >
+                          Edit
+                        </button>
+                      )}
+
+                      {item.id === user?.id ? (
+                        <button
+                          type="button"
+                          disabled
+                          title="You cannot delete your own account"
+                          className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-400 dark:border-slate-700 dark:text-slate-600 cursor-not-allowed opacity-60"
+                        >
+                          Delete
+                        </button>
+                      ) : isSuperAdmin(item) && !isSuperAdmin(user) ? (
+                        <button
+                          type="button"
+                          disabled
+                          title="Only a Super Admin can delete a Super Admin account"
+                          className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-400 dark:border-slate-700 dark:text-slate-600 cursor-not-allowed opacity-60"
+                        >
+                          Delete
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() =>
+                            handleDelete(item.id, item.fullName)
+                          }
+                          className="flex-1 rounded-xl border border-red-200 px-3 py-2 text-xs text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20 transition"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                {!paginatedUsers.length && (
+                  <div className="p-8 text-center text-sm text-slate-500 dark:text-slate-400 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                    No users found.
+                  </div>
+                )}
+              </div>
+
+              {/* Desktop Table View (>= md) */}
+              <div className="hidden md:block overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700">
                 <table className="w-full min-w-[620px]">
                   <thead className="bg-slate-50 dark:bg-slate-700/50">
                     <tr className="text-left text-xs sm:text-sm text-slate-500 dark:text-slate-400">

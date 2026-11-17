@@ -204,7 +204,7 @@ export default function UserAccessModal({
           onClick={(e) => e.stopPropagation()}
         >
           {/* ─── 1. Sleek Profile Header ─── */}
-          <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-850">
+          <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-850">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-3.5">
                 <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white font-bold flex items-center justify-center text-base shadow-sm shrink-0">
@@ -281,12 +281,12 @@ export default function UserAccessModal({
           </div>
 
           {/* ─── 2. Clean Tabs Navigation ─── */}
-          <div className="px-6 pt-3 pb-2 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/20">
-            <div className="flex items-center gap-2">
+          <div className="px-4 sm:px-6 pt-3 pb-2.5 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-slate-50/50 dark:bg-slate-900/20">
+            <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
               <button
                 type="button"
                 onClick={() => setActiveTab('ACCESSIBLE')}
-                className={`relative px-3.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-2 ${
+                className={`relative px-3.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-2 whitespace-nowrap ${
                   activeTab === 'ACCESSIBLE'
                     ? 'bg-indigo-600 text-white shadow-xs'
                     : 'text-slate-600 hover:bg-slate-200/60 dark:text-slate-300 dark:hover:bg-slate-800'
@@ -307,7 +307,7 @@ export default function UserAccessModal({
               <button
                 type="button"
                 onClick={() => setActiveTab('AVAILABLE')}
-                className={`relative px-3.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-2 ${
+                className={`relative px-3.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-2 whitespace-nowrap ${
                   activeTab === 'AVAILABLE'
                     ? 'bg-indigo-600 text-white shadow-xs'
                     : 'text-slate-600 hover:bg-slate-200/60 dark:text-slate-300 dark:hover:bg-slate-800'
@@ -327,7 +327,7 @@ export default function UserAccessModal({
             </div>
 
             {/* Search Input */}
-            <div className="relative w-48 sm:w-56">
+            <div className="relative w-full sm:w-56">
               <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
@@ -340,7 +340,7 @@ export default function UserAccessModal({
           </div>
 
           {/* ─── 3. Content Area ─── */}
-          <div className="flex-1 overflow-y-auto p-6 min-h-[300px]">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 min-h-[300px]">
             {error && (
               <div className="mb-4 p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-700 dark:bg-rose-950/30 dark:border-rose-900/60 dark:text-rose-300">
                 {error}
@@ -388,7 +388,7 @@ export default function UserAccessModal({
                         </div>
 
                         {/* Status Badges & Direct Controls */}
-                        <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-auto">
+                        <div className="flex items-center gap-2.5 shrink-0 self-stretch sm:self-auto justify-between sm:justify-end flex-wrap sm:flex-nowrap pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-750">
                           {/* Access Level Badge */}
                           <span
                             className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap border ${meta.badgeClass}`}
@@ -501,7 +501,7 @@ export default function UserAccessModal({
                         </div>
 
                         {/* Grant Controls */}
-                        <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                        <div className="flex items-center gap-2 shrink-0 self-stretch sm:self-auto justify-between sm:justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-750">
                           <select
                             disabled={isProcessing}
                             value={selectedLevel}
