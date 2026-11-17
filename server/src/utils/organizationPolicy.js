@@ -4,7 +4,7 @@ const DEFAULT_POLICY = {
   id: 'default',
   requireTwoFactor: false,
   maxVaultTimeoutMinutes: 30,
-  minMasterPasswordLength: 12,
+  minMasterPasswordLength: 8,
   requireMasterPasswordSpecial: true,
   clipboardTimeoutSeconds: 30,
   requireDualAdminApproval: true,

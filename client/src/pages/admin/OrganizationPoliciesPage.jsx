@@ -57,7 +57,7 @@ function OrganizationPoliciesPage() {
   // Form state
   const [requireTwoFactor, setRequireTwoFactor] = useState(false);
   const [maxVaultTimeoutMinutes, setMaxVaultTimeoutMinutes] = useState(30);
-  const [minMasterPasswordLength, setMinMasterPasswordLength] = useState(12);
+  const [minMasterPasswordLength, setMinMasterPasswordLength] = useState(8);
   const [requireMasterPasswordSpecial, setRequireMasterPasswordSpecial] = useState(true);
   const [clipboardTimeoutSeconds, setClipboardTimeoutSeconds] = useState(30);
   const [requireDualAdminApproval, setRequireDualAdminApproval] = useState(true);
