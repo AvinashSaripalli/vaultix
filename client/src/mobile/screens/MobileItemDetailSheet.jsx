@@ -19,6 +19,7 @@ import {
   ChevronDown,
   ChevronUp,
   Lock,
+  Building2,
 } from 'lucide-react';
 import ItemServiceIcon from '../../components/common/ItemServiceIcon';
 import { hapticMedium, hapticLight } from '../../utils/haptics';
@@ -35,6 +36,7 @@ export default function MobileItemDetailSheet({
   onEdit,
   onDelete,
   onShare,
+  onTransferToCompany,
   isItemRecentlyVerified,
   onRequireVerify,
 }) {
@@ -137,6 +139,20 @@ export default function MobileItemDetailSheet({
                 title="Share item"
               >
                 <Share2 size={15} />
+              </button>
+            )}
+
+            {onTransferToCompany && (
+              <button
+                type="button"
+                onClick={() => {
+                  hapticLight();
+                  onTransferToCompany(item);
+                }}
+                className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center hover:bg-indigo-100 dark:hover:bg-indigo-900/40 active:scale-95 transition"
+                title="Move to Company Vault"
+              >
+                <Building2 size={15} />
               </button>
             )}
 

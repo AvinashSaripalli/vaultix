@@ -1,17 +1,21 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
-import { Users, UserPlus, Search, X, RefreshCw, Mail, Shield, Check, AlertTriangle } from 'lucide-react';
+import { Users, UserPlus, Search, X, RefreshCw, Mail, Shield, Check, AlertTriangle, Archive, Trash2 } from 'lucide-react';
 import api from '../../services/api';
 import { hapticMedium, hapticSuccess, hapticLight } from '../../utils/haptics';
 
 export default function MobileTeamSheet({ isOpen, onClose }) {
   const { user: currentUser, token } = useSelector((state) => state.auth);
 
-  const [activeTab, setActiveTab] = useState('members'); // 'members' | 'invite'
+  const [activeTab, setActiveTab] = useState('members'); // 'members' | 'invite' | 'archived'
   const [users, setUsers] = useState([]);
+  const [archivedVaults, setArchivedVaults] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadingArchived, setLoadingArchived] = useState(false);
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
+
+  const isAdmin = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN';
 
   // Invite Form
   const [inviteEmail, setInviteEmail] = useState('');
@@ -34,14 +38,39 @@ export default function MobileTeamSheet({ isOpen, onClose }) {
     }
   };
 
+  const fetchArchived = async () => {
+    if (!isAdmin) return;
+    try {
+      setLoadingArchived(true);
+      const res = await api.get('/vaults/archived');
+      setArchivedVaults(res.data || []);
+    } catch {
+      //
+    } finally {
+      setLoadingArchived(false);
+    }
+  };
+
   useEffect(() => {
     if (isOpen) {
       fetchUsers();
+      fetchArchived();
       setInviteEmail('');
       setInviteSuccess('');
       setError('');
     }
   }, [isOpen]);
+
+  const handlePurgeArchived = async (vaultId) => {
+    if (!window.confirm('Permanently purge this archived vault?')) return;
+    try {
+      await api.delete(`/vaults/archived/${vaultId}`);
+      setArchivedVaults((prev) => prev.filter((v) => v.id !== vaultId));
+      hapticSuccess();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete archive');
+    }
+  };
 
   const filteredUsers = useMemo(() => {
     if (!search.trim()) return users;
@@ -111,7 +140,7 @@ export default function MobileTeamSheet({ isOpen, onClose }) {
 
         {/* Tab Switcher */}
         <div className="p-3 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 shrink-0">
-          <div className="grid grid-cols-2 gap-1.5 p-1 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+          <div className={`grid ${isAdmin ? 'grid-cols-3' : 'grid-cols-2'} gap-1.5 p-1 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800`}>
             <button
               type="button"
               onClick={() => {
@@ -141,8 +170,26 @@ export default function MobileTeamSheet({ isOpen, onClose }) {
               }`}
             >
               <UserPlus size={13} />
-              <span>Invite User</span>
+              <span>Invite</span>
             </button>
+
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => {
+                  hapticLight();
+                  setActiveTab('archived');
+                }}
+                className={`py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                  activeTab === 'archived'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400'
+                }`}
+              >
+                <Archive size={13} />
+                <span>Archives ({archivedVaults.length})</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -186,7 +233,7 @@ export default function MobileTeamSheet({ isOpen, onClose }) {
                       className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 font-black text-xs flex items-center justify-center shrink-0">
+                        <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:indigo-900/40 text-indigo-600 dark:text-indigo-400 font-black text-xs flex items-center justify-center shrink-0">
                           {u.fullName?.charAt(0)?.toUpperCase() || 'U'}
                         </div>
                         <div className="min-w-0">
@@ -206,6 +253,77 @@ export default function MobileTeamSheet({ isOpen, onClose }) {
                 </div>
               )}
             </>
+          ) : activeTab === 'archived' ? (
+            /* ARCHIVED VAULTS LIST */
+            <div className="space-y-3">
+              <div className="p-2.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/40 text-[11px] text-indigo-700 dark:text-indigo-300">
+                These personal vaults belonged to deleted members. Their data is secured by Super Admin escrow and separated from active vaults.
+              </div>
+
+              {loadingArchived ? (
+                <div className="py-12 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
+                  <RefreshCw size={16} className="animate-spin text-indigo-500" />
+                  <span>Loading archived vaults...</span>
+                </div>
+              ) : archivedVaults.length === 0 ? (
+                <div className="py-12 px-4 text-center">
+                  <div className="w-12 h-12 mx-auto mb-3 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                    <Archive size={24} />
+                  </div>
+                  <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">No Archived Vaults</h4>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 max-w-xs mx-auto">
+                    When employees or users are deleted, their personal vaults are archived here for administrator recovery without cluttering the vaults list.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {archivedVaults.map((vault) => (
+                    <div
+                      key={vault.id}
+                      className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2.5"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                            <Archive size={16} />
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                              {vault.name}
+                            </h4>
+                            <p className="text-[10px] text-slate-400">
+                              {vault.originalUserName ? `Former user: ${vault.originalUserName}` : 'Former employee'} &middot; {vault.itemCount || 0} {vault.itemCount === 1 ? 'item' : 'items'}
+                            </p>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handlePurgeArchived(vault.id)}
+                          className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 active:scale-95 transition shrink-0"
+                          title="Permanently Delete Archive"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+
+                      {vault.folders && vault.folders.length > 0 && (
+                        <div className="flex flex-wrap gap-1 pt-0.5">
+                          {vault.folders.map((f) => (
+                            <span
+                              key={f.id}
+                              className="px-2 py-0.5 rounded-md text-[9px] font-semibold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300"
+                            >
+                              {f.name} ({f.count})
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           ) : (
             /* INVITE FORM */
             <form onSubmit={handleSendInvite} className="space-y-3.5 pt-1">

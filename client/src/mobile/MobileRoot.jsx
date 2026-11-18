@@ -26,6 +26,7 @@ import MobileVerifyMasterPasswordSheet from './screens/MobileVerifyMasterPasswor
 import MobileGeneratorScreen from './screens/MobileGeneratorScreen';
 import MobileHealthScreen from './screens/MobileHealthScreen';
 import MobileSettingsScreen from './screens/MobileSettingsScreen';
+import TransferToCompanyModal from '../components/myVault/TransferToCompanyModal';
 import {
   logoutUser,
   loginUser,
@@ -153,6 +154,8 @@ export default function MobileRoot() {
   const [sharingItem, setSharingItem] = useState(null);
   const [isSharedWithMeOpen, setIsSharedWithMeOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [transferModalOpen, setTransferModalOpen] = useState(false);
+  const [transferItem, setTransferItem] = useState(null);
 
   // Security & Enterprise Sheets
   const [isTwoFactorOpen, setIsTwoFactorOpen] = useState(false);
@@ -623,6 +626,14 @@ export default function MobileRoot() {
           }}
           onEdit={(item, pwd, nt, flds) => handleOpenEditItem(item, pwd, nt, flds)}
           onShare={(item) => handleOpenShareItem(item)}
+          onTransferToCompany={
+            (currentVault?.type === 'PERSONAL' || selectedItem?.vaultId === myVaultObj?.id)
+              ? (item) => {
+                  setTransferItem(item);
+                  setTransferModalOpen(true);
+                }
+              : null
+          }
           onDelete={async (item) => {
             if (window.confirm(`Move "${item.name}" to Trash?`)) {
               if (currentVault?.type === 'PERSONAL' || item.vaultId === myVaultObj?.id) {
@@ -826,6 +837,24 @@ export default function MobileRoot() {
           setPendingSensitiveAction(null);
         }}
         onVerified={handleSensitiveVerifySuccess}
+      />
+
+      {/* Transfer Personal Item to Company Vault Modal */}
+      <TransferToCompanyModal
+        open={transferModalOpen}
+        item={transferItem}
+        onClose={() => {
+          setTransferModalOpen(false);
+          setTransferItem(null);
+        }}
+        onTransferred={(transferredItem) => {
+          setTransferModalOpen(false);
+          setTransferItem(null);
+          setSelectedItem(null);
+          dispatch(fetchMyVault());
+          dispatch(fetchVaults());
+          showToast(`Transferred "${transferredItem?.name || 'Item'}" to Company Vault`);
+        }}
       />
     </MobileAppShell>
   );

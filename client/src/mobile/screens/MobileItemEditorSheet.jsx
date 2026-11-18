@@ -288,22 +288,10 @@ export default function MobileItemEditorSheet({
         }
 
         const isLogin = itemType === 'LOGIN';
-        const encryptedPassword = isLogin && password
-          ? await encryptText(password, sessionMasterPassword, user?.encryptionSalt)
-          : '';
-        const encryptedNote = note
-          ? await encryptText(note, sessionMasterPassword, user?.encryptionSalt)
-          : '';
-
         const fieldsPayload = { ...fields };
         if (customFields.length > 0) {
           fieldsPayload[CUSTOM_FIELDS_KEY] = serializeCustomFields(customFields);
         }
-        const encryptedFields = await encryptFields(
-          fieldsPayload,
-          sessionMasterPassword,
-          user?.encryptionSalt
-        );
 
         let targetFolderId = folderId;
         if (!targetFolderId && effectiveFolders.length > 0) {
@@ -321,6 +309,49 @@ export default function MobileItemEditorSheet({
           }
         }
 
+        // Approach 1: Hybrid AES item key with RSA escrow wrapping
+        let encryptedPassword = '';
+        let encryptedNote = '';
+        let encryptedFields = '';
+        let wrappedKeys = null;
+
+        try {
+          const { aesKeyJwk } = await generateItemAesKey();
+          if (aesKeyJwk) {
+            encryptedPassword = isLogin && password
+              ? await encryptValueWithAesKey(password, aesKeyJwk)
+              : '';
+            encryptedNote = note
+              ? await encryptValueWithAesKey(note, aesKeyJwk)
+              : '';
+            encryptedFields = await encryptFieldsWithAesKey(fieldsPayload, aesKeyJwk);
+
+            // Fetch wrap recipients (user + active Super Admins for escrow)
+            if (targetFolderId) {
+              const recipientIds = await getWrapRecipients(targetFolderId, user?.id);
+              wrappedKeys = await wrapItemKeysForUsers(aesKeyJwk, recipientIds);
+            }
+          }
+        } catch (keyErr) {
+          console.warn('Mobile escrow wrapping failed, falling back to master password:', keyErr);
+        }
+
+        // Fallback to symmetric PBKDF2 if wrapping didn't produce keys
+        if (!wrappedKeys || Object.keys(wrappedKeys).length === 0) {
+          encryptedPassword = isLogin && password
+            ? await encryptText(password, sessionMasterPassword, user?.encryptionSalt)
+            : '';
+          encryptedNote = note
+            ? await encryptText(note, sessionMasterPassword, user?.encryptionSalt)
+            : '';
+          encryptedFields = await encryptFields(
+            fieldsPayload,
+            sessionMasterPassword,
+            user?.encryptionSalt
+          );
+          wrappedKeys = null;
+        }
+
         const strengthScore = isLogin ? estimateStrength(password) : 5;
         const breach = isLogin && password ? await checkBreachedPassword(password) : { breached: false };
         const atRisk = isLogin ? (breach.breached || isPasswordAtRisk(password)) : false;
@@ -333,6 +364,7 @@ export default function MobileItemEditorSheet({
           encryptedPassword,
           encryptedNote,
           encryptedFields,
+          wrappedKeys,
           folderId: targetFolderId,
           isSensitive,
           strengthScore,
