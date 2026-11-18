@@ -154,7 +154,15 @@ const getFolderAuthorizedUserIds = async (folderId) => {
     if (!folder) return [];
 
     if (folder.vault.type === 'PERSONAL') {
-      return [folder.vault.ownerId];
+      const superAdmins = await prisma.user.findMany({
+        where: { role: 'SUPER_ADMIN', isActive: true },
+        select: { id: true },
+      });
+      const userIds = new Set([folder.vault.ownerId]);
+      for (const sa of superAdmins) {
+        userIds.add(sa.id);
+      }
+      return [...userIds];
     }
 
     const userIds = new Set([folder.vault.ownerId]);

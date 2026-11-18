@@ -1,6 +1,18 @@
 const prisma = require('../config/prisma');
 const generateId = require('../utils/generateId');
 const { VALID_ITEM_TYPES, validateItemFields, validateLoginForType } = require('../utils/itemFieldSchemas');
+const { getFolderAccess } = require('../utils/permissions');
+
+const toClientPassword = (pw, userId) => {
+  if (!pw) return pw;
+  const allWrappedKeys = pw.wrappedKeys || {};
+  const { wrappedKeys, ...rest } = pw;
+  return {
+    ...rest,
+    myWrappedKey: allWrappedKeys[userId] || null,
+    wrappedUserIds: Object.keys(allWrappedKeys),
+  };
+};
 
 const makeSlug = (name, userId) =>
   `${name}-${userId}`
@@ -72,6 +84,10 @@ const getOrCreateMyVault = async (req, res) => {
 
         return newVault;
       });
+    }
+
+    if (vault && vault.passwords) {
+      vault.passwords = vault.passwords.map((p) => toClientPassword(p, req.user.id));
     }
 
     res.json(vault);
@@ -269,6 +285,7 @@ const createMyVaultPassword = async (req, res) => {
           encryptedPassword: encryptedPassword || '',
           encryptedFields,
           encryptedNote,
+          wrappedKeys: req.body.wrappedKeys || null,
           url,
           colorTag,
           vaultId: vault.id,
@@ -326,7 +343,7 @@ const createMyVaultPassword = async (req, res) => {
       return entry;
     });
 
-    res.status(201).json(passwordEntry);
+    res.status(201).json(toClientPassword(passwordEntry, req.user.id));
   } catch (error) {
     console.error('Create my vault password error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -370,7 +387,7 @@ const getMyVaultPasswords = async (req, res) => {
       },
     });
 
-    res.json(passwords);
+    res.json(passwords.map((p) => toClientPassword(p, req.user.id)));
   } catch (error) {
     console.error('Get my vault passwords error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -821,6 +838,7 @@ const updateMyVaultPassword = async (req, res) => {
           encryptedFields:
             encryptedFields !== undefined ? encryptedFields || null : undefined,
           encryptedNote,
+          wrappedKeys: req.body.wrappedKeys !== undefined ? req.body.wrappedKeys : undefined,
           url,
           colorTag,
           folderId,
@@ -913,7 +931,7 @@ const updateMyVaultPassword = async (req, res) => {
       return updated;
     });
 
-    res.json(updatedPassword);
+    res.json(toClientPassword(updatedPassword, req.user.id));
   } catch (error) {
     console.error('Update my vault password error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -1204,6 +1222,100 @@ const getPasswordShares = async (req, res) => {
   }
 };
 
+const transferPasswordToCompanyVault = async (req, res) => {
+  try {
+    const { passwordId } = req.params;
+    const {
+      targetFolderId,
+      encryptedPassword,
+      encryptedFields,
+      encryptedNote,
+      wrappedKeys,
+    } = req.body;
+
+    if (!targetFolderId) {
+      return res.status(400).json({ message: 'Target folder ID is required' });
+    }
+
+    const personalVault = await prisma.vault.findFirst({
+      where: { ownerId: req.user.id, type: 'PERSONAL' },
+    });
+
+    if (!personalVault) {
+      return res.status(404).json({ message: 'Personal vault not found' });
+    }
+
+    const password = await prisma.passwordEntry.findFirst({
+      where: { id: passwordId, vaultId: personalVault.id, deletedAt: null },
+    });
+
+    if (!password) {
+      return res.status(404).json({ message: 'Password not found in personal vault' });
+    }
+
+    const targetFolder = await prisma.folder.findFirst({
+      where: { id: targetFolderId, deletedAt: null },
+      include: { vault: true },
+    });
+
+    if (!targetFolder) {
+      return res.status(404).json({ message: 'Target folder not found' });
+    }
+
+    if (targetFolder.vault.type === 'PERSONAL') {
+      return res.status(400).json({ message: 'Cannot transfer to another personal vault' });
+    }
+
+    const access = await getFolderAccess(targetFolder.id, req.user.id);
+    if (!access || !['READ_WRITE', 'FULL_ACCESS', 'ADMINISTRATOR'].includes(access)) {
+      return res.status(403).json({ message: 'You do not have write access to the target company folder' });
+    }
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const entry = await tx.passwordEntry.update({
+        where: { id: passwordId },
+        data: {
+          vaultId: targetFolder.vaultId,
+          folderId: targetFolder.id,
+          encryptedPassword: encryptedPassword !== undefined ? encryptedPassword : password.encryptedPassword,
+          encryptedFields: encryptedFields !== undefined ? encryptedFields : password.encryptedFields,
+          encryptedNote: encryptedNote !== undefined ? encryptedNote : password.encryptedNote,
+          wrappedKeys: wrappedKeys || undefined,
+          lastUpdatedAt: new Date(),
+        },
+        include: {
+          folder: true,
+          tags: { include: { tag: true } },
+        },
+      });
+
+      await tx.activityLog.create({
+        data: {
+          id: await generateId('activityLog'),
+          userId: req.user.id,
+          action: 'MOVE_PASSWORD',
+          targetType: 'PasswordEntry',
+          targetId: entry.id,
+          metadata: {
+            name: entry.name,
+            fromVaultId: personalVault.id,
+            toVaultId: targetFolder.vaultId,
+            toFolderId: targetFolder.id,
+            transferToCompany: true,
+          },
+        },
+      });
+
+      return entry;
+    });
+
+    res.json(toClientPassword(updated, req.user.id));
+  } catch (error) {
+    console.error('Transfer password to company vault error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   getOrCreateMyVault,
   createMyVaultFolder,
@@ -1221,4 +1333,5 @@ module.exports = {
   purgeMyVaultPassword,
   getMyVaultTrash,
   getPasswordShares,
+  transferPasswordToCompanyVault,
 };

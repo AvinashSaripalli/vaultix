@@ -18,6 +18,7 @@ const {
   purgeMyVaultPassword,
   getMyVaultTrash,
   getPasswordShares,
+  transferPasswordToCompanyVault,
 } = require('../controllers/personalVaultController');
 
 const router = express.Router();
@@ -36,6 +37,7 @@ router.delete('/folders/:folderId/purge', purgeMyVaultFolder);
 
 router.get('/passwords', getMyVaultPasswords);
 router.post('/passwords', createMyVaultPassword);
+router.post('/passwords/:passwordId/transfer-to-company', transferPasswordToCompanyVault);
 router.put('/passwords/:passwordId', updateMyVaultPassword);
 router.delete('/passwords/:passwordId', deleteMyVaultPassword);
 router.post('/passwords/:passwordId/restore', restoreMyVaultPassword);

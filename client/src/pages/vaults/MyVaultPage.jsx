@@ -16,6 +16,7 @@ import EditMyVaultPasswordModal from '../../components/myVault/EditMyVaultPasswo
 import SharePasswordModal from '../../components/myVault/SharePasswordModal';
 import ManagePasswordSharesModal from '../../components/myVault/ManagePasswordSharesModal';
 import ViewMyVaultPasswordModal from '../../components/myVault/ViewMyVaultPasswordModal';
+import TransferToCompanyModal from '../../components/myVault/TransferToCompanyModal';
 import VerifyMasterPasswordModal from '../../components/security/VerifyMasterPasswordModal';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import FolderHistoryPanel from '../../components/folder/FolderHistoryPanel';
@@ -102,6 +103,8 @@ function MyVaultPage() {
   const [selectedPassword, setSelectedPassword] = useState(null);
   const [selectedFolderForEdit, setSelectedFolderForEdit] = useState(null);
   const [selectedPasswordForEdit, setSelectedPasswordForEdit] = useState(null);
+  const [transferModalOpen, setTransferModalOpen] = useState(false);
+  const [selectedPasswordForTransfer, setSelectedPasswordForTransfer] = useState(null);
   const [viewPasswordOpen, setViewPasswordOpen] = useState(false);
   const [selectedPasswordForView, setSelectedPasswordForView] = useState(null);
   const [selectedPasswordId, setSelectedPasswordId] = useState(null);
@@ -280,6 +283,24 @@ function MyVaultPage() {
     }
 
     setConfirmDelete({ open: false, type: '', item: null });
+  };
+
+  const handleOpenTransfer = (password) => {
+    setSelectedPasswordForTransfer(password);
+    setTransferModalOpen(true);
+  };
+
+  const handlePasswordTransferred = (transferredItem) => {
+    dispatch(fetchMyVault());
+    if (transferredItem?.id) {
+      notifyVaultMutated({
+        id: transferredItem.id,
+        folderId: transferredItem.folderId,
+        action: 'MOVE',
+        vaultType: 'personal',
+      });
+    }
+    setSelectedPasswordId(null);
   };
 
   const handleOpenShare = (password) => {
@@ -777,6 +798,7 @@ function MyVaultPage() {
               onEditPassword={handleEditPassword}
               onDeletePassword={handleDeletePassword}
               onManageShares={handleManageShares}
+              onTransferToCompany={handleOpenTransfer}
               onAddChild={openAddPasswordModal}
             />
           )}
@@ -849,6 +871,16 @@ function MyVaultPage() {
             setViewPasswordOpen(false);
             setSelectedPasswordForView(null);
           }}
+        />
+
+        <TransferToCompanyModal
+          open={transferModalOpen}
+          item={selectedPasswordForTransfer}
+          onClose={() => {
+            setTransferModalOpen(false);
+            setSelectedPasswordForTransfer(null);
+          }}
+          onTransferred={handlePasswordTransferred}
         />
 
         <ConfirmModal

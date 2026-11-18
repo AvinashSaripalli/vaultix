@@ -17,6 +17,7 @@ import {
   RefreshCw,
   KeyRound,
   Pencil,
+  Building2,
 } from 'lucide-react';
 import api from '../../services/api';
 import {
@@ -24,6 +25,9 @@ import {
   decryptFields,
   generateTOTP,
   isEncryptedFormat,
+  unwrapItemKey,
+  decryptTextWithAesKey,
+  decryptFieldsWithAesKey,
 } from '../../utils/crypto';
 import { secureCopyText } from '../../utils/clipboard';
 import { showToast } from '../../utils/toast';
@@ -54,11 +58,13 @@ function PersonalAccountCard({
   onEdit,
   onDelete,
   onManageShares,
+  onTransferToCompany,
   user,
   sessionMasterPassword,
   verifiedAtMap,
   onRequestVerify,
 }) {
+  const { sessionRsaPrivateKey } = useSelector((state) => state.auth);
   const [decryptedPassword, setDecryptedPassword] = useState(null);
   const [decryptedFields, setDecryptedFields] = useState(null);
   const [decryptedNote, setDecryptedNote] = useState(null);
@@ -75,6 +81,28 @@ function PersonalAccountCard({
     async (masterPassword) => {
       const result = { password: '', fields: {}, note: null };
 
+      // 1. Try unwrapping via RSA private key if myWrappedKey is present
+      if (item.myWrappedKey && sessionRsaPrivateKey) {
+        try {
+          const aesKeyJwk = await unwrapItemKey(item.myWrappedKey, sessionRsaPrivateKey);
+          if (aesKeyJwk) {
+            result.password = item.encryptedPassword
+              ? await decryptTextWithAesKey(item.encryptedPassword, aesKeyJwk)
+              : '';
+            result.note = item.encryptedNote
+              ? await decryptTextWithAesKey(item.encryptedNote, aesKeyJwk)
+              : null;
+            result.fields = item.encryptedFields
+              ? (await decryptFieldsWithAesKey(item.encryptedFields, aesKeyJwk)) || {}
+              : {};
+            return result;
+          }
+        } catch (wrapErr) {
+          console.warn('Wrapped key unwrap failed in card, falling back to master password:', wrapErr);
+        }
+      }
+
+      // 2. Fallback to master password
       if (item.encryptedPassword && isEncryptedFormat(item.encryptedPassword)) {
         result.password = await decryptText(item.encryptedPassword, masterPassword, salt);
       } else {
@@ -93,7 +121,7 @@ function PersonalAccountCard({
 
       return result;
     },
-    [item, salt]
+    [item, salt, sessionRsaPrivateKey]
   );
 
   useEffect(() => {
@@ -572,6 +600,16 @@ function PersonalAccountCard({
           >
             <Users size={16} />
           </button>
+          {onTransferToCompany && (
+            <button
+              onClick={() => onTransferToCompany(item)}
+              className="w-9 h-9 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-indigo-900/30 dark:hover:text-indigo-400 transition"
+              title="Move to Company Vault"
+              aria-label="Move to Company Vault"
+            >
+              <Building2 size={16} />
+            </button>
+          )}
           <button
             onClick={() => onEdit(item)}
             className="w-9 h-9 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50 text-slate-600 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 transition"
@@ -717,6 +755,7 @@ function ItemDetailsPanel({
   onEdit,
   onDelete,
   onManageShares,
+  onTransferToCompany,
   user,
   sessionMasterPassword,
 }) {
@@ -889,6 +928,7 @@ function ItemDetailsPanel({
             onEdit={onEdit}
             onDelete={onDelete}
             onManageShares={onManageShares}
+            onTransferToCompany={onTransferToCompany}
             user={user}
             sessionMasterPassword={sessionMasterPassword}
             verifiedAtMap={verifiedAtMap}

@@ -453,6 +453,60 @@ const deleteUser = async (req, res) => {
     }
 
     await prisma.$transaction(async (tx) => {
+      // 1. Personal vaults owned by this user: Archive them to the Super Admin!
+      const personalVaults = await tx.vault.findMany({
+        where: { ownerId: userId, type: 'PERSONAL' },
+        include: {
+          passwords: {
+            where: { deletedAt: null },
+            select: { id: true },
+          },
+        },
+      });
+
+      for (const pVault of personalVaults) {
+        if (pVault.passwords && pVault.passwords.length > 0) {
+          // Reassign vault ownership to the acting Super Admin, rename to Archived Vault, and convert to COMPANY type
+          await tx.vault.update({
+            where: { id: pVault.id },
+            data: {
+              name: `Archived Vault - ${targetUser.fullName || targetUser.email}`,
+              type: 'COMPANY',
+              ownerId: req.user.id,
+            },
+          });
+
+          // Ensure Super Admin has administrator permission on this vault
+          await tx.vaultPermission.upsert({
+            where: {
+              vaultId_userId: {
+                vaultId: pVault.id,
+                userId: req.user.id,
+              },
+            },
+            update: { accessLevel: 'ADMINISTRATOR' },
+            create: {
+              id: await generateId('vaultPermission'),
+              vaultId: pVault.id,
+              userId: req.user.id,
+              accessLevel: 'ADMINISTRATOR',
+            },
+          });
+
+          // Reassign createdById on all passwords in this vault to the Super Admin
+          await tx.passwordEntry.updateMany({
+            where: { vaultId: pVault.id },
+            data: { createdById: req.user.id },
+          });
+        } else {
+          // Empty personal vault can be safely deleted
+          await tx.vault.delete({
+            where: { id: pVault.id },
+          });
+        }
+      }
+
+      // 2. Reassign any remaining created passwords in other vaults to their respective vault owners
       const createdPasswords = await tx.passwordEntry.findMany({
         where: { createdById: userId },
         select: {
@@ -461,30 +515,14 @@ const deleteUser = async (req, res) => {
         },
       });
 
-      const toReassign = [];
-      const ownVaultPasswordIds = [];
-
       for (const entry of createdPasswords) {
-        if (entry.vault.ownerId === userId) {
-          ownVaultPasswordIds.push(entry.id);
-        } else {
-          toReassign.push(entry);
-        }
-      }
-
-      for (const entry of toReassign) {
         await tx.passwordEntry.update({
           where: { id: entry.id },
           data: { createdById: entry.vault.ownerId },
         });
       }
 
-      if (ownVaultPasswordIds.length > 0) {
-        await tx.passwordEntry.deleteMany({
-          where: { id: { in: ownVaultPasswordIds } },
-        });
-      }
-
+      // 3. Delete user
       await tx.user.delete({
         where: { id: userId },
       });

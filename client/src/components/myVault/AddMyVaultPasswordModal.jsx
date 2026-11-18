@@ -3,7 +3,14 @@ import { KeyRound, Lock, X, Eye, EyeOff, FolderDown, Sparkles } from 'lucide-rea
 import { useSelector } from 'react-redux';
 import ModalPortal, { ModalBackdrop } from '../common/ModalPortal';
 import ItemFormFields from '../common/ItemFormFields';
-import { encryptText, encryptFields } from '../../utils/crypto';
+import {
+  encryptText,
+  encryptFields,
+  generateItemAesKey,
+  encryptValueWithAesKey,
+  encryptFieldsWithAesKey,
+} from '../../utils/crypto';
+import { getWrapRecipients, wrapItemKeysForUsers } from '../../utils/keyWrapping';
 import { generatePassword } from '../../utils/passwordGenerator';
 import { estimateStrength, checkBreachedPassword } from '../../utils/breachCheck';
 import { isPasswordAtRisk } from '../../utils/passwordRisk';
@@ -167,25 +174,51 @@ function AddMyVaultPasswordModal({
       setFormError('');
 
       const isLogin = formData.type === 'LOGIN';
-
-      const encryptedPassword = isLogin
-        ? await encryptText(formData.encryptedPassword, sessionMasterPassword, user?.encryptionSalt)
-        : '';
-
-      const encryptedNote = formData.encryptedNote
-        ? await encryptText(formData.encryptedNote, sessionMasterPassword, user?.encryptionSalt)
-        : '';
-
       const fieldsPayload = { ...formData.fields };
       if (formData.customFields?.length) {
         fieldsPayload[CUSTOM_FIELDS_KEY] = serializeCustomFields(formData.customFields);
       }
 
-      const encryptedFields = await encryptFields(
-        fieldsPayload,
-        sessionMasterPassword,
-        user?.encryptionSalt
-      );
+      // Approach 1: Hybrid AES item key with RSA escrow wrapping
+      let encryptedPassword = '';
+      let encryptedNote = '';
+      let encryptedFields = '';
+      let wrappedKeys = null;
+
+      try {
+        const { aesKeyJwk } = await generateItemAesKey();
+        if (aesKeyJwk) {
+          encryptedPassword = isLogin && formData.encryptedPassword
+            ? await encryptValueWithAesKey(formData.encryptedPassword, aesKeyJwk)
+            : '';
+          encryptedNote = formData.encryptedNote
+            ? await encryptValueWithAesKey(formData.encryptedNote, aesKeyJwk)
+            : '';
+          encryptedFields = await encryptFieldsWithAesKey(fieldsPayload, aesKeyJwk);
+
+          // Get recipients: returns user.id + all active Super Admins for escrow
+          const recipientIds = await getWrapRecipients(formData.folderId, user?.id);
+          wrappedKeys = await wrapItemKeysForUsers(aesKeyJwk, recipientIds);
+        }
+      } catch (keyErr) {
+        console.warn('Escrow key wrapping failed, falling back to master password:', keyErr);
+      }
+
+      // Fallback to symmetric PBKDF2 if wrapping didn't produce keys
+      if (!wrappedKeys || Object.keys(wrappedKeys).length === 0) {
+        encryptedPassword = isLogin
+          ? await encryptText(formData.encryptedPassword, sessionMasterPassword, user?.encryptionSalt)
+          : '';
+        encryptedNote = formData.encryptedNote
+          ? await encryptText(formData.encryptedNote, sessionMasterPassword, user?.encryptionSalt)
+          : '';
+        encryptedFields = await encryptFields(
+          fieldsPayload,
+          sessionMasterPassword,
+          user?.encryptionSalt
+        );
+        wrappedKeys = null;
+      }
 
       const strengthScore = isLogin ? estimateStrength(formData.encryptedPassword) : 0;
 
@@ -204,6 +237,7 @@ function AddMyVaultPasswordModal({
         encryptedPassword,
         encryptedNote,
         encryptedFields,
+        wrappedKeys,
         tags: formData.tags,
         isSensitive: formData.isSensitive,
         strengthScore,

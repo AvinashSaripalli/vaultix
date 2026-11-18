@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react';
 import { X, Eye, EyeOff, Copy, ExternalLink, ShieldAlert, KeyRound, Lock } from 'lucide-react';
 import { useSelector } from 'react-redux';
-import { decryptText, decryptFields, isEncryptedFormat } from '../../utils/crypto';
+import {
+  decryptText,
+  decryptFields,
+  isEncryptedFormat,
+  unwrapItemKey,
+  decryptTextWithAesKey,
+  decryptFieldsWithAesKey,
+} from '../../utils/crypto';
 import { secureCopyText } from '../../utils/clipboard';
 import VerifyMasterPasswordModal from '../security/VerifyMasterPasswordModal';
 import ModalPortal, { ModalBackdrop } from '../common/ModalPortal';
@@ -18,7 +25,7 @@ import { formatCardNumber } from '../../utils/cardValidation';
 import TotpField from './TotpField';
 
 function ViewMyVaultPasswordModal({ open, password, onClose }) {
-  const { user, sessionMasterPassword } = useSelector((state) => state.auth);
+  const { user, sessionMasterPassword, sessionRsaPrivateKey } = useSelector((state) => state.auth);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -67,35 +74,59 @@ function ViewMyVaultPasswordModal({ open, password, onClose }) {
       (async () => {
         try {
           let plainPassword = '';
-          if (password.encryptedPassword) {
-            plainPassword = isEncryptedFormat(password.encryptedPassword)
-              ? await decryptText(
-                  password.encryptedPassword,
-                  sessionMasterPassword,
-                  user?.encryptionSalt
-                )
-              : password.encryptedPassword;
-          }
-
           let noteText = null;
-          if (password.encryptedNote) {
-            noteText = isEncryptedFormat(password.encryptedNote)
-              ? await decryptText(
-                  password.encryptedNote,
-                  sessionMasterPassword,
-                  user?.encryptionSalt
-                )
-              : password.encryptedNote;
+          let plainFields = {};
+
+          // 1. Try unwrapping via RSA private key if myWrappedKey is present
+          if (password.myWrappedKey && sessionRsaPrivateKey) {
+            try {
+              const aesKeyJwk = await unwrapItemKey(password.myWrappedKey, sessionRsaPrivateKey);
+              if (aesKeyJwk) {
+                plainPassword = password.encryptedPassword
+                  ? await decryptTextWithAesKey(password.encryptedPassword, aesKeyJwk)
+                  : '';
+                noteText = password.encryptedNote
+                  ? await decryptTextWithAesKey(password.encryptedNote, aesKeyJwk)
+                  : null;
+                plainFields = password.encryptedFields
+                  ? (await decryptFieldsWithAesKey(password.encryptedFields, aesKeyJwk)) || {}
+                  : {};
+              }
+            } catch (wrapErr) {
+              console.warn('Wrapped key unwrap failed in modal, falling back to master password:', wrapErr);
+            }
           }
 
-          let plainFields = {};
-          if (password.encryptedFields) {
-            plainFields =
-              (await decryptFields(
-                password.encryptedFields,
-                sessionMasterPassword,
-                user?.encryptionSalt
-              )) || {};
+          // 2. Fallback to master password
+          if (!plainPassword && !noteText && Object.keys(plainFields).length === 0 && sessionMasterPassword) {
+            if (password.encryptedPassword) {
+              plainPassword = isEncryptedFormat(password.encryptedPassword)
+                ? await decryptText(
+                    password.encryptedPassword,
+                    sessionMasterPassword,
+                    user?.encryptionSalt
+                  )
+                : password.encryptedPassword;
+            }
+
+            if (password.encryptedNote) {
+              noteText = isEncryptedFormat(password.encryptedNote)
+                ? await decryptText(
+                    password.encryptedNote,
+                    sessionMasterPassword,
+                    user?.encryptionSalt
+                  )
+                : password.encryptedNote;
+            }
+
+            if (password.encryptedFields) {
+              plainFields =
+                (await decryptFields(
+                  password.encryptedFields,
+                  sessionMasterPassword,
+                  user?.encryptionSalt
+                )) || {};
+            }
           }
 
           setDecryptedPassword(plainPassword);

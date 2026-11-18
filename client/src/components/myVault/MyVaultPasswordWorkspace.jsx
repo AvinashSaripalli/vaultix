@@ -16,6 +16,7 @@ function MyVaultPasswordWorkspace({
   onEditPassword,
   onDeletePassword,
   onManageShares,
+  onTransferToCompany,
   onAddChild,
 }) {
   const { user, sessionMasterPassword } = useSelector((state) => state.auth);
@@ -199,6 +200,7 @@ function MyVaultPasswordWorkspace({
                   onEdit={onEditPassword}
                   onDelete={onDeletePassword}
                   onManageShares={onManageShares}
+                  onTransferToCompany={onTransferToCompany}
                   user={user}
                   sessionMasterPassword={sessionMasterPassword}
                   samples={passwords.map((item) => item.encryptedPassword)}

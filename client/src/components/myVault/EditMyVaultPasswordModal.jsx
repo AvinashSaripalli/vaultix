@@ -10,7 +10,14 @@ import {
   decryptFields,
   encryptFields,
   isEncryptedFormat,
+  unwrapItemKey,
+  decryptTextWithAesKey,
+  decryptFieldsWithAesKey,
+  generateItemAesKey,
+  encryptValueWithAesKey,
+  encryptFieldsWithAesKey,
 } from '../../utils/crypto';
+import { getWrapRecipients, wrapItemKeysForUsers } from '../../utils/keyWrapping';
 import { estimateStrength, checkBreachedPassword } from '../../utils/breachCheck';
 import { isPasswordOld, isPasswordAtRisk } from '../../utils/passwordRisk';
 import {
@@ -33,7 +40,7 @@ function EditMyVaultPasswordModal({
   onClose,
   onSubmit,
 }) {
-  const { user, sessionMasterPassword } = useSelector((state) => state.auth);
+  const { user, sessionMasterPassword, sessionRsaPrivateKey } = useSelector((state) => state.auth);
 
   const [formData, setFormData] = useState({
     folderId: '',
@@ -86,18 +93,45 @@ function EditMyVaultPasswordModal({
       setDecrypting(true);
 
       try {
-        const isEncryptedPw = isEncryptedFormat(password.encryptedPassword);
-        const plainPassword = isEncryptedPw
-          ? await decryptText(password.encryptedPassword, sessionMasterPassword, user?.encryptionSalt)
-          : password.encryptedPassword || '';
+        let plainPassword = '';
+        let plainNote = '';
+        let plainFields = {};
 
-        const plainNote = password.encryptedNote && isEncryptedFormat(password.encryptedNote)
-          ? await decryptText(password.encryptedNote, sessionMasterPassword, user?.encryptionSalt)
-          : password.encryptedNote || '';
+        // 1. Try unwrapping via RSA private key if myWrappedKey is present
+        if (password.myWrappedKey && sessionRsaPrivateKey) {
+          try {
+            const aesKeyJwk = await unwrapItemKey(password.myWrappedKey, sessionRsaPrivateKey);
+            if (aesKeyJwk) {
+              plainPassword = password.encryptedPassword
+                ? await decryptTextWithAesKey(password.encryptedPassword, aesKeyJwk)
+                : '';
+              plainNote = password.encryptedNote
+                ? await decryptTextWithAesKey(password.encryptedNote, aesKeyJwk)
+                : '';
+              plainFields = password.encryptedFields
+                ? (await decryptFieldsWithAesKey(password.encryptedFields, aesKeyJwk)) || {}
+                : {};
+            }
+          } catch (wrapErr) {
+            console.warn('Wrapped key unwrap failed, trying master password:', wrapErr);
+          }
+        }
 
-        const plainFields = password.encryptedFields
-          ? (await decryptFields(password.encryptedFields, sessionMasterPassword, user?.encryptionSalt)) || {}
-          : {};
+        // 2. Fallback to master password if fields are still empty
+        if (!plainPassword && !plainNote && Object.keys(plainFields).length === 0 && sessionMasterPassword) {
+          const isEncryptedPw = isEncryptedFormat(password.encryptedPassword);
+          plainPassword = isEncryptedPw
+            ? await decryptText(password.encryptedPassword, sessionMasterPassword, user?.encryptionSalt)
+            : password.encryptedPassword || '';
+
+          plainNote = password.encryptedNote && isEncryptedFormat(password.encryptedNote)
+            ? await decryptText(password.encryptedNote, sessionMasterPassword, user?.encryptionSalt)
+            : password.encryptedNote || '';
+
+          plainFields = password.encryptedFields
+            ? (await decryptFields(password.encryptedFields, sessionMasterPassword, user?.encryptionSalt)) || {}
+            : {};
+        }
 
         const { [CUSTOM_FIELDS_KEY]: customRaw, ...typedFields } = plainFields;
 
@@ -216,27 +250,55 @@ function EditMyVaultPasswordModal({
 
     try {
       const isLogin = formData.type === 'LOGIN';
-
-      const encryptedPassword = isLogin
-        ? await encryptText(formData.encryptedPassword, sessionMasterPassword, user?.encryptionSalt)
-        : formData.encryptedPassword
-          ? await encryptText(formData.encryptedPassword, sessionMasterPassword, user?.encryptionSalt)
-          : '';
-
-      const encryptedNote = formData.encryptedNote
-        ? await encryptText(formData.encryptedNote, sessionMasterPassword, user?.encryptionSalt)
-        : '';
-
       const fieldsPayload = { ...formData.fields };
       if (formData.customFields?.length) {
         fieldsPayload[CUSTOM_FIELDS_KEY] = serializeCustomFields(formData.customFields);
       }
 
-      const encryptedFields = await encryptFields(
-        fieldsPayload,
-        sessionMasterPassword,
-        user?.encryptionSalt
-      );
+      // Approach 1: Hybrid AES item key with RSA escrow wrapping
+      let encryptedPassword = '';
+      let encryptedNote = '';
+      let encryptedFields = '';
+      let wrappedKeys = null;
+
+      try {
+        const { aesKeyJwk } = await generateItemAesKey();
+        if (aesKeyJwk) {
+          encryptedPassword = isLogin && formData.encryptedPassword
+            ? await encryptValueWithAesKey(formData.encryptedPassword, aesKeyJwk)
+            : formData.encryptedPassword
+              ? await encryptValueWithAesKey(formData.encryptedPassword, aesKeyJwk)
+              : '';
+          encryptedNote = formData.encryptedNote
+            ? await encryptValueWithAesKey(formData.encryptedNote, aesKeyJwk)
+            : '';
+          encryptedFields = await encryptFieldsWithAesKey(fieldsPayload, aesKeyJwk);
+
+          // Get recipients: returns user.id + all active Super Admins for escrow
+          const recipientIds = await getWrapRecipients(formData.folderId, user?.id);
+          wrappedKeys = await wrapItemKeysForUsers(aesKeyJwk, recipientIds);
+        }
+      } catch (keyErr) {
+        console.warn('Escrow key wrapping failed, falling back to master password:', keyErr);
+      }
+
+      // Fallback to symmetric PBKDF2 if wrapping didn't produce keys
+      if (!wrappedKeys || Object.keys(wrappedKeys).length === 0) {
+        encryptedPassword = isLogin
+          ? await encryptText(formData.encryptedPassword, sessionMasterPassword, user?.encryptionSalt)
+          : formData.encryptedPassword
+            ? await encryptText(formData.encryptedPassword, sessionMasterPassword, user?.encryptionSalt)
+            : '';
+        encryptedNote = formData.encryptedNote
+          ? await encryptText(formData.encryptedNote, sessionMasterPassword, user?.encryptionSalt)
+          : '';
+        encryptedFields = await encryptFields(
+          fieldsPayload,
+          sessionMasterPassword,
+          user?.encryptionSalt
+        );
+        wrappedKeys = null;
+      }
 
       const strengthScore = isLogin ? estimateStrength(formData.encryptedPassword) : 0;
 
@@ -255,6 +317,7 @@ function EditMyVaultPasswordModal({
         encryptedPassword,
         encryptedNote,
         encryptedFields,
+        wrappedKeys,
         tags: formData.tags,
         isSensitive: formData.isSensitive,
         strengthScore,
