@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { KeyRound } from 'lucide-react';
+import { KeyRound, Users, FolderArchive } from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout';
 import api from '../../services/api';
 import PendingInvitationsModal from './PendingInvitationsModal';
 import UserAccessModal from './UserAccessModal';
+import ArchivedVaultsTab from './ArchivedVaultsTab';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import RoleBadge from '../../components/common/RoleBadge';
 import { isAdmin, isSuperAdmin, ROLES } from '../../utils/roles';
@@ -26,6 +27,8 @@ function TeamManagementPage() {
   const [deleteUser, setDeleteUser] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [accessUser, setAccessUser] = useState(null);
+  const [activeTab, setActiveTab] = useState('users');
+  const [archivedCount, setArchivedCount] = useState(0);
 
   useEffect(() => {
     if (!isAdmin(user)) return;
@@ -47,7 +50,17 @@ function TeamManagementPage() {
       }
     };
 
+    const fetchArchivedCount = async () => {
+      try {
+        const res = await api.get('/vaults/archived');
+        setArchivedCount((res.data || []).length);
+      } catch {
+        // silent
+      }
+    };
+
     fetchUsers();
+    fetchArchivedCount();
   }, [token, user]);
 
   useEffect(() => {
@@ -98,7 +111,11 @@ function TeamManagementPage() {
         showToast(res.data.message || 'Dual-Admin approval request created', 'info');
       } else {
         setUsers((prev) => prev.filter((item) => item.id !== deleteUser.id));
-        showToast('User deleted');
+        showToast('User deleted and personal vault safely archived', 'success');
+        try {
+          const archRes = await api.get('/vaults/archived');
+          setArchivedCount((archRes.data || []).length);
+        } catch {}
       }
       setDeleteUser(null);
     } catch (err) {
@@ -152,23 +169,63 @@ function TeamManagementPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-xl sm:text-2xl font-bold text-slate-950 dark:text-slate-100">Users</h2>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-                Registered users in your workspace
-              </p>
-            </div>
+        {/* Navigation Tabs */}
+        <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-700 pb-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab('users')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition ${
+              activeTab === 'users'
+                ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+          >
+            <Users size={16} />
+            <span>Active Users</span>
+            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-200/70 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+              {users.length}
+            </span>
+          </button>
 
-            <input
-              type="text"
-              placeholder="Search users..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-11 sm:h-12 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 text-sm outline-none focus:border-indigo-500 sm:w-72 md:w-80 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
-            />
-          </div>
+          <button
+            type="button"
+            onClick={() => setActiveTab('archived')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition ${
+              activeTab === 'archived'
+                ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+          >
+            <FolderArchive size={16} />
+            <span>Archived Vaults</span>
+            {archivedCount > 0 && (
+              <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                {archivedCount}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {activeTab === 'archived' ? (
+          <ArchivedVaultsTab onCountChange={setArchivedCount} />
+        ) : (
+          <div className="rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+            <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-950 dark:text-slate-100">Users</h2>
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+                  Registered users in your workspace
+                </p>
+              </div>
+
+              <input
+                type="text"
+                placeholder="Search users..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-11 sm:h-12 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 text-sm outline-none focus:border-indigo-500 sm:w-72 md:w-80 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
+              />
+            </div>
 
           {loading && <p className="text-slate-500 dark:text-slate-400">Loading users...</p>}
 
@@ -508,6 +565,7 @@ function TeamManagementPage() {
             </>
           )}
         </div>
+        )}
       </div>
 
       <PendingInvitationsModal

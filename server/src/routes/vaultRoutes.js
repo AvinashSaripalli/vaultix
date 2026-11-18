@@ -6,6 +6,9 @@ const vaultController = require('../controllers/vaultController');
 
 router.get('/', authenticate, require2faIfEnforced, vaultController.getVaults);
 router.post('/', authenticate, require2faIfEnforced, vaultController.createVault);
+router.get('/archived', authenticate, require2faIfEnforced, vaultController.getArchivedVaults);
+router.post('/archived/:vaultId/transfer-all', authenticate, require2faIfEnforced, vaultController.transferAllArchivedPasswords);
+router.delete('/archived/:vaultId', authenticate, require2faIfEnforced, vaultController.purgeArchivedVault);
 router.get('/:slug', authenticate, require2faIfEnforced, vaultController.getVaultBySlug);
 router.post('/:id/share', authenticate, require2faIfEnforced, vaultController.shareVault);
 router.post('/:id/unshare', authenticate, require2faIfEnforced, vaultController.unshareVault);

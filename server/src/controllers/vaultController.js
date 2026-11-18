@@ -111,6 +111,9 @@ const getVaults = async (req, res) => {
     type: {
       not: 'PERSONAL',
     },
+    NOT: {
+      name: { startsWith: 'Archived Vault -' },
+    },
   },
   include: {
     permissions: {
@@ -177,7 +180,14 @@ const getVaults = async (req, res) => {
       };
 
       const candidateFoldersForVaults = await prisma.folder.findMany({
-        where: folderAccessFilter,
+        where: {
+          ...folderAccessFilter,
+          vault: {
+            NOT: {
+              name: { startsWith: 'Archived Vault -' },
+            },
+          },
+        },
         select: { id: true, vaultId: true, blockedUserIds: true, permissions: { select: { userId: true, accessLevel: true } } },
       });
 
@@ -740,6 +750,190 @@ const setVaultPolicy = async (req, res) => {
   }
 };
 
+const getArchivedVaults = async (req, res) => {
+  try {
+    if (!['SUPER_ADMIN', 'ADMIN'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Only administrators can view archived vaults' });
+    }
+
+    const archivedVaults = await prisma.vault.findMany({
+      where: {
+        name: { startsWith: 'Archived Vault -' },
+      },
+      include: {
+        folders: {
+          where: { deletedAt: null },
+          include: {
+            passwords: {
+              where: { deletedAt: null },
+              include: {
+                tags: { include: { tag: true } },
+              },
+            },
+          },
+        },
+        passwords: {
+          where: { deletedAt: null },
+          include: {
+            folder: true,
+            tags: { include: { tag: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const formatted = archivedVaults.map((v) => {
+      const formattedPasswords = (v.passwords || []).map((p) => {
+        const allWrappedKeys = p.wrappedKeys || {};
+        const { wrappedKeys, ...rest } = p;
+        return {
+          ...rest,
+          myWrappedKey: allWrappedKeys[req.user.id] || null,
+          wrappedUserIds: Object.keys(allWrappedKeys),
+        };
+      });
+
+      return {
+        ...v,
+        passwords: formattedPasswords,
+        itemCount: formattedPasswords.length,
+      };
+    });
+
+    res.json(formatted);
+  } catch (error) {
+    console.error('Get archived vaults error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+const transferAllArchivedPasswords = async (req, res) => {
+  try {
+    if (!['SUPER_ADMIN', 'ADMIN'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Only administrators can transfer archived vaults' });
+    }
+
+    const { vaultId } = req.params;
+    const { targetFolderId, rewrappedPasswords = [] } = req.body;
+
+    if (!targetFolderId) {
+      return res.status(400).json({ message: 'Target folder ID is required' });
+    }
+
+    const archivedVault = await prisma.vault.findUnique({
+      where: { id: vaultId },
+      include: {
+        passwords: { where: { deletedAt: null } },
+      },
+    });
+
+    if (!archivedVault || !archivedVault.name.startsWith('Archived Vault -')) {
+      return res.status(404).json({ message: 'Archived vault not found' });
+    }
+
+    const targetFolder = await prisma.folder.findUnique({
+      where: { id: targetFolderId, deletedAt: null },
+      include: { vault: true },
+    });
+
+    if (!targetFolder) {
+      return res.status(404).json({ message: 'Target destination folder not found' });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      const rewrapMap = new Map((rewrappedPasswords || []).map((rw) => [rw.id, rw]));
+
+      for (const pw of archivedVault.passwords) {
+        const rewrap = rewrapMap.get(pw.id);
+
+        await tx.passwordEntry.update({
+          where: { id: pw.id },
+          data: {
+            vaultId: targetFolder.vaultId,
+            folderId: targetFolder.id,
+            encryptedPassword: rewrap?.encryptedPassword !== undefined ? rewrap.encryptedPassword : pw.encryptedPassword,
+            encryptedFields: rewrap?.encryptedFields !== undefined ? rewrap.encryptedFields : pw.encryptedFields,
+            encryptedNote: rewrap?.encryptedNote !== undefined ? rewrap.encryptedNote : pw.encryptedNote,
+            wrappedKeys: rewrap?.wrappedKeys || pw.wrappedKeys,
+            createdById: req.user.id,
+            lastUpdatedAt: new Date(),
+          },
+        });
+      }
+
+      await tx.folder.deleteMany({ where: { vaultId: archivedVault.id } });
+      await tx.vaultPermission.deleteMany({ where: { vaultId: archivedVault.id } });
+      await tx.vault.delete({ where: { id: archivedVault.id } });
+
+      await tx.activityLog.create({
+        data: {
+          id: await generateId('activityLog'),
+          userId: req.user.id,
+          action: 'MOVE_PASSWORD',
+          targetType: 'Vault',
+          targetId: targetFolder.vaultId,
+          metadata: {
+            action: 'TRANSFER_ARCHIVED_VAULT',
+            fromVault: archivedVault.name,
+            toFolderId: targetFolder.id,
+            count: archivedVault.passwords.length,
+          },
+        },
+      });
+    });
+
+    res.json({ message: 'All credentials transferred and archive purged successfully' });
+  } catch (error) {
+    console.error('Transfer all archived passwords error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+const purgeArchivedVault = async (req, res) => {
+  try {
+    if (!['SUPER_ADMIN', 'ADMIN'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Only administrators can delete archived vaults' });
+    }
+
+    const { vaultId } = req.params;
+
+    const archivedVault = await prisma.vault.findUnique({
+      where: { id: vaultId },
+    });
+
+    if (!archivedVault || !archivedVault.name.startsWith('Archived Vault -')) {
+      return res.status(404).json({ message: 'Archived vault not found' });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.passwordEntry.deleteMany({ where: { vaultId } });
+      await tx.folder.deleteMany({ where: { vaultId } });
+      await tx.vaultPermission.deleteMany({ where: { vaultId } });
+      await tx.vault.delete({ where: { id: vaultId } });
+
+      await tx.activityLog.create({
+        data: {
+          id: await generateId('activityLog'),
+          userId: req.user.id,
+          action: 'DELETE_VAULT',
+          targetType: 'Vault',
+          targetId: vaultId,
+          metadata: {
+            action: 'PURGE_ARCHIVED_VAULT',
+            name: archivedVault.name,
+          },
+        },
+      });
+    });
+
+    res.json({ message: 'Archived vault purged successfully' });
+  } catch (error) {
+    console.error('Purge archived vault error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   createVault,
   getVaults,
@@ -748,4 +942,7 @@ module.exports = {
   unshareVault,
   getVaultPolicy,
   setVaultPolicy,
+  getArchivedVaults,
+  transferAllArchivedPasswords,
+  purgeArchivedVault,
 };
