@@ -43,7 +43,7 @@ export default function MobileHomeScreen({
   const recentItems = passwords.slice(0, 4);
 
   return (
-    <div className="px-5 pt-3 pb-6 space-y-4 select-none">
+    <div className="px-5 pt-3 pb-8 space-y-4 touch-pan-y">
       {/* Top Header: Greeting & Quick Lock */}
       <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800/80">
         <div className="flex items-center gap-2.5">

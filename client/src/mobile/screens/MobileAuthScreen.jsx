@@ -308,7 +308,13 @@ export default function MobileAuthScreen({
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col justify-between px-6 pt-16 pb-6 select-none relative overflow-x-hidden overflow-y-auto transition-colors duration-200">
+    <div
+      className="fixed inset-0 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col justify-between px-6 pt-16 pb-6 select-none overflow-x-hidden overflow-y-auto overscroll-y-contain transition-colors duration-200"
+      style={{
+        WebkitOverflowScrolling: 'touch',
+        touchAction: 'pan-y',
+      }}
+    >
       
       {/* Background Ambient Glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-indigo-500/10 dark:bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />

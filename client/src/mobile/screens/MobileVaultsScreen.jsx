@@ -104,7 +104,7 @@ export default function MobileVaultsScreen({
   }, [passwords, search, selectedFilter, activeFolderId]);
 
   return (
-    <div className="flex flex-col min-h-full select-none bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
+    <div className="flex flex-col min-h-full touch-pan-y bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
       {/* Streamlined Sticky Header & Controls (Option A: Modern Minimalist) */}
       <div className="px-4 pt-3 pb-2.5 space-y-2 border-b border-slate-200/80 dark:border-slate-800/80 sticky top-0 bg-slate-50/95 dark:bg-slate-950/95 backdrop-blur-md z-30 transition-colors duration-200">
         

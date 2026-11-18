@@ -12,9 +12,9 @@ export default function MobileAppShell({ activeTab, onSelectTab, children, toast
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col relative select-none antialiased transition-colors duration-200">
+    <div className="fixed inset-0 flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden antialiased transition-colors duration-200">
       {/* Safe Area Top Spacer */}
-      <div className="pt-[env(safe-area-inset-top)] bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md sticky top-0 z-40 transition-colors duration-200" />
+      <div className="pt-[env(safe-area-inset-top)] bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md shrink-0 z-40 transition-colors duration-200" />
 
       {/* Floating Toast Notification Pill */}
       {toast && (
@@ -25,7 +25,13 @@ export default function MobileAppShell({ activeTab, onSelectTab, children, toast
       )}
 
       {/* Main Content Area with Bottom Padding to clear Tab Bar */}
-      <main className="flex-1 overflow-y-auto pb-24 min-w-0">
+      <main
+        className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain pb-32 min-w-0 touch-pan-y"
+        style={{
+          WebkitOverflowScrolling: 'touch',
+          touchAction: 'pan-y',
+        }}
+      >
         {children}
       </main>
 

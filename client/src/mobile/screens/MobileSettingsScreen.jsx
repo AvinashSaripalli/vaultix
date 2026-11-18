@@ -90,7 +90,7 @@ export default function MobileSettingsScreen({
   const userIsSuperAdmin = isSuperAdmin(user);
 
   return (
-    <div className="px-5 pt-3 pb-8 space-y-4 select-none">
+    <div className="px-5 pt-3 pb-8 space-y-4 touch-pan-y">
       <div>
         <h1 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">Settings</h1>
         <p className="text-xs text-slate-500 dark:text-slate-400">Security, active sessions, enterprise &amp; theme</p>

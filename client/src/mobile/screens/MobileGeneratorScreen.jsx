@@ -50,7 +50,7 @@ export default function MobileGeneratorScreen({ onCopyPassword }) {
   const entropy = Math.round(length * Math.log2(poolSize || 26));
 
   return (
-    <div className="px-5 pt-3 pb-6 space-y-4 select-none">
+    <div className="px-5 pt-3 pb-8 space-y-4 touch-pan-y">
       <div>
         <h1 className="text-xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
           <span>Password Generator</span>
