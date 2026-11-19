@@ -282,8 +282,7 @@ export default function ExportPersonalVaultModal({
 
   return (
     <ModalPortal>
-      <ModalBackdrop onClick={onClose} />
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+      <ModalBackdrop onClose={onClose}>
         <div
           className="relative w-full max-w-xl bg-white dark:bg-slate-800 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden my-auto"
           onClick={(e) => e.stopPropagation()}
@@ -490,14 +489,14 @@ export default function ExportPersonalVaultModal({
                 ) : (
                   <>
                     <Download size={14} />
-                    <span>Export {targetPasswords.length} Credentials</span>
+                    <span>Export {targetPasswords.length} {targetPasswords.length === 1 ? 'Credential' : 'Credentials'}</span>
                   </>
                 )}
               </button>
             </div>
           </form>
         </div>
-      </div>
+      </ModalBackdrop>
     </ModalPortal>
   );
 }
