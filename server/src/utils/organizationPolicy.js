@@ -8,6 +8,7 @@ const DEFAULT_POLICY = {
   requireMasterPasswordSpecial: true,
   clipboardTimeoutSeconds: 30,
   requireDualAdminApproval: true,
+  allowPersonalVaultExport: true,
 };
 
 let cachedPolicy = null;

@@ -1,6 +1,6 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Download, Upload, FileText, Check, AlertTriangle, RefreshCw, X } from 'lucide-react';
+import { Download, Upload, FileText, Check, AlertTriangle, RefreshCw, X, Lock, Building } from 'lucide-react';
 import { parseImportFile, downloadExport } from '../../utils/vaultImportExport';
 import { createPassword, fetchPasswordsByVault } from '../../features/vault/vaultSlice';
 import {
@@ -8,6 +8,12 @@ import {
   encryptValueWithAesKey,
   encryptFieldsWithAesKey,
   wrapItemKey,
+  unwrapItemKey,
+  decryptTextWithAesKey,
+  decryptFieldsWithAesKey,
+  decryptText,
+  decryptFields,
+  isEncryptedFormat,
 } from '../../utils/crypto';
 import { getWrapRecipients, wrapItemKeysForUsers } from '../../utils/keyWrapping';
 import { hapticMedium, hapticSuccess, hapticLight } from '../../utils/haptics';
@@ -18,11 +24,14 @@ export default function MobileImportExportSheet({ isOpen, onClose }) {
   const fileInputRef = useRef(null);
 
   const { passwords = [], selectedVault } = useSelector((state) => state.vault);
-  const { user, sessionMasterPassword, sessionRsaPublicKey, sessionRsaPrivateKey } = useSelector((state) => state.auth);
+  const { passwords: myVaultPasswords = [] } = useSelector((state) => state.myVault);
+  const { user, token, sessionMasterPassword, sessionRsaPublicKey, sessionRsaPrivateKey } = useSelector((state) => state.auth);
 
   const [activeTab, setActiveTab] = useState('export'); // 'export' | 'import'
+  const [exportSource, setExportSource] = useState('PERSONAL'); // 'PERSONAL' | 'COMPANY'
   const [exportFormat, setExportFormat] = useState('csv'); // 'csv' | 'json' | 'bitwarden'
   const [exporting, setExporting] = useState(false);
+  const [policyAllowed, setPolicyAllowed] = useState(true);
 
   // Import state
   const [importing, setImporting] = useState(false);
@@ -32,28 +41,116 @@ export default function MobileImportExportSheet({ isOpen, onClose }) {
   const [statusMsg, setStatusMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const checkPolicy = async () => {
+      try {
+        const res = await api.get('/organization-policy/public');
+        if (res.data) {
+          setPolicyAllowed(res.data.allowPersonalVaultExport !== false);
+        }
+      } catch {
+        setPolicyAllowed(true);
+      }
+    };
+    checkPolicy();
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
-  const handleExport = () => {
+  const currentExportPasswords = exportSource === 'PERSONAL' ? myVaultPasswords : passwords;
+
+  const handleExport = async () => {
+    if (exportSource === 'PERSONAL' && !policyAllowed) {
+      setErrorMsg('Personal Vault export is blocked by your organization policy.');
+      return;
+    }
+
     setExporting(true);
+    setErrorMsg('');
     hapticMedium();
+
     try {
-      const rows = passwords.map((p) => ({
-        Name: p.name || '',
-        Login: p.login || '',
-        Password: p.password || p.rawPassword || '',
-        URL: p.url || '',
-        Note: p.note || p.notes || '',
-        Type: p.type || 'LOGIN',
-      }));
+      const rows = [];
+      const rsaKey = sessionRsaPrivateKey;
+
+      for (const p of currentExportPasswords) {
+        let plainPassword = '';
+        let plainNote = '';
+        let plainFields = {};
+
+        if (p.myWrappedKey && rsaKey) {
+          try {
+            const aesKeyJwk = await unwrapItemKey(p.myWrappedKey, rsaKey);
+            if (aesKeyJwk) {
+              if (p.encryptedPassword) {
+                plainPassword = await decryptTextWithAesKey(p.encryptedPassword, aesKeyJwk);
+              }
+              if (p.encryptedNote) {
+                plainNote = await decryptTextWithAesKey(p.encryptedNote, aesKeyJwk);
+              }
+              if (p.encryptedFields) {
+                plainFields = (await decryptFieldsWithAesKey(p.encryptedFields, aesKeyJwk)) || {};
+              }
+            }
+          } catch {
+            // fallback below
+          }
+        }
+
+        if (!plainPassword && !plainNote && Object.keys(plainFields).length === 0 && sessionMasterPassword) {
+          if (p.encryptedPassword) {
+            plainPassword = isEncryptedFormat(p.encryptedPassword)
+              ? await decryptText(p.encryptedPassword, sessionMasterPassword, user?.encryptionSalt)
+              : p.encryptedPassword;
+          }
+          if (p.encryptedNote) {
+            plainNote = isEncryptedFormat(p.encryptedNote)
+              ? await decryptText(p.encryptedNote, sessionMasterPassword, user?.encryptionSalt)
+              : p.encryptedNote;
+          }
+          if (p.encryptedFields) {
+            plainFields = isEncryptedFormat(p.encryptedFields)
+              ? await decryptFields(p.encryptedFields, sessionMasterPassword, user?.encryptionSalt)
+              : (typeof p.encryptedFields === 'string' ? JSON.parse(p.encryptedFields || '{}') : p.encryptedFields || {});
+          }
+        }
+
+        rows.push({
+          Name: p.name || '',
+          Login: p.login || '',
+          Password: plainPassword || '',
+          URL: p.url || '',
+          Note: plainNote || '',
+          Type: p.type || 'LOGIN',
+          ...plainFields,
+        });
+      }
 
       const dateStr = new Date().toISOString().split('T')[0];
-      downloadExport(rows, exportFormat, `vaultix_export_${dateStr}`);
+      const filenameBase = exportSource === 'PERSONAL'
+        ? `vaultix_personal_vault_${dateStr}`
+        : `vaultix_company_vault_${dateStr}`;
+
+      downloadExport(rows, exportFormat, filenameBase);
+
+      if (exportSource === 'PERSONAL') {
+        try {
+          await api.post('/personal-vault/export-log', {
+            itemCount: rows.length,
+            format: exportFormat,
+          });
+        } catch {
+          //
+        }
+      }
+
       hapticSuccess();
-      setStatusMsg(`Exported ${passwords.length} credentials as ${exportFormat.toUpperCase()}`);
+      setStatusMsg(`Exported ${rows.length} ${exportSource === 'PERSONAL' ? 'personal' : 'company'} credentials as ${exportFormat.toUpperCase()}`);
       setTimeout(() => setStatusMsg(''), 3000);
     } catch (err) {
-      setErrorMsg('Export failed. Please try again.');
+      console.error('Export error:', err);
+      setErrorMsg('Export failed. Please ensure your vault is unlocked.');
     } finally {
       setExporting(false);
     }
@@ -215,9 +312,56 @@ export default function MobileImportExportSheet({ isOpen, onClose }) {
           {activeTab === 'export' ? (
             /* EXPORT */
             <div className="space-y-4">
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Generate an encrypted offline archive of your credentials ({passwords.length} items).
-              </p>
+              <div>
+                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 block mb-1.5">
+                  Select Vault to Export
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      hapticLight();
+                      setExportSource('PERSONAL');
+                    }}
+                    className={`py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                      exportSource === 'PERSONAL'
+                        ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400'
+                        : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400'
+                    }`}
+                  >
+                    <Lock size={12} />
+                    <span>Personal ({myVaultPasswords.length})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      hapticLight();
+                      setExportSource('COMPANY');
+                    }}
+                    className={`py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                      exportSource === 'COMPANY'
+                        ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400'
+                        : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400'
+                    }`}
+                  >
+                    <Building size={12} />
+                    <span>Company ({passwords.length})</span>
+                  </button>
+                </div>
+              </div>
+
+              {exportSource === 'PERSONAL' && !policyAllowed && (
+                <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 text-[11px] text-rose-700 dark:text-rose-300">
+                  Personal Vault export is blocked by your organization security policy.
+                </div>
+              )}
+
+              {exportSource === 'PERSONAL' && policyAllowed && (
+                <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 text-[10px] text-amber-700 dark:text-amber-400 leading-relaxed">
+                  Moving or leaving? Transfer any corporate passwords to Company Vault before exporting so your team keeps access.
+                </div>
+              )}
 
               <div>
                 <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 block mb-1">
@@ -244,11 +388,15 @@ export default function MobileImportExportSheet({ isOpen, onClose }) {
               <button
                 type="button"
                 onClick={handleExport}
-                disabled={passwords.length === 0 || exporting}
+                disabled={currentExportPasswords.length === 0 || exporting || (exportSource === 'PERSONAL' && !policyAllowed)}
                 className="w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold text-xs active:scale-98 transition shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2"
               >
                 <Download size={14} />
-                <span>{exporting ? 'Generating...' : `Export ${passwords.length} Items`}</span>
+                <span>
+                  {exporting
+                    ? 'Decrypting & Exporting...'
+                    : `Export ${currentExportPasswords.length} ${exportSource === 'PERSONAL' ? 'Personal' : 'Company'} Items`}
+                </span>
               </button>
             </div>
           ) : (

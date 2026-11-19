@@ -35,9 +35,14 @@ const updateOrganizationPolicy = async (req, res) => {
       requireMasterPasswordSpecial,
       clipboardTimeoutSeconds,
       requireDualAdminApproval,
+      allowPersonalVaultExport,
     } = req.body;
 
     const data = {};
+
+    if (allowPersonalVaultExport !== undefined) {
+      data.allowPersonalVaultExport = Boolean(allowPersonalVaultExport);
+    }
 
     if (requireDualAdminApproval !== undefined) {
       data.requireDualAdminApproval = Boolean(requireDualAdminApproval);
@@ -122,7 +127,24 @@ const updateOrganizationPolicy = async (req, res) => {
   }
 };
 
+const getPublicOrganizationPolicy = async (req, res) => {
+  try {
+    const policy = await getEffectiveOrganizationPolicy();
+    res.json({
+      allowPersonalVaultExport: policy.allowPersonalVaultExport !== false,
+      clipboardTimeoutSeconds: policy.clipboardTimeoutSeconds ?? 30,
+      maxVaultTimeoutMinutes: policy.maxVaultTimeoutMinutes ?? 30,
+      minMasterPasswordLength: policy.minMasterPasswordLength ?? 8,
+      requireMasterPasswordSpecial: policy.requireMasterPasswordSpecial !== false,
+    });
+  } catch (error) {
+    console.error('Get public policy error:', error);
+    res.status(500).json({ message: 'Server error retrieving policy' });
+  }
+};
+
 module.exports = {
   getOrganizationPolicy,
   updateOrganizationPolicy,
+  getPublicOrganizationPolicy,
 };

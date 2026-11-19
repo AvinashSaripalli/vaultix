@@ -2,6 +2,7 @@ const prisma = require('../config/prisma');
 const generateId = require('../utils/generateId');
 const { VALID_ITEM_TYPES, validateItemFields, validateLoginForType } = require('../utils/itemFieldSchemas');
 const { getFolderAccess } = require('../utils/permissions');
+const { getEffectiveOrganizationPolicy } = require('../utils/organizationPolicy');
 
 const toClientPassword = (pw, userId) => {
   if (!pw) return pw;
@@ -1316,6 +1317,43 @@ const transferPasswordToCompanyVault = async (req, res) => {
   }
 };
 
+const logPersonalVaultExport = async (req, res) => {
+  try {
+    const policy = await getEffectiveOrganizationPolicy();
+    if (policy.allowPersonalVaultExport === false) {
+      return res.status(403).json({
+        message: 'Personal vault export is disabled by your organization security policy.',
+      });
+    }
+
+    const { itemCount = 0, format = 'csv' } = req.body;
+
+    try {
+      await prisma.activityLog.create({
+        data: {
+          id: await generateId('activityLog'),
+          userId: req.user.id,
+          action: 'EXPORT_PASSWORDS',
+          targetType: 'Vault',
+          metadata: {
+            vaultType: 'PERSONAL',
+            itemCount: Number(itemCount) || 0,
+            format: String(format).toLowerCase(),
+            ip: req.ip || req.headers['x-forwarded-for'] || null,
+          },
+        },
+      });
+    } catch (logErr) {
+      console.warn('Activity log for personal vault export failed:', logErr.message);
+    }
+
+    res.json({ success: true, message: 'Personal vault export logged' });
+  } catch (error) {
+    console.error('Log personal vault export error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   getOrCreateMyVault,
   createMyVaultFolder,
@@ -1334,4 +1372,5 @@ module.exports = {
   getMyVaultTrash,
   getPasswordShares,
   transferPasswordToCompanyVault,
+  logPersonalVaultExport,
 };

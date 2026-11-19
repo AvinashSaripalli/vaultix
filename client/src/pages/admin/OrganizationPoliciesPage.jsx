@@ -14,6 +14,7 @@ import {
   Building2,
   Lock,
   UserCheck,
+  Download,
 } from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout';
 import api from '../../services/api';
@@ -61,6 +62,7 @@ function OrganizationPoliciesPage() {
   const [requireMasterPasswordSpecial, setRequireMasterPasswordSpecial] = useState(true);
   const [clipboardTimeoutSeconds, setClipboardTimeoutSeconds] = useState(30);
   const [requireDualAdminApproval, setRequireDualAdminApproval] = useState(true);
+  const [allowPersonalVaultExport, setAllowPersonalVaultExport] = useState(true);
 
   const [updatedAt, setUpdatedAt] = useState(null);
   const [updatedBy, setUpdatedBy] = useState(null);
@@ -86,6 +88,7 @@ function OrganizationPoliciesPage() {
         setRequireMasterPasswordSpecial(p.requireMasterPasswordSpecial !== false);
         setClipboardTimeoutSeconds(p.clipboardTimeoutSeconds ?? null);
         setRequireDualAdminApproval(p.requireDualAdminApproval !== false);
+        setAllowPersonalVaultExport(p.allowPersonalVaultExport !== false);
         setUpdatedAt(p.updatedAt);
         setUpdatedBy(p.updatedBy);
       } catch (err) {
@@ -113,7 +116,8 @@ function OrganizationPoliciesPage() {
     minMasterPasswordLength !== (originalPolicy.minMasterPasswordLength ?? 8) ||
     requireMasterPasswordSpecial !== (originalPolicy.requireMasterPasswordSpecial !== false) ||
     clipboardTimeoutSeconds !== (originalPolicy.clipboardTimeoutSeconds ?? null) ||
-    requireDualAdminApproval !== (originalPolicy.requireDualAdminApproval !== false)
+    requireDualAdminApproval !== (originalPolicy.requireDualAdminApproval !== false) ||
+    allowPersonalVaultExport !== (originalPolicy.allowPersonalVaultExport !== false)
   );
 
   const handleReset = () => {
@@ -124,6 +128,7 @@ function OrganizationPoliciesPage() {
     setRequireMasterPasswordSpecial(originalPolicy.requireMasterPasswordSpecial !== false);
     setClipboardTimeoutSeconds(originalPolicy.clipboardTimeoutSeconds ?? null);
     setRequireDualAdminApproval(originalPolicy.requireDualAdminApproval !== false);
+    setAllowPersonalVaultExport(originalPolicy.allowPersonalVaultExport !== false);
     setSuccessMessage('');
     setErrorMessage('');
   };
@@ -142,6 +147,7 @@ function OrganizationPoliciesPage() {
         requireMasterPasswordSpecial,
         clipboardTimeoutSeconds,
         requireDualAdminApproval,
+        allowPersonalVaultExport,
       };
 
       const res = await api.put('/organization-policy', payload, {
@@ -453,6 +459,52 @@ function OrganizationPoliciesPage() {
                       className="sr-only peer"
                     />
                     <div className="w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-indigo-600"></div>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Policy 6: Allow Personal Vault Export */}
+            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-sm transition hover:border-slate-300 dark:hover:border-slate-600">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                <div className="flex items-start gap-4">
+                  <div className="h-10 w-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                    <Download size={20} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2.5">
+                      <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100">
+                        Allow Personal Vault Export
+                      </h2>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                          allowPersonalVaultExport
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
+                            : 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300'
+                        }`}
+                      >
+                        {allowPersonalVaultExport ? 'Permitted' : 'Blocked'}
+                      </span>
+                    </div>
+                    <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-2xl leading-relaxed">
+                      Permit team members to export credentials and notes stored in their Personal Vault (My Vault) into CSV, Excel, or JSON backups for personal portability or offboarding.
+                    </p>
+                    <div className="mt-3 text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                      <ShieldCheck size={14} className="text-emerald-500 shrink-0" />
+                      <span>Exports require Master Password verification and are recorded with timestamp and item count in the security audit log.</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="sm:shrink-0 pt-1">
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={allowPersonalVaultExport}
+                      onChange={(e) => setAllowPersonalVaultExport(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-emerald-600"></div>
                   </label>
                 </div>
               </div>

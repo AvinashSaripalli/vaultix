@@ -17,6 +17,7 @@ import SharePasswordModal from '../../components/myVault/SharePasswordModal';
 import ManagePasswordSharesModal from '../../components/myVault/ManagePasswordSharesModal';
 import ViewMyVaultPasswordModal from '../../components/myVault/ViewMyVaultPasswordModal';
 import TransferToCompanyModal from '../../components/myVault/TransferToCompanyModal';
+import ExportPersonalVaultModal from '../../components/myVault/ExportPersonalVaultModal';
 import VerifyMasterPasswordModal from '../../components/security/VerifyMasterPasswordModal';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import FolderHistoryPanel from '../../components/folder/FolderHistoryPanel';
@@ -105,6 +106,7 @@ function MyVaultPage() {
   const [selectedPasswordForEdit, setSelectedPasswordForEdit] = useState(null);
   const [transferModalOpen, setTransferModalOpen] = useState(false);
   const [selectedPasswordForTransfer, setSelectedPasswordForTransfer] = useState(null);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
   const [viewPasswordOpen, setViewPasswordOpen] = useState(false);
   const [selectedPasswordForView, setSelectedPasswordForView] = useState(null);
   const [selectedPasswordId, setSelectedPasswordId] = useState(null);
@@ -419,6 +421,7 @@ function MyVaultPage() {
             folders={folders}
             onCreateFolder={() => setFolderModalOpen(true)}
             onCreatePassword={() => openAddPasswordModal()}
+            onOpenExport={() => setExportModalOpen(true)}
             trashOpen={trashOpen}
             trashCount={totalTrashCount}
             onToggleTrash={handleToggleTrash}
@@ -881,6 +884,14 @@ function MyVaultPage() {
             setSelectedPasswordForTransfer(null);
           }}
           onTransferred={handlePasswordTransferred}
+        />
+
+        <ExportPersonalVaultModal
+          open={exportModalOpen}
+          onClose={() => setExportModalOpen(false)}
+          passwords={passwords}
+          folders={folders}
+          selectedFolderId={selectedFolderId}
         />
 
         <ConfirmModal

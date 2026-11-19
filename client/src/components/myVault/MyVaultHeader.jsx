@@ -1,9 +1,10 @@
-import { FolderPlus, Plus, Trash2 } from 'lucide-react';
+import { FolderPlus, Plus, Trash2, Download } from 'lucide-react';
 
 function MyVaultHeader({
   folders,
   onCreateFolder,
   onCreatePassword,
+  onOpenExport,
   trashOpen = false,
   trashCount = 0,
   onToggleTrash,
@@ -37,6 +38,18 @@ function MyVaultHeader({
           <Plus size={16} className="shrink-0" />
           <span>Add Item</span>
         </button>
+
+        {onOpenExport && (
+          <button
+            type="button"
+            onClick={onOpenExport}
+            className="h-9 sm:h-10 inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3.5 sm:px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-semibold dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 transition shadow-sm"
+            title="Export Personal Vault"
+          >
+            <Download size={15} className="shrink-0 text-slate-500 dark:text-slate-400" />
+            <span>Export</span>
+          </button>
+        )}
 
         {onToggleTrash && (
           <button

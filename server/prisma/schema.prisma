@@ -331,6 +331,7 @@ model OrganizationPolicy {
   requireMasterPasswordSpecial Boolean  @default(true)
   clipboardTimeoutSeconds      Int?
   requireDualAdminApproval     Boolean  @default(true)
+  allowPersonalVaultExport     Boolean  @default(true)
   updatedById                  String?
   updatedAt                    DateTime @updatedAt
   createdAt                    DateTime @default(now())
@@ -439,6 +440,7 @@ enum ActivityAction {
   REVOKE_PASSWORD_SHARE
   SHARE_VAULT
   IMPORT_PASSWORDS
+  EXPORT_PASSWORDS
   CREATE_DEPARTMENT
   UPDATE_DEPARTMENT
   DELETE_DEPARTMENT
