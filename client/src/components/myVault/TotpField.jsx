@@ -32,7 +32,7 @@ function TotpField({ secret, revealed, onReveal, onCopy }) {
   return (
     <div className="border-b border-slate-200 py-3.5 sm:py-5 dark:border-slate-700 min-w-0">
       <div className="grid grid-cols-[100px_1fr_auto] sm:grid-cols-[130px_1fr_auto] gap-2 items-center min-w-0">
-        <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 shrink-0">Authenticator</p>
+        <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 tracking-tight shrink-0">Authenticator</p>
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <p className="text-base sm:text-lg tracking-widest text-slate-900 truncate dark:text-slate-100 font-mono">
             {revealed && currentCode ? currentCode.code : '••••••'}

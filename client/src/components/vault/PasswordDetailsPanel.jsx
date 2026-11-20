@@ -1440,7 +1440,7 @@ function CopyIconButton({ onCopy, title = 'Copy to clipboard' }) {
 function DetailRow({ label, value, action, isMono = false }) {
   return (
     <div className="flex flex-col gap-1 sm:grid sm:grid-cols-[130px_1fr_auto] sm:gap-3 sm:items-center border-b border-slate-200 last:border-b-0 px-3.5 sm:px-4 py-3 sm:py-3.5 dark:border-slate-700/80 min-w-0">
-      <p className="text-[11px] sm:text-sm font-semibold uppercase tracking-wider text-slate-400 sm:text-slate-500 sm:normal-case sm:tracking-normal dark:text-slate-400 shrink-0">{label}</p>
+      <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 tracking-tight shrink-0">{label}</p>
 
       <div className="flex items-center justify-between gap-2 min-w-0 sm:contents">
         <div className={`text-xs sm:text-sm font-medium text-slate-900 break-all min-w-0 flex-1 dark:text-slate-100 ${isMono ? 'font-mono tracking-wider select-all' : ''}`}>

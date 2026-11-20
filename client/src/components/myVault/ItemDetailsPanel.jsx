@@ -447,7 +447,7 @@ function PersonalAccountCard({
     return (
       <div key={field.key} className="border-b border-slate-200 py-3 sm:py-4 dark:border-slate-700 min-w-0">
         <div className="flex flex-col gap-1 sm:grid sm:grid-cols-[150px_1fr_auto] sm:gap-3 sm:items-center min-w-0">
-          <p className="text-[11px] sm:text-sm font-medium text-slate-500 dark:text-slate-400 shrink-0">{field.label}</p>
+          <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 tracking-tight shrink-0">{field.label}</p>
           <div className="flex items-center justify-between gap-2 min-w-0 sm:contents">
             {field.key === 'url' && display ? (
               <a
@@ -501,7 +501,7 @@ function PersonalAccountCard({
     return (
       <div key={`__custom_${idx}`} className="border-b border-slate-200 py-3 sm:py-4 dark:border-slate-700 min-w-0">
         <div className="flex flex-col gap-1 sm:grid sm:grid-cols-[150px_1fr_auto] sm:gap-3 sm:items-center min-w-0">
-          <p className="text-[11px] sm:text-sm font-medium text-slate-500 dark:text-slate-400 shrink-0">{custom.name || 'Custom Field'}</p>
+          <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 tracking-tight shrink-0">{custom.name || 'Custom Field'}</p>
           <div className="flex items-center justify-between gap-2 min-w-0 sm:contents">
             <p className={`text-xs sm:text-sm text-slate-900 break-all min-w-0 flex-1 dark:text-slate-100 ${custom.sensitive && isRevealed ? 'font-mono tracking-wider select-all font-semibold' : ''}`}>
               {display || '—'}
@@ -648,7 +648,7 @@ function PersonalAccountCard({
           <>
             <div className="border-b border-slate-200 py-3 sm:py-4 dark:border-slate-700 min-w-0">
               <div className="flex flex-col gap-1 sm:grid sm:grid-cols-[130px_1fr_auto] sm:gap-3 sm:items-center min-w-0">
-                <p className="text-[11px] sm:text-sm font-medium text-slate-500 dark:text-slate-400 shrink-0">Login</p>
+                <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 tracking-tight shrink-0">Login</p>
                 <div className="flex items-center justify-between gap-2 min-w-0 sm:contents">
                   <p className="text-xs sm:text-sm text-slate-900 break-all dark:text-slate-100 min-w-0 flex-1">{item.login}</p>
                   <div className="flex justify-end items-center gap-1.5 shrink-0">
@@ -660,7 +660,7 @@ function PersonalAccountCard({
 
             <div className="border-b border-slate-200 py-3 sm:py-4 dark:border-slate-700 min-w-0">
               <div className="flex flex-col gap-1 sm:grid sm:grid-cols-[130px_1fr_auto] sm:gap-3 sm:items-center min-w-0">
-                <p className="text-[11px] sm:text-sm font-medium text-slate-500 dark:text-slate-400 shrink-0">Password</p>
+                <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 tracking-tight shrink-0">Password</p>
                 <div className="flex items-center justify-between gap-2 min-w-0 sm:contents">
                   <p className={`text-xs sm:text-sm text-slate-900 break-all min-w-0 flex-1 dark:text-slate-100 ${showPassword ? 'font-mono tracking-wider select-all font-semibold' : ''}`}>
                     {showPassword ? decryptedPassword || '' : '••••••••••••'}
@@ -683,7 +683,7 @@ function PersonalAccountCard({
 
             <div className="border-b border-slate-200 py-3 sm:py-5 dark:border-slate-700 min-w-0">
               <div className="flex flex-col gap-1 sm:grid sm:grid-cols-[130px_1fr_auto] sm:gap-3 sm:items-center min-w-0">
-                <p className="text-[11px] sm:text-sm text-slate-500 dark:text-slate-400 shrink-0">URL</p>
+                <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 tracking-tight shrink-0">URL</p>
                 <div className="flex items-center justify-between gap-2 min-w-0 sm:contents">
                   {item.url ? (
                     <a
@@ -731,7 +731,7 @@ function PersonalAccountCard({
         {(item.encryptedNote || item.type === 'SECURE_NOTE') && (
           <div className="border-b border-slate-200 py-3 sm:py-5 dark:border-slate-700 min-w-0">
             <div className="flex flex-col gap-1 sm:grid sm:grid-cols-[130px_1fr_auto] sm:gap-3 sm:items-start min-w-0">
-              <p className="text-[11px] sm:text-sm text-slate-500 dark:text-slate-400 shrink-0">Note</p>
+              <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 tracking-tight shrink-0">Note</p>
               <p className="text-xs sm:text-sm text-slate-900 break-words dark:text-slate-100 min-w-0">
                 {decryptedNote || '—'}
               </p>
@@ -742,7 +742,7 @@ function PersonalAccountCard({
         {item.tags?.length > 0 && (
           <div className="py-3 sm:py-4 min-w-0">
             <div className="flex flex-col gap-1.5 sm:grid sm:grid-cols-[130px_1fr_auto] sm:gap-3 sm:items-start min-w-0">
-              <p className="text-[11px] sm:text-sm text-slate-500 dark:text-slate-400 shrink-0">Tags</p>
+              <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 tracking-tight shrink-0">Tags</p>
               <div className="flex flex-wrap gap-1.5 min-w-0">
                 {item.tags.map((tagItem) => (
                   <span
