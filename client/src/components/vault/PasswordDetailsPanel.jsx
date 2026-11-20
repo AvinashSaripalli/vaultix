@@ -18,6 +18,7 @@ import {
   KeyRound,
   Share2,
   X,
+  RotateCcw,
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import api from '../../services/api';
@@ -612,31 +613,46 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
       </div>
 
       {/* Tabs: Credentials vs Activity */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-700/80 pb-2">
-        <button
-          type="button"
-          onClick={() => setActiveTab('credentials')}
-          className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition ${
-            activeTab === 'credentials'
-              ? 'bg-indigo-600 text-white shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
-          }`}
-        >
-          <KeyRound size={15} />
-          <span>Credentials & Fields</span>
-        </button>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-700/80 pb-2">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab('credentials')}
+            className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition ${
+              activeTab === 'credentials'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+          >
+            <KeyRound size={15} />
+            <span>Credentials & Fields</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('activity')}
+            className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition ${
+              activeTab === 'activity'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+          >
+            <History size={15} />
+            <span>Activity & History</span>
+          </button>
+        </div>
 
         <button
           type="button"
-          onClick={() => setActiveTab('activity')}
-          className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition ${
-            activeTab === 'activity'
-              ? 'bg-indigo-600 text-white shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
-          }`}
+          onClick={() => {
+            setHistoryTargetItem(selectedPassword);
+            setHistoryModalOpen(true);
+          }}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 bg-white hover:bg-indigo-50/70 dark:bg-slate-800 dark:hover:bg-indigo-950/40 border border-slate-200/80 dark:border-slate-700 shadow-2xs cursor-pointer"
+          title="Inspect past versions and roll back if needed"
         >
-          <History size={15} />
-          <span>Activity & History</span>
+          <RotateCcw size={13} className="text-indigo-600 dark:text-indigo-400" />
+          <span>Version History & Rollback</span>
         </button>
       </div>
 
@@ -1107,6 +1123,24 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
             >
               <RefreshCw size={13} className={activityLoading ? 'animate-spin' : ''} />
               <span>Refresh</span>
+            </button>
+          </div>
+
+          {/* Quick Version History banner */}
+          <div className="mb-4 p-3.5 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2.5 text-indigo-900 dark:text-indigo-200">
+              <RotateCcw size={16} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
+              <span>Need to recover a previous password or roll back an overwrite?</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setHistoryTargetItem(selectedPassword);
+                setHistoryModalOpen(true);
+              }}
+              className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition shadow-xs shrink-0"
+            >
+              Open Version History
             </button>
           </div>
 
