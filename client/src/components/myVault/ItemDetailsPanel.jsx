@@ -808,9 +808,13 @@ function ItemDetailsPanel({
       try {
         setActivityLoading(true);
         setActivityError('');
-        const res = await api.get(`/passwords/${item.id}/activity?includeGroup=true`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        let res;
+        try {
+          res = await api.get(`/my-vault/passwords/${item.id}/activity?includeGroup=true`);
+        } catch (myVaultErr) {
+          // If /my-vault 404s, fall back to /passwords
+          res = await api.get(`/passwords/${item.id}/activity?includeGroup=true`);
+        }
         if (isMounted) {
           setItemActivityLogs(res.data || []);
         }
@@ -829,7 +833,7 @@ function ItemDetailsPanel({
     return () => {
       isMounted = false;
     };
-  }, [item?.id, activeTab, token]);
+  }, [item?.id, activeTab]);
 
   if (!item) return null;
 
@@ -1015,15 +1019,21 @@ function ItemDetailsPanel({
 
             <button
               type="button"
-              onClick={() => {
+              onClick={async () => {
                 setActivityLoading(true);
-                api
-                  .get(`/passwords/${item.id}/activity?includeGroup=true`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                  })
-                  .then((res) => setItemActivityLogs(res.data || []))
-                  .catch(() => {})
-                  .finally(() => setActivityLoading(false));
+                try {
+                  let res;
+                  try {
+                    res = await api.get(`/my-vault/passwords/${item.id}/activity?includeGroup=true`);
+                  } catch {
+                    res = await api.get(`/passwords/${item.id}/activity?includeGroup=true`);
+                  }
+                  setItemActivityLogs(res.data || []);
+                } catch (err) {
+                  setActivityError(err.response?.data?.message || 'Failed to load item activity');
+                } finally {
+                  setActivityLoading(false);
+                }
               }}
               disabled={activityLoading}
               className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition"

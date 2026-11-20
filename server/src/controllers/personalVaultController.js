@@ -1535,6 +1535,87 @@ const restoreMyVaultPasswordRevision = async (req, res) => {
   }
 };
 
+const getMyVaultPasswordActivity = async (req, res) => {
+  try {
+    const passwordId = req.params.passwordId || req.params.id;
+    const includeGroup = req.query.includeGroup === 'true';
+
+    const vault = await prisma.vault.findFirst({
+      where: {
+        ownerId: req.user.id,
+        type: 'PERSONAL',
+      },
+    });
+
+    const password = await prisma.passwordEntry.findFirst({
+      where: {
+        id: passwordId,
+        OR: [
+          vault ? { vaultId: vault.id } : { id: passwordId },
+          { createdById: req.user.id },
+        ],
+      },
+      include: {
+        vault: true,
+        folder: true,
+      },
+    });
+
+    if (!password) {
+      return res.status(404).json({ message: 'Password not found' });
+    }
+
+    let targetIds = [password.id];
+    if (includeGroup && password.name) {
+      const siblings = await prisma.passwordEntry.findMany({
+        where: {
+          vaultId: password.vaultId,
+          name: password.name,
+        },
+        select: { id: true },
+      });
+      targetIds = siblings.map((s) => s.id);
+    }
+
+    const orConditions = [
+      { targetId: { in: targetIds } },
+      ...targetIds.map((id) => ({
+        metadata: { path: ['passwordId'], equals: id },
+      })),
+    ];
+
+    const logs = await prisma.activityLog.findMany({
+      where: {
+        OR: orConditions,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    const enrichedLogs = logs.map((l) => ({
+      ...l,
+      action: l.action || 'UPDATE_PASSWORD',
+      itemType: password.type || 'LOGIN',
+      details: l.details || l.action,
+    }));
+
+    return res.json(enrichedLogs);
+  } catch (error) {
+    console.error('Get my vault password activity error:', error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   getOrCreateMyVault,
   createMyVaultFolder,
@@ -1556,4 +1637,5 @@ module.exports = {
   logPersonalVaultExport,
   getMyVaultPasswordRevisions,
   restoreMyVaultPasswordRevision,
+  getMyVaultPasswordActivity,
 };

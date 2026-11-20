@@ -155,9 +155,7 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
       try {
         setActivityLoading(true);
         setActivityError('');
-        const res = await api.get(`/passwords/${selectedPasswordId}/activity?includeGroup=true`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await api.get(`/passwords/${selectedPasswordId}/activity?includeGroup=true`);
         if (isMounted) {
           setItemActivityLogs(res.data || []);
         }
@@ -1140,9 +1138,7 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
               onClick={() => {
                 setActivityLoading(true);
                 api
-                  .get(`/passwords/${selectedPasswordId}/activity?includeGroup=true`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                  })
+                  .get(`/passwords/${selectedPasswordId}/activity?includeGroup=true`)
                   .then((res) => setItemActivityLogs(res.data || []))
                   .catch(() => {})
                   .finally(() => setActivityLoading(false));

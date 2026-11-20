@@ -1521,9 +1521,14 @@ const getPasswordActivity = async (req, res) => {
       },
     });
 
+    const isOwner =
+      password.createdById === req.user.id ||
+      (password.vault && password.vault.type === 'PERSONAL' && password.vault.ownerId === req.user.id);
+
     const isAuthorized =
-      hasItemAccess &&
-      ['ADMINISTRATOR', 'READ_WRITE', 'READ_ONLY', 'FULL_ACCESS'].includes(hasItemAccess);
+      isOwner ||
+      (hasItemAccess &&
+      ['ADMINISTRATOR', 'READ_WRITE', 'READ_ONLY', 'FULL_ACCESS'].includes(hasItemAccess));
 
     if (!isAuthorized && !hasShare) {
       return res.status(403).json({ message: 'Access denied' });

@@ -22,6 +22,7 @@ const {
   logPersonalVaultExport,
   getMyVaultPasswordRevisions,
   restoreMyVaultPasswordRevision,
+  getMyVaultPasswordActivity,
 } = require('../controllers/personalVaultController');
 
 const router = express.Router();
@@ -44,6 +45,7 @@ router.post('/export-log', logPersonalVaultExport);
 router.post('/passwords/:passwordId/transfer-to-company', transferPasswordToCompanyVault);
 router.get('/passwords/:passwordId/revisions', getMyVaultPasswordRevisions);
 router.post('/passwords/:passwordId/revisions/:revisionId/restore', restoreMyVaultPasswordRevision);
+router.get('/passwords/:passwordId/activity', getMyVaultPasswordActivity);
 router.put('/passwords/:passwordId', updateMyVaultPassword);
 router.delete('/passwords/:passwordId', deleteMyVaultPassword);
 router.post('/passwords/:passwordId/restore', restoreMyVaultPassword);
@@ -51,5 +53,6 @@ router.delete('/passwords/:passwordId/purge', purgeMyVaultPassword);
 router.get('/trash', getMyVaultTrash);
 
 router.get('/passwords/:passwordId/shares', getPasswordShares);
+router.get('/:passwordId/activity', getMyVaultPasswordActivity);
 
 module.exports = router;

@@ -123,6 +123,7 @@ app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/folders', folderRoutes);
 app.use('/api/v1/invitations', invitationRoutes);
 app.use('/api/v1/my-vault', personalVaultRoutes);
+app.use('/api/v1/personal-vault', personalVaultRoutes);
 app.use('/api/v1/password-shares', passwordShareRoutes);
 app.use('/api/v1/login-activity', loginActivityRoutes);
 app.use('/api/v1/notifications', notificationRoutes);

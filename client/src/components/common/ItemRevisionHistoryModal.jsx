@@ -73,13 +73,22 @@ export default function ItemRevisionHistoryModal({
     const fetchRevisions = async () => {
       try {
         setLoading(true);
-        const endpoint = isPersonal
-          ? `/personal-vault/passwords/${item.id}/revisions`
-          : `/passwords/${item.id}/revisions`;
+        const isPersonalItem = isPersonal || item?.vaultType === 'PERSONAL' || item?.isPersonalVault;
+        let res;
 
-        const res = await api.get(endpoint, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        if (isPersonalItem) {
+          try {
+            res = await api.get(`/personal-vault/passwords/${item.id}/revisions`);
+          } catch (primaryErr) {
+            if (primaryErr.response?.status === 404) {
+              res = await api.get(`/my-vault/passwords/${item.id}/revisions`);
+            } else {
+              throw primaryErr;
+            }
+          }
+        } else {
+          res = await api.get(`/passwords/${item.id}/revisions`);
+        }
 
         if (cancelled) return;
         setRevisions(res.data?.revisions || []);
@@ -192,15 +201,22 @@ export default function ItemRevisionHistoryModal({
 
     try {
       setRestoring(true);
-      const endpoint = isPersonal
-        ? `/personal-vault/passwords/${item.id}/revisions/${confirmRestore.id}/restore`
-        : `/passwords/${item.id}/revisions/${confirmRestore.id}/restore`;
+      const isPersonalItem = isPersonal || item?.vaultType === 'PERSONAL' || item?.isPersonalVault;
+      let res;
 
-      const res = await api.post(
-        endpoint,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      if (isPersonalItem) {
+        try {
+          res = await api.post(`/personal-vault/passwords/${item.id}/revisions/${confirmRestore.id}/restore`, {});
+        } catch (primaryErr) {
+          if (primaryErr.response?.status === 404) {
+            res = await api.post(`/my-vault/passwords/${item.id}/revisions/${confirmRestore.id}/restore`, {});
+          } else {
+            throw primaryErr;
+          }
+        }
+      } else {
+        res = await api.post(`/passwords/${item.id}/revisions/${confirmRestore.id}/restore`, {});
+      }
 
       showToast(`Restored version ${confirmRestore.version} as the active credential`);
       setConfirmRestore(null);

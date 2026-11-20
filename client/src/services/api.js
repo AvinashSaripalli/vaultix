@@ -102,6 +102,22 @@ api.interceptors.request.use((config) => {
   config.baseURL = getApiBaseUrl();
   const token = localStorage.getItem('token');
 
+  // Strip broken/stale Authorization headers that may have been passed with undefined/null token
+  if (config.headers) {
+    const rawAuth = config.headers?.get
+      ? config.headers.get('Authorization')
+      : (config.headers.Authorization || config.headers.authorization);
+    if (typeof rawAuth === 'string' && (rawAuth.includes('undefined') || rawAuth.includes('null'))) {
+      if (config.headers?.delete) {
+        config.headers.delete('Authorization');
+        config.headers.delete('authorization');
+      } else {
+        delete config.headers.Authorization;
+        delete config.headers.authorization;
+      }
+    }
+  }
+
   if (token) {
     if (config.headers?.set) {
       config.headers.set('Authorization', `Bearer ${token}`);
