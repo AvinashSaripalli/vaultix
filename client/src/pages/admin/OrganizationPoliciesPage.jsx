@@ -534,7 +534,7 @@ function OrganizationPoliciesPage() {
                     </p>
 
                     {/* Segmented Selector for Length */}
-                    <div className="mt-3.5 grid grid-cols-5 gap-1.5 p-1 bg-slate-100 dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-700/60">
+                    <div className="mt-3.5 grid grid-cols-5 gap-1 sm:gap-1.5 p-1 bg-slate-100 dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-700/60 overflow-hidden">
                       {PASSWORD_LENGTH_OPTIONS.map((opt) => {
                         const isSelected = minMasterPasswordLength === opt.value;
                         return (
@@ -542,7 +542,7 @@ function OrganizationPoliciesPage() {
                             key={opt.value}
                             type="button"
                             onClick={() => setMinMasterPasswordLength(opt.value)}
-                            className={`py-1.5 text-xs font-bold rounded-xl transition-all ${
+                            className={`py-1.5 px-0.5 text-[11px] sm:text-xs font-bold rounded-xl transition-all truncate text-center ${
                               isSelected
                                 ? 'bg-emerald-600 text-white shadow-xs'
                                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -610,7 +610,7 @@ function OrganizationPoliciesPage() {
                     </p>
 
                     {/* Segmented Selector for Timeout */}
-                    <div className="mt-3.5 grid grid-cols-5 gap-1.5 p-1 bg-slate-100 dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-700/60">
+                    <div className="mt-3.5 grid grid-cols-5 gap-1 sm:gap-1.5 p-1 bg-slate-100 dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-700/60 overflow-hidden">
                       {TIMEOUT_OPTIONS.map((opt) => {
                         const isSelected = maxVaultTimeoutMinutes === opt.value;
                         return (
@@ -618,7 +618,7 @@ function OrganizationPoliciesPage() {
                             key={String(opt.value)}
                             type="button"
                             onClick={() => setMaxVaultTimeoutMinutes(opt.value)}
-                            className={`py-1.5 text-xs font-bold rounded-xl transition-all ${
+                            className={`py-1.5 px-0.5 text-[11px] sm:text-xs font-bold rounded-xl transition-all truncate text-center ${
                               isSelected
                                 ? 'bg-amber-600 text-white shadow-xs'
                                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -672,7 +672,7 @@ function OrganizationPoliciesPage() {
                     </p>
 
                     {/* Segmented Selector for Clipboard */}
-                    <div className="mt-3.5 grid grid-cols-4 gap-1.5 p-1 bg-slate-100 dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-700/60">
+                    <div className="mt-3.5 grid grid-cols-4 gap-1 sm:gap-1.5 p-1 bg-slate-100 dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-700/60 overflow-hidden">
                       {CLIPBOARD_OPTIONS.map((opt) => {
                         const isSelected = clipboardTimeoutSeconds === opt.value;
                         return (
@@ -680,7 +680,7 @@ function OrganizationPoliciesPage() {
                             key={String(opt.value)}
                             type="button"
                             onClick={() => setClipboardTimeoutSeconds(opt.value)}
-                            className={`py-1.5 text-xs font-bold rounded-xl transition-all ${
+                            className={`py-1.5 px-0.5 text-[11px] sm:text-xs font-bold rounded-xl transition-all truncate text-center ${
                               isSelected
                                 ? 'bg-blue-600 text-white shadow-xs'
                                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'

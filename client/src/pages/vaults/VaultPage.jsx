@@ -868,7 +868,7 @@ function VaultPage() {
   return (
     <AppLayout>
       <div className="bg-white rounded-2xl border border-slate-200 dark:bg-slate-800 dark:border-slate-700 shadow-sm min-w-0">
-        <div className={`px-4 sm:px-6 lg:px-8 py-4 sm:py-5 border-b border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800 rounded-t-2xl ${selectedPasswordId ? 'hidden md:block' : 'block'}`}>
+        <div className={`px-4 sm:px-6 lg:px-8 py-4 sm:py-5 border-b border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800 rounded-t-2xl ${selectedPasswordId ? 'hidden xl:block' : 'block'}`}>
           {isTrashView ? (
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
               <div className="min-w-0 flex-1">
@@ -913,7 +913,7 @@ function VaultPage() {
               </div>
             </div>
           ) : (
-            <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 ${selectedPasswordId ? 'hidden md:flex' : 'flex'}`}>
+            <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 ${selectedPasswordId ? 'hidden xl:flex' : 'flex'}`}>
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
                   Company Vault
@@ -1546,11 +1546,11 @@ function VaultPage() {
                 }}
               />
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] lg:grid-cols-[320px_1fr] xl:grid-cols-[360px_1fr] min-h-[640px] divide-y md:divide-y-0 md:divide-x divide-slate-200 dark:divide-slate-700 min-w-0">
-                <div className="hidden md:block min-w-0">
+              <div className="grid grid-cols-1 xl:grid-cols-[300px_1fr] 2xl:grid-cols-[340px_1fr] min-h-[640px] divide-y xl:divide-y-0 xl:divide-x divide-slate-200 dark:divide-slate-700 min-w-0">
+                <div className={`min-w-0 ${selectedPasswordId ? 'hidden xl:block' : 'block'}`}>
                   <PasswordListPanel />
                 </div>
-                <div className="min-w-0">
+                <div className={`min-w-0 ${!selectedPasswordId ? 'hidden xl:block' : 'block'}`}>
                   <PasswordDetailsPanel
                     onBackToList={() => dispatch(selectPassword(null))}
                     onShareVault={() => setVaultShareOpen(true)}

@@ -858,8 +858,8 @@ function ItemDetailsPanel({
         }}
       />
 
-      {/* Mobile Hero Center Display */}
-      <div className="md:hidden flex flex-col items-center text-center py-2 mb-4">
+      {/* Mobile Hero Center Display (< sm) */}
+      <div className="sm:hidden flex flex-col items-center text-center py-2 mb-4">
         <ItemServiceIcon name={item.name} type={item.type} size="lg" className="mb-2.5 shadow-md" />
         <h1 className="text-xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
           {item.name}
@@ -873,8 +873,8 @@ function ItemDetailsPanel({
         </div>
       </div>
 
-      {/* Desktop Header */}
-      <div className="hidden md:flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 mb-5 sm:mb-6 min-w-0">
+      {/* Main Responsive Header (>= sm) */}
+      <div className="hidden sm:flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 mb-5 sm:mb-6 min-w-0">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-3.5 min-w-0">
             <ItemServiceIcon name={item.name} type={item.type} size="md" />
@@ -891,7 +891,7 @@ function ItemDetailsPanel({
                   </span>
                 )}
               </div>
-              <p className="text-slate-500 mt-0.5 text-xs dark:text-slate-400">
+              <p className="text-slate-500 mt-0.5 text-xs dark:text-slate-400 break-words">
                 {effectiveGroupItems.length > 1
                   ? `${effectiveGroupItems.length} accounts in Personal Vault`
                   : `${typeMeta.label} in Personal Vault`}
@@ -930,7 +930,7 @@ function ItemDetailsPanel({
       </div>
 
       {/* Tabs: Credentials vs Activity */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-700/80 pb-2 mb-5 overflow-x-auto scrollbar-thin">
+      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-700/80 pb-2 mb-5 overflow-x-auto scrollbar-none flex-nowrap">
         <button
           type="button"
           onClick={() => setActiveTab('credentials')}

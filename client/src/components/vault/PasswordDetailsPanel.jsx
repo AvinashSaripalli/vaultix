@@ -504,21 +504,26 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
 
   return (
     <div className="p-3.5 sm:p-6 lg:p-8 min-w-0">
-      {/* Mobile Top Navigation & Hero Display */}
-      <div className="md:hidden mb-5">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-200/80 dark:border-slate-700/80 mb-3">
+      {/* Back to items navigation (visible below xl breakpoint) */}
+      {onBackToList && (
+        <div className="xl:hidden mb-4">
           <button
             type="button"
             onClick={() => {
               hapticLight();
-              onBackToList?.();
+              onBackToList();
             }}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 py-1.5 px-3 rounded-xl bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-900/30 transition active:scale-95 cursor-pointer"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 py-1.5 px-3 rounded-xl bg-indigo-50/70 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 transition border border-indigo-100 dark:border-indigo-800 cursor-pointer"
           >
-            <ArrowLeft size={15} />
-            <span>Back</span>
+            <ArrowLeft size={14} />
+            <span>Back to items</span>
           </button>
+        </div>
+      )}
 
+      {/* Mobile-only Compact Hero Display (< sm) */}
+      <div className="sm:hidden mb-5">
+        <div className="flex items-center justify-end pb-3 border-b border-slate-200/80 dark:border-slate-700/80 mb-3">
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -572,8 +577,8 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
         </div>
       </div>
 
-      {/* Desktop Header */}
-      <div className="hidden md:flex mb-5 sm:mb-6 flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 min-w-0">
+      {/* Main Responsive Header (>= sm) */}
+      <div className="hidden sm:flex mb-5 sm:mb-6 flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 min-w-0">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-3.5 min-w-0">
             <ItemServiceIcon name={selectedPassword.name} type={selectedPassword.type} size="md" />
@@ -590,7 +595,7 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-500 mt-0.5 dark:text-slate-400">
+              <p className="text-xs text-slate-500 mt-0.5 dark:text-slate-400 break-words">
                 {sameNamePasswords.length > 1
                   ? `${sameNamePasswords.length} accounts in ${selectedFolder?.name || 'Company Vault'}`
                   : `${getItemTypeMeta(selectedPassword.type).label} in ${selectedFolder?.name || 'Company Vault'}`}
@@ -652,11 +657,11 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
       </div>
 
       {/* Tabs: Credentials vs Activity */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-700/80 pb-2">
+      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-700/80 pb-2 overflow-x-auto scrollbar-none flex-nowrap">
         <button
           type="button"
           onClick={() => setActiveTab('credentials')}
-          className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition ${
+          className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition shrink-0 ${
             activeTab === 'credentials'
               ? 'bg-indigo-600 text-white shadow-sm'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -669,7 +674,7 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
         <button
           type="button"
           onClick={() => setActiveTab('activity')}
-          className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition ${
+          className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition shrink-0 ${
             activeTab === 'activity'
               ? 'bg-indigo-600 text-white shadow-sm'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'

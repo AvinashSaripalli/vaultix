@@ -175,15 +175,15 @@ function PasswordListPanel() {
                     {group.name}
                   </div>
 
-                  <div className="flex items-center gap-1.5 mt-1 min-w-0">
-                    <span className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 mt-1 min-w-0 flex-wrap">
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate min-w-0 max-w-[140px]">
                       {group.items.length > 1
                         ? `${group.items.length} accounts`
                         : firstItem?.login || meta.label}
                     </span>
                     {!selectedFolderId && (
                       <span
-                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-amber-50 text-amber-800 border border-amber-200/80 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60 truncate max-w-[100px] shrink-0"
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-amber-50 text-amber-800 border border-amber-200/80 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60 truncate max-w-[90px] shrink-0"
                         title={firstItem?.folder?.name || folders.find((f) => f.id === firstItem?.folderId)?.name || 'Vault Root'}
                       >
                         <Folder size={9} className="text-amber-600 dark:text-amber-400 shrink-0" />

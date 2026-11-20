@@ -416,7 +416,7 @@ function MyVaultPage() {
   return (
     <AppLayout>
       <div className="space-y-5 sm:space-y-6 min-w-0">
-        <div className={selectedPasswordId ? 'hidden md:block' : 'block'}>
+        <div className={selectedPasswordId ? 'hidden xl:block' : 'block'}>
           <MyVaultHeader
             folders={folders}
             onCreateFolder={() => setFolderModalOpen(true)}
@@ -428,8 +428,8 @@ function MyVaultPage() {
           />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-4 sm:gap-5 items-stretch min-w-0">
-          <div className={selectedPasswordId ? 'hidden md:block' : 'block'}>
+        <div className="grid grid-cols-1 xl:grid-cols-[240px_1fr] gap-4 sm:gap-5 items-stretch min-w-0">
+          <div className={selectedPasswordId ? 'hidden xl:block' : 'block'}>
             <MyVaultSidebar
               folders={folders}
               selectedFolderId={selectedFolderId}
