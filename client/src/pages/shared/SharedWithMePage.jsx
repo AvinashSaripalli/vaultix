@@ -395,37 +395,40 @@ function SharedWithMePage() {
                               hapticLight();
                               handleSelectShare(item);
                             }}
-                            className={`w-full text-left p-2.5 sm:px-3 sm:py-2.5 rounded-xl border transition-all active:scale-[0.99] flex items-center gap-3 min-w-0 ${
+                            className={`w-full text-left p-3 rounded-2xl border transition-all active:scale-[0.99] flex items-center gap-3 min-w-0 ${
                               active
-                                ? 'bg-indigo-50/90 border-indigo-200 shadow-sm dark:bg-indigo-900/25 dark:border-indigo-800'
-                                : 'bg-white border-slate-200/90 hover:border-slate-300 hover:bg-slate-50/80 dark:bg-slate-800 dark:border-slate-700/80 dark:hover:border-slate-600 dark:hover:bg-slate-700/60 shadow-xs'
+                                ? 'bg-indigo-50/90 border-indigo-300 shadow-sm ring-1 ring-indigo-400/20 dark:bg-indigo-950/40 dark:border-indigo-600 dark:ring-indigo-500/20'
+                                : 'bg-white border-slate-200/90 hover:border-slate-300 hover:bg-slate-50/80 dark:bg-slate-800 dark:border-slate-700/80 dark:hover:border-slate-600 dark:hover:bg-slate-750/70 shadow-2xs'
                             }`}
                           >
-                            <ItemServiceIcon name={pwd.name} type={pwd.type} size="sm" />
+                            <ItemServiceIcon name={pwd.name} type={pwd.type} size="md" />
 
                             <div className="flex-1 min-w-0">
-                              <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
-                                {pwd.name || 'Untitled'}
+                              {/* Line 1: Bold title + Category Badge right aligned */}
+                              <div className="flex items-center justify-between gap-1.5 min-w-0">
+                                <span className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate tracking-tight">
+                                  {pwd.name || 'Untitled'}
+                                </span>
+                                <ItemTypeBadge type={pwd.type} size="xs" />
                               </div>
 
-                              <div className="flex items-center gap-1.5 mt-1 min-w-0 flex-wrap">
-                                <span className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate min-w-0 max-w-[130px]">
-                                  {pwd.login || meta.label}
+                              {/* Line 2: Full email / account + Shared By pill */}
+                              <div className="flex items-center justify-between gap-2 mt-1 min-w-0">
+                                <span className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate min-w-0">
+                                  {pwd.login || (pwd.type === 'CARD' ? 'Card details' : meta.label)}
                                 </span>
 
                                 <span
-                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-amber-50 text-amber-800 border border-amber-200/80 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60 truncate max-w-[100px] shrink-0"
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-amber-50 text-amber-800 border border-amber-200/80 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60 truncate max-w-[95px] shrink-0"
                                   title={`Shared by ${item.sharedBy?.fullName || 'User'}`}
                                 >
                                   <User size={9} className="text-amber-600 dark:text-amber-400 shrink-0" />
                                   <span className="truncate">{item.sharedBy?.fullName || 'User'}</span>
                                 </span>
-
-                                <ItemTypeBadge type={pwd.type} size="xs" />
                               </div>
                             </div>
 
-                            <ChevronRight size={16} className="text-slate-300 dark:text-slate-600 shrink-0" />
+                            <ChevronRight size={15} className={`shrink-0 transition-colors ${active ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-300 dark:text-slate-600'}`} />
                           </button>
                         );
                       })}

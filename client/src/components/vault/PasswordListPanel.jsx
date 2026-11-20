@@ -123,19 +123,19 @@ function PasswordListPanel() {
     <div className="bg-white p-3 sm:p-4 border-r border-slate-200 dark:bg-slate-800 dark:border-slate-700 flex flex-col justify-between min-h-[640px] min-w-0">
       <div>
         <div className="relative mb-3">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             placeholder="Search items..."
             value={searchTerm}
             onChange={(e) => dispatch(setSearchTerm(e.target.value))}
-            className="w-full h-9 rounded-xl border border-slate-200 bg-slate-50 pl-8.5 pr-3 text-xs sm:text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:bg-slate-800/50 dark:border-slate-700"
+            className="w-full h-9.5 rounded-xl border border-slate-200 bg-slate-50/80 pl-9 pr-3 text-xs sm:text-sm outline-none focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all dark:bg-slate-800/50 dark:border-slate-700 dark:focus:bg-slate-800"
           />
         </div>
 
-        <div className="flex items-center justify-between mb-2 px-1 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+        <div className="flex items-center justify-between mb-2.5 px-1 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
           <div className="flex items-center gap-1.5 min-w-0">
-            <span>NAME</span>
+            <span>CREDENTIALS</span>
             <span className="text-slate-400 dark:text-slate-500 font-semibold normal-case">
               ({totalGroups})
             </span>
@@ -158,32 +158,38 @@ function PasswordListPanel() {
             return (
               <button
                 key={group.name}
+                type="button"
                 onClick={() => {
                   hapticLight();
                   dispatch(selectPassword(firstItem.id));
                 }}
-                className={`w-full text-left p-2.5 sm:px-3 sm:py-2.5 rounded-xl border transition-all active:scale-[0.99] flex items-center gap-3 min-w-0 ${
+                className={`w-full text-left p-3 rounded-2xl border transition-all active:scale-[0.99] flex items-center gap-3 min-w-0 ${
                   active
-                    ? 'bg-indigo-50/90 border-indigo-200 shadow-sm dark:bg-indigo-900/25 dark:border-indigo-800'
-                    : 'bg-white border-slate-200/90 hover:border-slate-300 hover:bg-slate-50/80 dark:bg-slate-800 dark:border-slate-700/80 dark:hover:border-slate-600 dark:hover:bg-slate-700/60 shadow-xs'
+                    ? 'bg-indigo-50/90 border-indigo-300 shadow-sm ring-1 ring-indigo-400/20 dark:bg-indigo-950/40 dark:border-indigo-600 dark:ring-indigo-500/20'
+                    : 'bg-white border-slate-200/90 hover:border-slate-300 hover:bg-slate-50/80 dark:bg-slate-800 dark:border-slate-700/80 dark:hover:border-slate-600 dark:hover:bg-slate-750/70 shadow-2xs'
                 }`}
               >
-                <ItemServiceIcon name={group.name} type={firstItem?.type} size="sm" />
+                <ItemServiceIcon name={group.name} type={firstItem?.type} size="md" />
 
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
-                    {group.name}
+                  {/* Line 1: Bold title + Category Badge right aligned */}
+                  <div className="flex items-center justify-between gap-1.5 min-w-0">
+                    <span className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate tracking-tight">
+                      {group.name}
+                    </span>
+                    <ItemTypeBadge type={firstItem?.type} size="xs" />
                   </div>
 
-                  <div className="flex items-center gap-1.5 mt-1 min-w-0 flex-wrap">
-                    <span className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate min-w-0 max-w-[140px]">
+                  {/* Line 2: Full email/account without awkward truncation */}
+                  <div className="flex items-center justify-between gap-2 mt-1 min-w-0">
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate min-w-0">
                       {group.items.length > 1
                         ? `${group.items.length} accounts`
-                        : firstItem?.login || meta.label}
+                        : firstItem?.login || (firstItem?.type === 'CARD' ? 'Card details' : meta.label)}
                     </span>
                     {!selectedFolderId && (
                       <span
-                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-amber-50 text-amber-800 border border-amber-200/80 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60 truncate max-w-[90px] shrink-0"
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-amber-50 text-amber-800 border border-amber-200/80 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60 truncate max-w-[85px] shrink-0"
                         title={firstItem?.folder?.name || folders.find((f) => f.id === firstItem?.folderId)?.name || 'Vault Root'}
                       >
                         <Folder size={9} className="text-amber-600 dark:text-amber-400 shrink-0" />
@@ -192,11 +198,10 @@ function PasswordListPanel() {
                         </span>
                       </span>
                     )}
-                    <ItemTypeBadge type={firstItem?.type} size="xs" />
                   </div>
                 </div>
 
-                <ChevronRight size={16} className="text-slate-300 dark:text-slate-600 shrink-0" />
+                <ChevronRight size={15} className={`shrink-0 transition-colors ${active ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-300 dark:text-slate-600'}`} />
               </button>
             );
           })}

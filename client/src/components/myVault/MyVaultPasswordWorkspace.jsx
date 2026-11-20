@@ -133,34 +133,39 @@ function MyVaultPasswordWorkspace({
                     <button
                       key={group.name}
                       onClick={() => handleSelect(firstItem.id)}
-                      className={`w-full text-left rounded-xl border p-2.5 sm:px-3 sm:py-2.5 transition-all active:scale-[0.99] flex items-center gap-3 min-w-0 ${
+                      className={`w-full text-left rounded-2xl border p-3 transition-all active:scale-[0.99] flex items-center gap-3 min-w-0 ${
                         active
-                          ? 'bg-indigo-50/90 border-indigo-200 shadow-sm dark:bg-indigo-900/25 dark:border-indigo-800'
-                          : 'bg-white border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-slate-700 shadow-xs'
+                          ? 'bg-indigo-50/90 border-indigo-300 shadow-sm ring-1 ring-indigo-400/20 dark:bg-indigo-950/40 dark:border-indigo-600 dark:ring-indigo-500/20'
+                          : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/80 dark:bg-slate-800 dark:border-slate-700/80 dark:hover:border-slate-600 dark:hover:bg-slate-750/70 shadow-2xs'
                       }`}
                     >
-                      <ItemServiceIcon name={group.name} type={firstItem?.type} size="sm" />
+                      <ItemServiceIcon name={group.name} type={firstItem?.type} size="md" />
 
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <h3 className="font-semibold text-slate-900 truncate flex items-center gap-1.5 flex-1 dark:text-slate-100 min-w-0 text-sm">
-                            {group.name}
-                          </h3>
-                          {firstItem?.isSensitive && (
-                            <Lock size={11} className="text-emerald-600 shrink-0 dark:text-emerald-400" />
-                          )}
+                        {/* Line 1: Name + Lock + TypeBadge */}
+                        <div className="flex items-center justify-between gap-1.5 min-w-0">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <h3 className="font-bold text-slate-900 truncate tracking-tight dark:text-slate-100 text-sm">
+                              {group.name}
+                            </h3>
+                            {firstItem?.isSensitive && (
+                              <Lock size={11} className="text-emerald-600 shrink-0 dark:text-emerald-400" />
+                            )}
+                          </div>
+                          <ItemTypeBadge type={firstItem?.type} size="xs" />
                         </div>
-                        <div className="flex items-center gap-2 mt-1 min-w-0">
-                          <p className="text-xs text-slate-500 truncate dark:text-slate-400 min-w-0 flex-1 font-mono">
+
+                        {/* Line 2: Full email/account without truncation */}
+                        <div className="mt-1 min-w-0">
+                          <p className="text-xs text-slate-500 font-medium truncate dark:text-slate-400 min-w-0">
                             {group.items.length > 1
                               ? `${group.items.length} accounts`
-                              : firstItem?.login || meta.label}
+                              : firstItem?.login || (firstItem?.type === 'CARD' ? 'Card details' : meta.label)}
                           </p>
-                          <ItemTypeBadge type={firstItem?.type} size="xs" />
                         </div>
                       </div>
 
-                      <ChevronRight size={16} className="text-slate-300 dark:text-slate-600 shrink-0" />
+                      <ChevronRight size={15} className={`shrink-0 transition-colors ${active ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-300 dark:text-slate-600'}`} />
                     </button>
                   );
                 })}
