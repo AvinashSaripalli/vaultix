@@ -2,12 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Search,
   Share2,
-  Clock,
-  KeyRound,
-  ShieldCheck,
+  ChevronLeft,
   ChevronRight,
-  Filter,
-  Trash2,
+  User,
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import AppLayout from '../../components/layout/AppLayout';
@@ -16,6 +13,7 @@ import ModalPortal, { ModalBackdrop } from '../../components/common/ModalPortal'
 import ConfirmModal from '../../components/common/ConfirmModal';
 import VerifyMasterPasswordModal from '../../components/security/VerifyMasterPasswordModal';
 import ItemServiceIcon from '../../components/common/ItemServiceIcon';
+import ItemTypeBadge from '../../components/myVault/ItemTypeBadge';
 import { fetchSharedWithMe, removePasswordShare } from '../../features/sharedPasswords/sharedPasswordsSlice';
 import {
   decryptText,
@@ -26,10 +24,25 @@ import {
   decryptFieldsWithAesKey,
   decryptPrivateKey,
 } from '../../utils/crypto';
+import { getItemTypeMeta } from '../../utils/itemTypes';
 import { secureCopyText } from '../../utils/clipboard';
 import { showToast } from '../../utils/toast';
+import { hapticLight } from '../../utils/haptics';
 import api from '../../services/api';
 import { setSessionRsaPrivateKey, setSessionRsaPublicKey } from '../../features/auth/authSlice';
+
+function getPaginationItems(current, total) {
+  if (total <= 5) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  if (current <= 3) {
+    return [1, 2, 3, 'ellipsis-end', total];
+  }
+  if (current >= total - 2) {
+    return [1, 'ellipsis-start', total - 2, total - 1, total];
+  }
+  return [1, 'ellipsis-start', current - 1, current, current + 1, 'ellipsis-end', total];
+}
 
 function SharedWithMePage() {
   const dispatch = useDispatch();
@@ -39,8 +52,10 @@ function SharedWithMePage() {
   );
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedType, setSelectedType] = useState('ALL');
   const [selectedShareId, setSelectedShareId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   const [decryptedData, setDecryptedData] = useState({});
   const [decryptingId, setDecryptingId] = useState(null);
   const [decryptError, setDecryptError] = useState('');
@@ -52,23 +67,9 @@ function SharedWithMePage() {
     dispatch(fetchSharedWithMe());
   }, [dispatch]);
 
-  // Distinct types for filter chips
-  const typeCounts = useMemo(() => {
-    const counts = { ALL: sharedWithMe.length };
-    sharedWithMe.forEach((i) => {
-      const t = i.password?.type || 'LOGIN';
-      counts[t] = (counts[t] || 0) + 1;
-    });
-    return counts;
-  }, [sharedWithMe]);
-
   const filteredItems = useMemo(() => {
     const q = searchTerm.toLowerCase().trim();
     return sharedWithMe.filter((i) => {
-      const itemType = i.password?.type || 'LOGIN';
-      if (selectedType !== 'ALL' && itemType !== selectedType) {
-        return false;
-      }
       if (!q) return true;
       return (
         i.password?.name?.toLowerCase().includes(q) ||
@@ -78,19 +79,37 @@ function SharedWithMePage() {
         i.sharedBy?.email?.toLowerCase().includes(q)
       );
     });
-  }, [sharedWithMe, searchTerm, selectedType]);
+  }, [sharedWithMe, searchTerm]);
 
-  // Keep a valid item selected if available
+  // Reset page when search changes
   useEffect(() => {
-    if (filteredItems.length > 0) {
-      const exists = filteredItems.some((i) => i.id === selectedShareId);
-      if (!exists && window.innerWidth >= 1024) {
-        setSelectedShareId(filteredItems[0].id);
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  const totalItems = filteredItems.length;
+  const isAll = pageSize === 'all';
+  const effectivePageSize = isAll ? Math.max(totalItems, 1) : Number(pageSize);
+  const totalPages = Math.ceil(totalItems / effectivePageSize) || 1;
+  const validPage = Math.min(Math.max(currentPage, 1), totalPages);
+
+  const startIndex = (validPage - 1) * effectivePageSize;
+  const endIndex = isAll ? totalItems : Math.min(startIndex + effectivePageSize, totalItems);
+
+  const paginatedItems = useMemo(() => {
+    return filteredItems.slice(startIndex, endIndex);
+  }, [filteredItems, startIndex, endIndex]);
+
+  // Maintain valid selection
+  useEffect(() => {
+    if (paginatedItems.length > 0) {
+      const exists = paginatedItems.some((i) => i.id === selectedShareId);
+      if (!exists && window.innerWidth >= 1280) {
+        setSelectedShareId(paginatedItems[0].id);
       }
     } else {
       setSelectedShareId(null);
     }
-  }, [filteredItems, selectedShareId]);
+  }, [paginatedItems, selectedShareId]);
 
   const selectedShare = useMemo(() => {
     return sharedWithMe.find((i) => i.id === selectedShareId) || null;
@@ -245,23 +264,6 @@ function SharedWithMePage() {
     }
   };
 
-  const formatRelativeDate = (dateStr) => {
-    if (!dateStr) return '';
-    try {
-      const d = new Date(dateStr);
-      const now = new Date();
-      const diffMs = now - d;
-      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-      if (diffDays === 0) return 'Today';
-      if (diffDays === 1) return 'Yesterday';
-      if (diffDays < 7) return `${diffDays}d ago`;
-      if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
-      return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-    } catch {
-      return '';
-    }
-  };
-
   return (
     <AppLayout>
       <div className="space-y-5 sm:space-y-6 min-w-0">
@@ -290,7 +292,7 @@ function SharedWithMePage() {
           </div>
         </div>
 
-        {/* Main Master-Detail Split Workspace */}
+        {/* Main Workspace (Identical Company Vault Split Grid) */}
         <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-sm overflow-hidden dark:bg-slate-800 dark:border-slate-700 min-w-0">
           
           {loading ? (
@@ -324,135 +326,172 @@ function SharedWithMePage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] xl:grid-cols-[380px_1fr] min-h-[580px] divide-y lg:divide-y-0 lg:divide-x divide-slate-200 dark:divide-slate-700 min-w-0">
+            <div className="grid grid-cols-1 xl:grid-cols-[300px_1fr] 2xl:grid-cols-[340px_1fr] min-h-[640px] divide-y xl:divide-y-0 xl:divide-x divide-slate-200 dark:divide-slate-700 min-w-0">
               
-              {/* Left Pane (Master List) */}
-              <div
-                className={`${
-                  selectedShare ? 'hidden lg:flex' : 'flex'
-                } flex-col p-3.5 sm:p-4 bg-slate-50/50 dark:bg-slate-800/40 min-w-0`}
-              >
-                {/* Search Bar */}
-                <div className="relative mb-3">
-                  <Search
-                    size={15}
-                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none"
-                  />
-                  <input
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Search by name, login, or sender..."
-                    className="w-full h-9 rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-xs outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-                  />
-                </div>
-
-                {/* Filter Chips */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-2.5 mb-2 scrollbar-none text-xs">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedType('ALL')}
-                    className={`px-2.5 py-1 rounded-lg font-semibold shrink-0 transition ${
-                      selectedType === 'ALL'
-                        ? 'bg-indigo-600 text-white shadow-xs'
-                        : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-750'
-                    }`}
-                  >
-                    All ({typeCounts.ALL})
-                  </button>
-                  {Object.keys(typeCounts)
-                    .filter((k) => k !== 'ALL' && typeCounts[k] > 0)
-                    .map((typeKey) => (
-                      <button
-                        key={typeKey}
-                        type="button"
-                        onClick={() => setSelectedType(typeKey)}
-                        className={`px-2.5 py-1 rounded-lg font-semibold shrink-0 transition uppercase text-[10px] tracking-wider ${
-                          selectedType === typeKey
-                            ? 'bg-indigo-600 text-white shadow-xs'
-                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-750'
-                        }`}
-                      >
-                        {typeKey} ({typeCounts[typeKey]})
-                      </button>
-                    ))}
-                </div>
-
-                {/* List of Shared Items */}
-                <div className="space-y-1.5 overflow-y-auto flex-1 pr-1 max-h-[calc(100vh-320px)] lg:max-h-[600px]">
-                  {filteredItems.length === 0 ? (
-                    <div className="py-12 text-center text-slate-400 dark:text-slate-500 text-xs">
-                      No matches found.
+              {/* Left Side: PasswordListPanel Style (Company Vault Exact Match) */}
+              <div className={`min-w-0 ${selectedShareId ? 'hidden xl:block' : 'block'}`}>
+                <div className="bg-white p-3 sm:p-4 border-r border-slate-200 dark:bg-slate-800 dark:border-slate-700 flex flex-col justify-between min-h-[640px] h-full min-w-0">
+                  <div>
+                    {/* Search items... input */}
+                    <div className="relative mb-3">
+                      <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                      <input
+                        type="text"
+                        placeholder="Search items..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full h-9 rounded-xl border border-slate-200 bg-slate-50 pl-8.5 pr-3 text-xs sm:text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:bg-slate-800/50 dark:border-slate-700 dark:text-slate-100"
+                      />
                     </div>
-                  ) : (
-                    filteredItems.map((item) => {
-                      const isSelected = item.id === selectedShareId;
-                      const pwd = item.password || {};
-                      const itemType = pwd.type || 'LOGIN';
-                      const senderInitial = (item.sharedBy?.fullName?.[0] || 'U').toUpperCase();
 
-                      return (
-                        <div
-                          key={item.id}
-                          onClick={() => handleSelectShare(item)}
-                          className={`p-3 rounded-xl cursor-pointer transition flex flex-col gap-2 min-w-0 ${
-                            isSelected
-                              ? 'bg-indigo-50/90 dark:bg-indigo-950/50 border-l-4 border-indigo-600 dark:border-indigo-500 shadow-xs'
-                              : 'hover:bg-slate-100/70 dark:hover:bg-slate-750/60 border-l-4 border-transparent'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-2.5 min-w-0">
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <ItemServiceIcon name={pwd.name} type={itemType} size="sm" />
-                              <div className="min-w-0">
-                                <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
-                                  {pwd.name || 'Untitled'}
-                                </h3>
-                                <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                                  {pwd.login || (pwd.url ? pwd.url : 'No login')}
-                                </p>
+                    {/* NAME (totalItems) Header */}
+                    <div className="flex items-center justify-between mb-2 px-1 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span>NAME</span>
+                        <span className="text-slate-400 dark:text-slate-500 font-semibold normal-case">
+                          ({totalItems})
+                        </span>
+                      </div>
+                      {totalItems > 0 && !isAll && (
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500 font-normal lowercase">
+                          {startIndex + 1}–{endIndex} of {totalItems}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Items List (Card buttons matching Company Vault) */}
+                    <div className="space-y-2">
+                      {paginatedItems.map((item) => {
+                        const active = item.id === selectedShareId;
+                        const pwd = item.password || {};
+                        const meta = getItemTypeMeta(pwd?.type);
+
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => {
+                              hapticLight();
+                              handleSelectShare(item);
+                            }}
+                            className={`w-full text-left p-2.5 sm:px-3 sm:py-2.5 rounded-xl border transition-all active:scale-[0.99] flex items-center gap-3 min-w-0 ${
+                              active
+                                ? 'bg-indigo-50/90 border-indigo-200 shadow-sm dark:bg-indigo-900/25 dark:border-indigo-800'
+                                : 'bg-white border-slate-200/90 hover:border-slate-300 hover:bg-slate-50/80 dark:bg-slate-800 dark:border-slate-700/80 dark:hover:border-slate-600 dark:hover:bg-slate-700/60 shadow-xs'
+                            }`}
+                          >
+                            <ItemServiceIcon name={pwd.name} type={pwd.type} size="sm" />
+
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+                                {pwd.name || 'Untitled'}
+                              </div>
+
+                              <div className="flex items-center gap-1.5 mt-1 min-w-0 flex-wrap">
+                                <span className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate min-w-0 max-w-[130px]">
+                                  {pwd.login || meta.label}
+                                </span>
+
+                                <span
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-amber-50 text-amber-800 border border-amber-200/80 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60 truncate max-w-[100px] shrink-0"
+                                  title={`Shared by ${item.sharedBy?.fullName || 'User'}`}
+                                >
+                                  <User size={9} className="text-amber-600 dark:text-amber-400 shrink-0" />
+                                  <span className="truncate">{item.sharedBy?.fullName || 'User'}</span>
+                                </span>
+
+                                <ItemTypeBadge type={pwd.type} size="xs" />
                               </div>
                             </div>
-                            <span className="shrink-0 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-600">
-                              Read Only
-                            </span>
-                          </div>
 
-                          {/* Footer Sender Meta */}
-                          <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
-                            <div className="flex items-center gap-1.5 min-w-0 truncate">
-                              <span className="w-4 h-4 rounded-full bg-slate-200 dark:bg-slate-700 text-[9px] font-bold text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0">
-                                {senderInitial}
+                            <ChevronRight size={16} className="text-slate-300 dark:text-slate-600 shrink-0" />
+                          </button>
+                        );
+                      })}
+
+                      {!filteredItems.length && (
+                        <p className="text-slate-500 text-sm py-8 text-center dark:text-slate-400">No items found.</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Pagination Bar (Matching Company Vault) */}
+                  {totalPages > 1 && !isAll && (
+                    <div className="pt-3 mt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-1 select-none">
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                        disabled={validPage === 1}
+                        aria-label="Previous page"
+                        title="Previous page"
+                        className="h-8 px-2 sm:px-2.5 rounded-lg border border-slate-200 dark:border-slate-700/80 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1 transition shrink-0"
+                      >
+                        <ChevronLeft size={14} />
+                        <span className="hidden sm:inline">Prev</span>
+                      </button>
+
+                      <div className="flex items-center gap-1 min-w-0 justify-center overflow-hidden">
+                        {getPaginationItems(validPage, totalPages).map((pItem, idx) => {
+                          if (typeof pItem === 'string') {
+                            return (
+                              <span
+                                key={`ellipsis-${idx}`}
+                                className="h-8 w-4 flex items-center justify-center text-xs text-slate-400 dark:text-slate-500 font-medium select-none shrink-0"
+                              >
+                                …
                               </span>
-                              <span className="truncate">
-                                Shared by <strong className="font-semibold text-slate-700 dark:text-slate-300">{item.sharedBy?.fullName || 'Teammate'}</strong>
-                              </span>
-                            </div>
-                            <span className="shrink-0 text-[10px] font-medium text-slate-400 dark:text-slate-500">
-                              {formatRelativeDate(item.createdAt)}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })
+                            );
+                          }
+
+                          const isActive = pItem === validPage;
+                          return (
+                            <button
+                              key={pItem}
+                              type="button"
+                              onClick={() => setCurrentPage(pItem)}
+                              aria-label={`Page ${pItem}`}
+                              aria-current={isActive ? 'page' : undefined}
+                              className={`h-8 min-w-[32px] px-1.5 rounded-lg text-xs font-semibold transition shrink-0 flex items-center justify-center ${
+                                isActive
+                                  ? 'bg-indigo-600 text-white shadow-xs'
+                                  : 'border border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                              }`}
+                            >
+                              {pItem}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                        disabled={validPage === totalPages}
+                        aria-label="Next page"
+                        title="Next page"
+                        className="h-8 px-2 sm:px-2.5 rounded-lg border border-slate-200 dark:border-slate-700/80 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1 transition shrink-0"
+                      >
+                        <span className="hidden sm:inline">Next</span>
+                        <ChevronRight size={14} />
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
 
-              {/* Right Pane (Detail Panel) */}
-              <div
-                className={`${
-                  !selectedShare ? 'hidden lg:flex' : 'flex'
-                } flex-col p-4 sm:p-6 lg:p-7 min-w-0 bg-white dark:bg-slate-800`}
-              >
-                <SharedItemDetailsPanel
-                  item={selectedShare}
-                  decrypted={selectedShare ? decryptedData[selectedShare.id] : null}
-                  isDecrypting={decryptingId === selectedShare?.id}
-                  onCopy={handleCopy}
-                  onLeaveShare={(item) => setConfirmLeave({ open: true, item, loading: false })}
-                  onBack={() => setSelectedShareId(null)}
-                  onRequestDecrypt={handleRequestDecrypt}
-                />
+              {/* Right Side: PasswordDetailsPanel Style */}
+              <div className={`min-w-0 ${!selectedShareId ? 'hidden xl:block' : 'block'}`}>
+                <div className="p-4 sm:p-6 lg:p-7 bg-white dark:bg-slate-800 min-h-[640px]">
+                  <SharedItemDetailsPanel
+                    item={selectedShare}
+                    decrypted={selectedShare ? decryptedData[selectedShare.id] : null}
+                    isDecrypting={decryptingId === selectedShare?.id}
+                    onCopy={handleCopy}
+                    onLeaveShare={(item) => setConfirmLeave({ open: true, item, loading: false })}
+                    onBack={() => setSelectedShareId(null)}
+                    onRequestDecrypt={handleRequestDecrypt}
+                  />
+                </div>
               </div>
 
             </div>
