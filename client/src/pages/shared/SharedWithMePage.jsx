@@ -63,6 +63,17 @@ function SharedWithMePage() {
   const [pendingActionItem, setPendingActionItem] = useState(null);
   const [confirmLeave, setConfirmLeave] = useState({ open: false, item: null, loading: false });
 
+  // Option 2: Master Password Gatekeeper
+  const [unlockedItemIds, setUnlockedItemIds] = useState({});
+  const [sessionUnlockedAt, setSessionUnlockedAt] = useState(0);
+  const UNLOCK_TTL_MS = 15 * 60 * 1000;
+
+  const isItemUnlocked = (itemId) => {
+    if (!itemId) return false;
+    const isSessionActive = Boolean(sessionUnlockedAt && Date.now() - sessionUnlockedAt < UNLOCK_TTL_MS);
+    return isSessionActive || Boolean(unlockedItemIds[itemId]);
+  };
+
   useEffect(() => {
     dispatch(fetchSharedWithMe());
   }, [dispatch]);
@@ -234,8 +245,18 @@ function SharedWithMePage() {
 
   const handleSelectShare = (item) => {
     setSelectedShareId(item.id);
-    if (sessionMasterPassword && !decryptedData[item.id]) {
+    if (!isItemUnlocked(item.id)) {
+      setPendingActionItem(item);
+      setReVerifyOpen(true);
+    } else if (!decryptedData[item.id]) {
       handleRequestDecrypt(item);
+    }
+  };
+
+  const handleUnlockCurrent = () => {
+    if (selectedShare) {
+      setPendingActionItem(selectedShare);
+      setReVerifyOpen(true);
     }
   };
 
@@ -484,6 +505,8 @@ function SharedWithMePage() {
                 <div className="p-4 sm:p-6 lg:p-7 bg-white dark:bg-slate-800 min-h-[640px]">
                   <SharedItemDetailsPanel
                     item={selectedShare}
+                    isUnlocked={isItemUnlocked(selectedShare?.id)}
+                    onUnlock={handleUnlockCurrent}
                     decrypted={selectedShare ? decryptedData[selectedShare.id] : null}
                     isDecrypting={decryptingId === selectedShare?.id}
                     onCopy={handleCopy}
@@ -553,7 +576,9 @@ function SharedWithMePage() {
             setReVerifyOpen(false);
             const itemToDecrypt = pendingActionItem || selectedShare;
             setPendingActionItem(null);
+            setSessionUnlockedAt(Date.now());
             if (itemToDecrypt) {
+              setUnlockedItemIds((prev) => ({ ...prev, [itemToDecrypt.id]: true }));
               await handleRequestDecrypt(itemToDecrypt);
             }
           }}

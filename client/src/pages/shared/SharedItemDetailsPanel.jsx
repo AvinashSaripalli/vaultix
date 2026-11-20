@@ -27,6 +27,8 @@ import {
 
 export default function SharedItemDetailsPanel({
   item,
+  isUnlocked = false,
+  onUnlock,
   decrypted,
   isDecrypting = false,
   onCopy,
@@ -55,6 +57,66 @@ export default function SharedItemDetailsPanel({
   const passwordEntry = item.password || {};
   const itemType = passwordEntry.type || 'LOGIN';
   const typeMeta = getItemTypeMeta(itemType);
+
+  if (!isUnlocked) {
+    return (
+      <div className="space-y-6 min-w-0">
+        {/* Mobile Back Button */}
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="xl:hidden inline-flex items-center gap-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
+          >
+            <ArrowLeft size={16} />
+            <span>Back to items</span>
+          </button>
+        )}
+
+        {/* Top Header Row Preview */}
+        <div className="flex items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-700">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <ItemServiceIcon name={passwordEntry.name} type={itemType} size="md" />
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 truncate">
+                  {passwordEntry.name || 'Untitled'}
+                </h2>
+                <ItemTypeBadge type={itemType} />
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5 dark:text-slate-400">
+                Shared by {item.sharedBy?.fullName || 'User'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Locked Card */}
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-8 sm:p-12 text-center dark:border-slate-700 dark:bg-slate-800/40 flex flex-col items-center justify-center my-6 shadow-xs">
+          <div className="w-16 h-16 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center mb-4 dark:bg-indigo-900/30 dark:border-indigo-800 dark:text-indigo-400 shadow-sm">
+            <Lock size={28} />
+          </div>
+
+          <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+            Master Password Required
+          </h3>
+
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-2 max-w-md leading-relaxed">
+            This credential is end-to-end encrypted for your private key. Please verify your Master Password to decrypt and view credentials.
+          </p>
+
+          <button
+            type="button"
+            onClick={onUnlock}
+            className="mt-6 h-10 px-5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold inline-flex items-center gap-2 shadow-sm transition active:scale-[0.99] cursor-pointer"
+          >
+            <Lock size={15} />
+            <span>Unlock with Master Password</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const displayPassword = decrypted?.password || '';
   const displayNote = decrypted?.note || (passwordEntry.encryptedNote ? null : 'No note');
