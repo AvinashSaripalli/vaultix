@@ -20,6 +20,7 @@ import {
   KeyRound,
   Pencil,
   Building2,
+  Activity,
 } from 'lucide-react';
 import api from '../../services/api';
 import {
@@ -790,6 +791,7 @@ function ItemDetailsPanel({
   const [verifiedAtMap, setVerifiedAtMap] = useState({});
   const { token } = useSelector((state) => state.auth);
   const [activeTab, setActiveTab] = useState('credentials');
+  const [topHistoryModalOpen, setTopHistoryModalOpen] = useState(false);
   const [itemActivityLogs, setItemActivityLogs] = useState([]);
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityError, setActivityError] = useState('');
@@ -899,6 +901,21 @@ function ItemDetailsPanel({
         </div>
 
         <div className="flex items-center flex-wrap gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => setTopHistoryModalOpen(true)}
+            className="h-9 sm:h-10 px-3.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-semibold inline-flex items-center gap-1.5 transition shadow-2xs cursor-pointer hover:border-slate-300 dark:hover:border-slate-600"
+            title="Inspect version history and roll back if needed"
+          >
+            <History size={15} className="text-indigo-600 dark:text-indigo-400" />
+            <span>Version History</span>
+            {item?.currentVersion > 1 && (
+              <span className="ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                v{item.currentVersion}
+              </span>
+            )}
+          </button>
+
           {hasLogin && onAddChild && (
             <button
               onClick={onAddChild}
@@ -936,8 +953,8 @@ function ItemDetailsPanel({
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
           }`}
         >
-          <History size={15} />
-          <span>Activity & History</span>
+          <Activity size={15} />
+          <span>Activity Log</span>
         </button>
       </div>
 
@@ -1121,6 +1138,18 @@ function ItemDetailsPanel({
             </div>
           )}
         </div>
+      )}
+
+      {topHistoryModalOpen && (
+        <ItemRevisionHistoryModal
+          open={topHistoryModalOpen}
+          onClose={() => setTopHistoryModalOpen(false)}
+          item={item}
+          isPersonal={true}
+          onRestored={() => {
+            dispatch(fetchMyVault());
+          }}
+        />
       )}
     </>
   );

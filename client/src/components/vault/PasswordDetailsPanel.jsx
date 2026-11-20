@@ -19,6 +19,7 @@ import {
   Share2,
   X,
   RotateCcw,
+  Activity,
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import api from '../../services/api';
@@ -518,21 +519,41 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
             <span>Back</span>
           </button>
 
-          {canAddLogin && onAddLogin && (
+          <div className="flex items-center gap-2">
             <button
-              onClick={() =>
-                onAddLogin({
-                  name: selectedPassword.name,
-                  url: selectedPassword.url,
-                  tags: (selectedPassword.tags || []).map((t) => t.tag?.name).filter(Boolean),
-                })
-              }
-              className="h-8 px-3 rounded-xl bg-indigo-600 text-white text-xs font-semibold inline-flex items-center gap-1 shadow-xs active:scale-95 transition"
+              type="button"
+              onClick={() => {
+                setHistoryTargetItem(selectedPassword);
+                setHistoryModalOpen(true);
+              }}
+              className="h-8 px-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold inline-flex items-center gap-1 shadow-2xs active:scale-95 transition cursor-pointer"
+              title="Version History & Rollback"
             >
-              <Plus size={14} />
-              <span>Add Login</span>
+              <History size={14} className="text-indigo-600 dark:text-indigo-400" />
+              <span>History</span>
+              {selectedPassword?.currentVersion > 1 && (
+                <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400">
+                  v{selectedPassword.currentVersion}
+                </span>
+              )}
             </button>
-          )}
+
+            {canAddLogin && onAddLogin && (
+              <button
+                onClick={() =>
+                  onAddLogin({
+                    name: selectedPassword.name,
+                    url: selectedPassword.url,
+                    tags: (selectedPassword.tags || []).map((t) => t.tag?.name).filter(Boolean),
+                  })
+                }
+                className="h-8 px-3 rounded-xl bg-indigo-600 text-white text-xs font-semibold inline-flex items-center gap-1 shadow-xs active:scale-95 transition"
+              >
+                <Plus size={14} />
+                <span>Add Login</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Hero Card */}
@@ -578,6 +599,24 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
           </div>
         </div>
         <div className="flex items-center flex-wrap gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              setHistoryTargetItem(selectedPassword);
+              setHistoryModalOpen(true);
+            }}
+            className="h-9 sm:h-10 px-3.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-semibold inline-flex items-center gap-1.5 transition shadow-2xs cursor-pointer hover:border-slate-300 dark:hover:border-slate-600"
+            title="Inspect version history and roll back if needed"
+          >
+            <History size={15} className="text-indigo-600 dark:text-indigo-400" />
+            <span>Version History</span>
+            {selectedPassword?.currentVersion > 1 && (
+              <span className="ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                v{selectedPassword.currentVersion}
+              </span>
+            )}
+          </button>
+
           {canAddLogin && onAddLogin && (
             <button
               onClick={() =>
@@ -613,46 +652,31 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
       </div>
 
       {/* Tabs: Credentials vs Activity */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-700/80 pb-2">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setActiveTab('credentials')}
-            className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition ${
-              activeTab === 'credentials'
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
-            }`}
-          >
-            <KeyRound size={15} />
-            <span>Credentials & Fields</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('activity')}
-            className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition ${
-              activeTab === 'activity'
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
-            }`}
-          >
-            <History size={15} />
-            <span>Activity & History</span>
-          </button>
-        </div>
+      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-700/80 pb-2">
+        <button
+          type="button"
+          onClick={() => setActiveTab('credentials')}
+          className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition ${
+            activeTab === 'credentials'
+              ? 'bg-indigo-600 text-white shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
+        >
+          <KeyRound size={15} />
+          <span>Credentials & Fields</span>
+        </button>
 
         <button
           type="button"
-          onClick={() => {
-            setHistoryTargetItem(selectedPassword);
-            setHistoryModalOpen(true);
-          }}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 bg-white hover:bg-indigo-50/70 dark:bg-slate-800 dark:hover:bg-indigo-950/40 border border-slate-200/80 dark:border-slate-700 shadow-2xs cursor-pointer"
-          title="Inspect past versions and roll back if needed"
+          onClick={() => setActiveTab('activity')}
+          className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition ${
+            activeTab === 'activity'
+              ? 'bg-indigo-600 text-white shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
         >
-          <RotateCcw size={13} className="text-indigo-600 dark:text-indigo-400" />
-          <span>Version History & Rollback</span>
+          <Activity size={15} />
+          <span>Activity Log</span>
         </button>
       </div>
 
