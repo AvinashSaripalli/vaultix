@@ -22,6 +22,8 @@ const config = {
   req: 'REQ',
   approvalRequest: 'REQ',
   adminApprovalRequest: 'REQ',
+  passwordRevision: 'REV',
+  revision: 'REV',
 };
 
 function generateId(model) {

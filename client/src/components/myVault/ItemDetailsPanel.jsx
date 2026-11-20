@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { fetchMyVault } from '../../features/myVault/myVaultSlice';
+import ItemRevisionHistoryModal from '../common/ItemRevisionHistoryModal';
 import {
   Copy,
   Edit2,
@@ -64,7 +66,9 @@ function PersonalAccountCard({
   verifiedAtMap,
   onRequestVerify,
 }) {
+  const dispatch = useDispatch();
   const { sessionRsaPrivateKey } = useSelector((state) => state.auth);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [decryptedPassword, setDecryptedPassword] = useState(null);
   const [decryptedFields, setDecryptedFields] = useState(null);
   const [decryptedNote, setDecryptedNote] = useState(null);
@@ -611,6 +615,15 @@ function PersonalAccountCard({
             </button>
           )}
           <button
+            type="button"
+            onClick={() => setHistoryModalOpen(true)}
+            className="w-9 h-9 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-indigo-900/30 dark:hover:text-indigo-400 transition"
+            title="Version History & Rollback"
+            aria-label="Version History"
+          >
+            <History size={16} />
+          </button>
+          <button
             onClick={() => onEdit(item)}
             className="w-9 h-9 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50 text-slate-600 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 transition"
             title="Edit"
@@ -743,6 +756,18 @@ function PersonalAccountCard({
           </div>
         )}
       </div>
+
+      {historyModalOpen && (
+        <ItemRevisionHistoryModal
+          open={historyModalOpen}
+          onClose={() => setHistoryModalOpen(false)}
+          item={item}
+          isPersonal={true}
+          onRestored={() => {
+            dispatch(fetchMyVault());
+          }}
+        />
+      )}
     </div>
   );
 }

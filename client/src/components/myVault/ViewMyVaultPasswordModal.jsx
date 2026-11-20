@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
-import { X, Eye, EyeOff, Copy, ExternalLink, ShieldAlert, KeyRound, Lock } from 'lucide-react';
-import { useSelector } from 'react-redux';
+import { X, Eye, EyeOff, Copy, ExternalLink, ShieldAlert, KeyRound, Lock, History } from 'lucide-react';
+import { useSelector, useDispatch } from 'react-redux';
+import { fetchMyVault } from '../../features/myVault/myVaultSlice';
+import ItemRevisionHistoryModal from '../common/ItemRevisionHistoryModal';
 import {
   decryptText,
   decryptFields,
@@ -25,9 +27,11 @@ import { formatCardNumber } from '../../utils/cardValidation';
 import TotpField from './TotpField';
 
 function ViewMyVaultPasswordModal({ open, password, onClose }) {
+  const dispatch = useDispatch();
   const { user, sessionMasterPassword, sessionRsaPrivateKey } = useSelector((state) => state.auth);
 
   const [loading, setLoading] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [error, setError] = useState('');
   const [decryptedPassword, setDecryptedPassword] = useState(null);
   const [decryptedNote, setDecryptedNote] = useState(null);
@@ -463,15 +467,39 @@ function ViewMyVaultPasswordModal({ open, password, onClose }) {
           </div>
 
           {/* Footer */}
-          <div className="pt-3 border-t border-slate-100 dark:border-slate-700 shrink-0">
+          <div className="pt-3 border-t border-slate-100 dark:border-slate-700 shrink-0 flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => setHistoryOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-900/30 dark:hover:text-indigo-400 transition"
+              title="Version History & Rollback"
+            >
+              <History size={14} />
+              <span>Version History</span>
+            </button>
+
             <button
               onClick={handleClose}
-              className="w-full bg-slate-900 text-white rounded-xl py-2.5 font-medium hover:bg-slate-800 dark:bg-slate-700 dark:hover:bg-slate-600 transition-colors"
+              className="flex-1 bg-slate-900 text-white rounded-xl py-2.5 font-medium hover:bg-slate-800 dark:bg-slate-700 dark:hover:bg-slate-600 transition-colors text-sm"
             >
               Done
             </button>
           </div>
         </div>
+
+        {/* Item Revision History Modal */}
+        {historyOpen && password && (
+          <ItemRevisionHistoryModal
+            open={historyOpen}
+            onClose={() => setHistoryOpen(false)}
+            item={password}
+            isPersonal={true}
+            onRestored={() => {
+              dispatch(fetchMyVault());
+              handleClose();
+            }}
+          />
+        )}
 
         {/* Re-verify Master Password Modal for Sensitive Step-up */}
         <VerifyMasterPasswordModal

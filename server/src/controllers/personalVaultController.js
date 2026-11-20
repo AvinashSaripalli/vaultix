@@ -3,6 +3,7 @@ const generateId = require('../utils/generateId');
 const { VALID_ITEM_TYPES, validateItemFields, validateLoginForType } = require('../utils/itemFieldSchemas');
 const { getFolderAccess } = require('../utils/permissions');
 const { getEffectiveOrganizationPolicy } = require('../utils/organizationPolicy');
+const { computeChangeSummary, archivePasswordRevision } = require('../utils/revisionHelper');
 
 const toClientPassword = (pw, userId) => {
   if (!pw) return pw;
@@ -829,6 +830,10 @@ const updateMyVaultPassword = async (req, res) => {
     }
 
     const updatedPassword = await prisma.$transaction(async (tx) => {
+      // Archive current version to revision history before applying changes
+      const summary = computeChangeSummary(password, req.body);
+      const nextVersion = await archivePasswordRevision(tx, password, req.user.id, summary);
+
       const updated = await tx.passwordEntry.update({
         where: { id: passwordId },
         data: {
@@ -844,6 +849,7 @@ const updateMyVaultPassword = async (req, res) => {
           colorTag,
           folderId,
           parentId: finalParentId,
+          currentVersion: nextVersion,
           lastUpdatedAt: new Date(),
           strengthScore: req.body.strengthScore ?? undefined,
           isWeak: req.body.isWeak ?? undefined,
@@ -1354,6 +1360,181 @@ const logPersonalVaultExport = async (req, res) => {
   }
 };
 
+const getMyVaultPasswordRevisions = async (req, res) => {
+  try {
+    const { passwordId } = req.params;
+
+    const vault = await prisma.vault.findFirst({
+      where: {
+        ownerId: req.user.id,
+        type: 'PERSONAL',
+      },
+    });
+
+    if (!vault) {
+      return res.status(404).json({ message: 'Personal vault not found' });
+    }
+
+    const password = await prisma.passwordEntry.findFirst({
+      where: {
+        id: passwordId,
+        vaultId: vault.id,
+      },
+      select: {
+        id: true,
+        currentVersion: true,
+        deletedAt: true,
+      },
+    });
+
+    if (!password || password.deletedAt) {
+      return res.status(404).json({ message: 'Password not found' });
+    }
+
+    const revisions = await prisma.passwordRevision.findMany({
+      where: { passwordId },
+      orderBy: { version: 'desc' },
+      include: {
+        createdBy: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    // Record view audit log
+    await prisma.activityLog.create({
+      data: {
+        id: generateId('activityLog'),
+        userId: req.user.id,
+        action: 'VIEW_PASSWORD_HISTORY',
+        targetType: 'PASSWORD',
+        targetId: passwordId,
+        metadata: {
+          passwordId,
+          isPersonalVault: true,
+          currentVersion: password.currentVersion,
+          revisionCount: revisions.length,
+        },
+      },
+    });
+
+    // Map wrappedKeys for current user
+    const clientRevisions = revisions.map((rev) => toClientPassword(rev, req.user.id));
+
+    res.json({
+      currentVersion: password.currentVersion || 1,
+      revisions: clientRevisions,
+    });
+  } catch (error) {
+    console.error('Get my vault password revisions error:', error);
+    res.status(500).json({ message: 'Failed to fetch revision history' });
+  }
+};
+
+const restoreMyVaultPasswordRevision = async (req, res) => {
+  try {
+    const { passwordId, revisionId } = req.params;
+
+    const vault = await prisma.vault.findFirst({
+      where: {
+        ownerId: req.user.id,
+        type: 'PERSONAL',
+      },
+    });
+
+    if (!vault) {
+      return res.status(404).json({ message: 'Personal vault not found' });
+    }
+
+    const existingPassword = await prisma.passwordEntry.findFirst({
+      where: {
+        id: passwordId,
+        vaultId: vault.id,
+      },
+      include: { tags: true },
+    });
+
+    if (!existingPassword || existingPassword.deletedAt) {
+      return res.status(404).json({ message: 'Password not found' });
+    }
+
+    const targetRevision = await prisma.passwordRevision.findFirst({
+      where: {
+        id: revisionId,
+        passwordId,
+      },
+    });
+
+    if (!targetRevision) {
+      return res.status(404).json({ message: 'Target revision not found' });
+    }
+
+    const restoredPassword = await prisma.$transaction(async (tx) => {
+      // 1. Archive current active state
+      const nextVersion = await archivePasswordRevision(
+        tx,
+        existingPassword,
+        req.user.id,
+        `Prior to rollback to v${targetRevision.version}`
+      );
+
+      // 2. Overwrite PasswordEntry with target revision's data
+      const updated = await tx.passwordEntry.update({
+        where: { id: passwordId },
+        data: {
+          name: targetRevision.name,
+          login: targetRevision.login,
+          type: targetRevision.type,
+          encryptedPassword: targetRevision.encryptedPassword,
+          encryptedFields: targetRevision.encryptedFields,
+          encryptedNote: targetRevision.encryptedNote,
+          wrappedKeys: targetRevision.wrappedKeys,
+          url: targetRevision.url,
+          colorTag: targetRevision.colorTag,
+          currentVersion: nextVersion,
+          lastUpdatedAt: new Date(),
+        },
+        include: {
+          tags: {
+            include: { tag: true },
+          },
+        },
+      });
+
+      // 3. Log activity
+      await tx.activityLog.create({
+        data: {
+          id: generateId('activityLog'),
+          userId: req.user.id,
+          action: 'RESTORE_PASSWORD_VERSION',
+          targetType: 'PASSWORD',
+          targetId: passwordId,
+          metadata: {
+            passwordId,
+            isPersonalVault: true,
+            restoredFromVersion: targetRevision.version,
+            newActiveVersion: nextVersion,
+          },
+        },
+      });
+
+      return updated;
+    });
+
+    res.json({
+      message: `Successfully restored version ${targetRevision.version}`,
+      password: toClientPassword(restoredPassword, req.user.id),
+    });
+  } catch (error) {
+    console.error('Restore my vault revision error:', error);
+    res.status(500).json({ message: 'Failed to restore revision' });
+  }
+};
+
 module.exports = {
   getOrCreateMyVault,
   createMyVaultFolder,
@@ -1373,4 +1554,6 @@ module.exports = {
   getPasswordShares,
   transferPasswordToCompanyVault,
   logPersonalVaultExport,
+  getMyVaultPasswordRevisions,
+  restoreMyVaultPasswordRevision,
 };

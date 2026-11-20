@@ -86,6 +86,7 @@ model User {
   webAuthnCredentials     WebAuthnCredential[]
   approvalRequestsRequested AdminApprovalRequest[] @relation("ApprovalRequester")
   approvalRequestsApproved  AdminApprovalRequest[] @relation("ApprovalApprover")
+  passwordRevisions       PasswordRevision[]
 }
 
 model Folder {
@@ -172,6 +173,7 @@ model PasswordEntry {
   updatedAt         DateTime        @updatedAt
   lastViewedAt      DateTime?
   lastUpdatedAt     DateTime?
+  currentVersion    Int             @default(1)
   strengthScore     Int?
   isWeak            Boolean         @default(false)
   isOld             Boolean         @default(false)
@@ -184,6 +186,7 @@ model PasswordEntry {
   vault             Vault           @relation(fields: [vaultId], references: [id], onDelete: Cascade)
   shares            PasswordShare[]
   tags              PasswordTag[]
+  revisions         PasswordRevision[]
 
   @@index([vaultId])
   @@index([folderId])
@@ -205,6 +208,30 @@ model PasswordTag {
   tag        Tag           @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@id([passwordId, tagId])
+}
+
+model PasswordRevision {
+  id                String        @id
+  passwordId        String
+  version           Int
+  name              String
+  login             String        @default("")
+  type              ItemType      @default(LOGIN)
+  encryptedPassword String        @default("")
+  encryptedFields   String?
+  encryptedNote     String?
+  wrappedKeys       Json?
+  url               String?
+  colorTag          String?
+  createdById       String
+  createdAt         DateTime      @default(now())
+  changeSummary     String?
+  createdBy         User          @relation(fields: [createdById], references: [id])
+  password          PasswordEntry @relation(fields: [passwordId], references: [id], onDelete: Cascade)
+
+  @@unique([passwordId, version])
+  @@index([passwordId])
+  @@index([createdById])
 }
 
 model ActivityLog {
@@ -461,6 +488,8 @@ enum ActivityAction {
   APPROVE_REQUEST
   REJECT_REQUEST
   CANCEL_APPROVAL_REQUEST
+  RESTORE_PASSWORD_VERSION
+  VIEW_PASSWORD_HISTORY
 }
 
 enum ApprovalActionType {

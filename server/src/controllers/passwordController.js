@@ -13,6 +13,7 @@ const createNotification = require('../utils/createNotification');
 const { VALID_ITEM_TYPES, validateItemFields, validateLoginForType } = require('../utils/itemFieldSchemas');
 const { getVaultPolicy, validateAgainstPolicy } = require('../utils/vaultPolicy');
 const { getEffectiveOrganizationPolicy } = require('../utils/organizationPolicy');
+const { computeChangeSummary, archivePasswordRevision } = require('../utils/revisionHelper');
 
 const notifyCollaboratorsOnPasswordChange = async ({
   folderId,
@@ -821,6 +822,10 @@ const updatePassword = async (req, res) => {
     const vaultType = await getVaultType(existingPassword.vaultId);
 
     const updatedPassword = await prisma.$transaction(async (tx) => {
+      // Archive current version to revision history before applying changes
+      const summary = computeChangeSummary(existingPassword, req.body);
+      const nextVersion = await archivePasswordRevision(tx, existingPassword, req.user.id, summary);
+
       const updated = await tx.passwordEntry.update({
         where: { id: req.params.id },
         data: {
@@ -833,6 +838,7 @@ const updatePassword = async (req, res) => {
           url,
           colorTag,
           folderId: folderId === undefined ? undefined : folderId,
+          currentVersion: nextVersion,
           lastUpdatedAt: new Date(),
           strengthScore: req.body.strengthScore ?? undefined,
           isWeak: req.body.isWeak ?? undefined,
@@ -1780,6 +1786,158 @@ const batchWrapKeys = async (req, res) => {
   }
 };
 
+const getPasswordRevisions = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const existingPassword = await prisma.passwordEntry.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        vaultId: true,
+        folderId: true,
+        currentVersion: true,
+        deletedAt: true,
+      },
+    });
+
+    if (!existingPassword || existingPassword.deletedAt) {
+      return res.status(404).json({ message: 'Password not found' });
+    }
+
+    const access = await getPasswordItemAccess(existingPassword, req.user.id);
+    if (!access) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    const revisions = await prisma.passwordRevision.findMany({
+      where: { passwordId: id },
+      orderBy: { version: 'desc' },
+      include: {
+        createdBy: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    // Record view audit log
+    await prisma.activityLog.create({
+      data: {
+        id: generateId('activityLog'),
+        userId: req.user.id,
+        action: 'VIEW_PASSWORD_HISTORY',
+        targetType: 'PASSWORD',
+        targetId: id,
+        metadata: {
+          passwordId: id,
+          currentVersion: existingPassword.currentVersion,
+          revisionCount: revisions.length,
+        },
+      },
+    });
+
+    res.json({
+      currentVersion: existingPassword.currentVersion || 1,
+      revisions,
+    });
+  } catch (error) {
+    console.error('Get password revisions error:', error);
+    res.status(500).json({ message: 'Failed to fetch revision history' });
+  }
+};
+
+const restorePasswordRevision = async (req, res) => {
+  try {
+    const { id, revisionId } = req.params;
+    const existingPassword = await prisma.passwordEntry.findUnique({
+      where: { id },
+      include: { tags: true },
+    });
+
+    if (!existingPassword || existingPassword.deletedAt) {
+      return res.status(404).json({ message: 'Password not found' });
+    }
+
+    const access = await getPasswordItemAccess(existingPassword, req.user.id);
+    if (!access || !['ADMINISTRATOR', 'READ_WRITE', 'FULL_ACCESS'].includes(access)) {
+      return res.status(403).json({ message: 'Write permission required to restore revisions' });
+    }
+
+    const targetRevision = await prisma.passwordRevision.findFirst({
+      where: {
+        id: revisionId,
+        passwordId: id,
+      },
+    });
+
+    if (!targetRevision) {
+      return res.status(404).json({ message: 'Target revision not found' });
+    }
+
+    const restoredPassword = await prisma.$transaction(async (tx) => {
+      // 1. Archive current active state as a revision
+      const nextVersion = await archivePasswordRevision(
+        tx,
+        existingPassword,
+        req.user.id,
+        `Prior to rollback to v${targetRevision.version}`
+      );
+
+      // 2. Overwrite PasswordEntry with target revision's data
+      const updated = await tx.passwordEntry.update({
+        where: { id },
+        data: {
+          name: targetRevision.name,
+          login: targetRevision.login,
+          type: targetRevision.type,
+          encryptedPassword: targetRevision.encryptedPassword,
+          encryptedFields: targetRevision.encryptedFields,
+          encryptedNote: targetRevision.encryptedNote,
+          wrappedKeys: targetRevision.wrappedKeys,
+          url: targetRevision.url,
+          colorTag: targetRevision.colorTag,
+          currentVersion: nextVersion,
+          lastUpdatedAt: new Date(),
+        },
+        include: {
+          tags: {
+            include: { tag: true },
+          },
+        },
+      });
+
+      // 3. Log activity
+      await tx.activityLog.create({
+        data: {
+          id: generateId('activityLog'),
+          userId: req.user.id,
+          action: 'RESTORE_PASSWORD_VERSION',
+          targetType: 'PASSWORD',
+          targetId: id,
+          metadata: {
+            passwordId: id,
+            restoredFromVersion: targetRevision.version,
+            newActiveVersion: nextVersion,
+          },
+        },
+      });
+
+      return updated;
+    });
+
+    res.json({
+      message: `Successfully restored version ${targetRevision.version}`,
+      password: restoredPassword,
+    });
+  } catch (error) {
+    console.error('Restore revision error:', error);
+    res.status(500).json({ message: 'Failed to restore revision' });
+  }
+};
+
 module.exports = {
   createPassword,
   getPasswordsByVault,
@@ -1796,4 +1954,6 @@ module.exports = {
   getPasswordsOwnedByUser,
   getItemsNeedingWrapping,
   batchWrapKeys,
+  getPasswordRevisions,
+  restorePasswordRevision,
 };

@@ -42,6 +42,7 @@ import ItemServiceIcon from '../common/ItemServiceIcon';
 import { hapticLight, hapticMedium } from '../../utils/haptics';
 import { formatItemAction, resolveFieldLabel, getActionBadge, getActionIcon } from '../../utils/activityActionFormatter';
 import { notifyVaultMutated } from '../../utils/vaultSync';
+import ItemRevisionHistoryModal from '../common/ItemRevisionHistoryModal';
 
 const SENSITIVE_VERIFY_TTL_MS = 3 * 60 * 1000; // 3 minutes per item
 
@@ -134,6 +135,8 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
   const [pendingAction, setPendingAction] = useState(null);
   const [verifiedAtMap, setVerifiedAtMap] = useState({});
   const [activeTab, setActiveTab] = useState('credentials');
+  const [historyTargetItem, setHistoryTargetItem] = useState(null);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [itemActivityLogs, setItemActivityLogs] = useState([]);
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityError, setActivityError] = useState('');
@@ -708,6 +711,19 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
                 </div>
 
                 <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHistoryTargetItem(item);
+                      setHistoryModalOpen(true);
+                    }}
+                    className="w-9 h-9 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-indigo-900/30 dark:hover:text-indigo-400 transition"
+                    title="Version History & Rollback"
+                    aria-label="Version History"
+                  >
+                    <History size={16} />
+                  </button>
+
                   {canEdit && (
                     <button
                       onClick={() => handleAction('edit', item)}
@@ -1300,6 +1316,23 @@ function PasswordDetailsPanel({ onShareVault, onAddLogin, onBackToList }) {
           executeAction(action.actionName, action.item.id);
         }}
       />
+
+      {historyModalOpen && historyTargetItem && (
+        <ItemRevisionHistoryModal
+          open={historyModalOpen}
+          onClose={() => {
+            setHistoryModalOpen(false);
+            setHistoryTargetItem(null);
+          }}
+          item={historyTargetItem}
+          isPersonal={false}
+          onRestored={() => {
+            if (selectedVault?.id) {
+              dispatch(fetchPasswordsByVault({ vaultId: selectedVault.id, folderId: selectedFolderId }));
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -20,6 +20,8 @@ const {
   getPasswordShares,
   transferPasswordToCompanyVault,
   logPersonalVaultExport,
+  getMyVaultPasswordRevisions,
+  restoreMyVaultPasswordRevision,
 } = require('../controllers/personalVaultController');
 
 const router = express.Router();
@@ -40,6 +42,8 @@ router.get('/passwords', getMyVaultPasswords);
 router.post('/passwords', createMyVaultPassword);
 router.post('/export-log', logPersonalVaultExport);
 router.post('/passwords/:passwordId/transfer-to-company', transferPasswordToCompanyVault);
+router.get('/passwords/:passwordId/revisions', getMyVaultPasswordRevisions);
+router.post('/passwords/:passwordId/revisions/:revisionId/restore', restoreMyVaultPasswordRevision);
 router.put('/passwords/:passwordId', updateMyVaultPassword);
 router.delete('/passwords/:passwordId', deleteMyVaultPassword);
 router.post('/passwords/:passwordId/restore', restoreMyVaultPassword);
