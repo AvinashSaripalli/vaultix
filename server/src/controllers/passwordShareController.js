@@ -224,6 +224,7 @@ const removePasswordShare = async (req, res) => {
 
     const canRemove =
       share.sharedById === req.user.id ||
+      share.sharedWithId === req.user.id ||
       share.password.createdById === req.user.id ||
       share.password.vault.ownerId === req.user.id;
 
@@ -254,18 +255,25 @@ const removePasswordShare = async (req, res) => {
       },
     });
 
-    await createNotification({
-      userId: share.sharedWithId,
-      title: 'Password Access Removed',
-      message: `Your access to "${share.password.name}" was removed`,
-      type: 'SHARE_PASSWORD',
-      metadata: {
-        passwordId: share.passwordId,
-        shareId,
-        vaultId: share.password.vaultId,
-        folderId: share.password.folderId,
-      },
-    });
+    const isSelfLeave = req.user.id === share.sharedWithId;
+    const notifyTargetUserId = isSelfLeave ? share.sharedById : share.sharedWithId;
+
+    if (notifyTargetUserId) {
+      await createNotification({
+        userId: notifyTargetUserId,
+        title: isSelfLeave ? 'Shared Password Left' : 'Password Access Removed',
+        message: isSelfLeave
+          ? `${req.user.fullName || 'A user'} removed themselves from shared password "${share.password.name}"`
+          : `Your access to "${share.password.name}" was removed`,
+        type: 'SHARE_PASSWORD',
+        metadata: {
+          passwordId: share.passwordId,
+          shareId,
+          vaultId: share.password.vaultId,
+          folderId: share.password.folderId,
+        },
+      });
+    }
 
     res.json({ message: 'Password share removed successfully' });
   } catch (error) {
