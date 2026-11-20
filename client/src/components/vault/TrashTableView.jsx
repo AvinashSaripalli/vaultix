@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, Fragment } from 'react';
 import {
   Trash2,
   RotateCcw,
@@ -10,12 +10,10 @@ import {
   Eye,
   ExternalLink,
   ChevronDown,
-  ChevronRight,
   Shield,
   Copy,
   Check,
   Calendar,
-  AlertCircle,
   FolderOpen,
 } from 'lucide-react';
 import ItemServiceIcon from '../common/ItemServiceIcon';
@@ -23,7 +21,6 @@ import ConfirmModal from '../common/ConfirmModal';
 import ModalPortal, { ModalBackdrop } from '../common/ModalPortal';
 import { getItemTypeMeta } from '../../utils/itemTypes';
 import { secureCopyText } from '../../utils/clipboard';
-import { showToast } from '../../utils/toast';
 
 export default function TrashTableView({
   title = 'Company Vault',
@@ -73,7 +70,17 @@ export default function TrashTableView({
     return map;
   }, [trashItems]);
 
-  // Filter passwords
+  // Resolve folder name for an item
+  const resolveFolderName = (item) => {
+    if (item.folder?.name) return item.folder.name;
+    const active = folders.find((f) => f.id === item.folderId);
+    if (active) return active.name;
+    const trashed = folderTrashItems.find((f) => f.id === item.folderId);
+    if (trashed) return trashed.name;
+    return null;
+  };
+
+  // Filtered passwords
   const filteredPasswords = useMemo(() => {
     if (!searchQuery.trim()) return trashItems;
     const q = searchQuery.toLowerCase();
@@ -81,26 +88,36 @@ export default function TrashTableView({
       const nameMatch = item.name?.toLowerCase().includes(q);
       const loginMatch = item.login?.toLowerCase().includes(q);
       const urlMatch = item.url?.toLowerCase().includes(q);
-      const folderName =
-        item.folder?.name ||
-        folders.find((f) => f.id === item.folderId)?.name ||
-        folderTrashItems.find((f) => f.id === item.folderId)?.name;
+      const folderName = resolveFolderName(item);
       const folderMatch = folderName?.toLowerCase().includes(q);
       return nameMatch || loginMatch || urlMatch || folderMatch;
     });
   }, [trashItems, searchQuery, folders, folderTrashItems]);
 
-  // Filter folders
+  // Filtered folders
   const filteredFolders = useMemo(() => {
     if (!searchQuery.trim()) return folderTrashItems;
     const q = searchQuery.toLowerCase();
     return folderTrashItems.filter((f) => f.name?.toLowerCase().includes(q));
   }, [folderTrashItems, searchQuery]);
 
-  // Visible items based on tab
-  const visiblePasswords = activeTab === 'folders' ? [] : filteredPasswords;
-  const visibleFolders = activeTab === 'passwords' ? [] : filteredFolders;
-  const visibleTotalCount = visiblePasswords.length + visibleFolders.length;
+  // Single unified list sorted chronologically
+  const combinedList = useMemo(() => {
+    const list = [];
+    if (activeTab === 'all' || activeTab === 'passwords') {
+      filteredPasswords.forEach((p) => list.push({ ...p, __itemKind: 'password' }));
+    }
+    if (activeTab === 'all' || activeTab === 'folders') {
+      filteredFolders.forEach((f) => list.push({ ...f, __itemKind: 'folder' }));
+    }
+    return list.sort((a, b) => {
+      const timeA = a.deletedAt ? new Date(a.deletedAt).getTime() : 0;
+      const timeB = b.deletedAt ? new Date(b.deletedAt).getTime() : 0;
+      return timeB - timeA;
+    });
+  }, [activeTab, filteredPasswords, filteredFolders]);
+
+  const visibleTotalCount = combinedList.length;
 
   // Toggle single item selection
   const toggleSelectId = (id) => {
@@ -117,23 +134,16 @@ export default function TrashTableView({
 
   // Select all / deselect all visible
   const allVisibleSelected = useMemo(() => {
-    if (visibleTotalCount === 0) return false;
-    for (const p of visiblePasswords) {
-      if (!selectedIds.has(p.id)) return false;
-    }
-    for (const f of visibleFolders) {
-      if (!selectedIds.has(f.id)) return false;
-    }
-    return true;
-  }, [visibleTotalCount, visiblePasswords, visibleFolders, selectedIds]);
+    if (combinedList.length === 0) return false;
+    return combinedList.every((item) => selectedIds.has(item.id));
+  }, [combinedList, selectedIds]);
 
   const toggleSelectAll = () => {
     if (allVisibleSelected) {
       setSelectedIds(new Set());
     } else {
       const next = new Set(selectedIds);
-      visiblePasswords.forEach((p) => next.add(p.id));
-      visibleFolders.forEach((f) => next.add(f.id));
+      combinedList.forEach((item) => next.add(item.id));
       setSelectedIds(next);
     }
   };
@@ -220,16 +230,6 @@ export default function TrashTableView({
     } catch {
       return '';
     }
-  };
-
-  // Resolve folder name for an item
-  const resolveFolderName = (item) => {
-    if (item.folder?.name) return item.folder.name;
-    const active = folders.find((f) => f.id === item.folderId);
-    if (active) return active.name;
-    const trashed = folderTrashItems.find((f) => f.id === item.folderId);
-    if (trashed) return trashed.name;
-    return null;
   };
 
   return (
@@ -429,10 +429,122 @@ export default function TrashTableView({
         </div>
       ) : (
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Mobile View (< md): High-Density Responsive Cards */}
+          {/* Mobile View (< md): Clean Responsive Cards */}
           <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-700/60">
-            {/* Passwords on Mobile */}
-            {visiblePasswords.map((item) => {
+            {combinedList.map((entry) => {
+              if (entry.__itemKind === 'folder') {
+                const folder = entry;
+                const isExpanded = expandedFolderIds.has(folder.id);
+                const childPasswords = passwordsByFolderId.get(folder.id) || [];
+                const count = Math.max(folder._count?.passwords ?? 0, childPasswords.length);
+                const isSelected = selectedIds.has(folder.id);
+
+                return (
+                  <div
+                    key={`m-folder-${folder.id}`}
+                    className={`p-3.5 space-y-2.5 bg-amber-50/20 dark:bg-amber-950/10 transition-colors ${
+                      isSelected ? 'ring-1 ring-indigo-500' : ''
+                    }`}
+                  >
+                    <div className="flex items-start gap-3 min-w-0">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelectId(folder.id)}
+                        className="mt-1 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                      />
+
+                      <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800 flex items-center justify-center font-bold text-sm shrink-0">
+                        <Folder size={16} />
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-bold text-sm text-slate-900 dark:text-slate-100 truncate">
+                            {folder.name}
+                          </span>
+                          <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+                            FOLDER
+                          </span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => toggleFolderExpanded(folder.id)}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 mt-1 rounded-md text-[11px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-800 transition"
+                        >
+                          <span>Contains {count} {count === 1 ? 'item' : 'items'}</span>
+                          {isExpanded ? <ChevronDown size={12} className="rotate-180" /> : <ChevronDown size={12} />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Expanded child credentials on Mobile */}
+                    {isExpanded && (
+                      <div className="pl-6 border-l-2 border-amber-300 dark:border-amber-600 py-1 space-y-1.5 animate-in fade-in duration-150">
+                        <div className="text-[11px] font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider">
+                          Passwords inside this folder:
+                        </div>
+                        {childPasswords.length > 0 ? (
+                          childPasswords.map((child) => (
+                            <div
+                              key={child.id}
+                              className="flex items-center justify-between gap-2 p-2 rounded-lg bg-white dark:bg-slate-750 border border-amber-200 dark:border-amber-900/50 text-xs"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Lock size={12} className="text-slate-400 shrink-0" />
+                                <span className="font-bold text-slate-900 dark:text-slate-100 truncate">
+                                  {child.name}
+                                </span>
+                                {child.login && (
+                                  <span className="text-slate-400 font-mono text-[11px] truncate">
+                                    ({child.login})
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[10px] text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded font-medium border border-emerald-200/80 dark:border-emerald-800 shrink-0">
+                                Auto-restores
+                              </span>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-xs text-slate-400 italic">
+                            No separate password entries found. Passwords will restore automatically with the folder.
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-100 dark:border-slate-700/60">
+                      <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                        {formatDate(folder.deletedAt)}
+                      </span>
+
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => onRestoreFolder?.(folder)}
+                          className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-xs"
+                        >
+                          <RotateCcw size={12} />
+                          <span>Restore Folder</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleTriggerSinglePurge('folder', folder)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition"
+                          title={isSuperAdmin ? 'Delete folder permanently' : 'Request deletion'}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              // Password card on mobile
+              const item = entry;
               const folderName = resolveFolderName(item);
               const isParentInTrash = Boolean(item.folderId && trashedFolderIdSet.has(item.folderId));
               const typeMeta = getItemTypeMeta(item.type);
@@ -440,7 +552,7 @@ export default function TrashTableView({
 
               return (
                 <div
-                  key={item.id}
+                  key={`m-pw-${item.id}`}
                   className={`p-3.5 space-y-2.5 transition-colors ${
                     isSelected ? 'bg-indigo-50/50 dark:bg-indigo-950/20' : 'hover:bg-slate-50/80 dark:hover:bg-slate-750/50'
                   }`}
@@ -526,125 +638,14 @@ export default function TrashTableView({
                 </div>
               );
             })}
-
-            {/* Folders on Mobile */}
-            {visibleFolders.map((folder) => {
-              const isExpanded = expandedFolderIds.has(folder.id);
-              const childPasswords = passwordsByFolderId.get(folder.id) || [];
-              const count = Math.max(folder._count?.passwords ?? 0, childPasswords.length);
-              const isSelected = selectedIds.has(folder.id);
-
-              return (
-                <div
-                  key={folder.id}
-                  className={`p-3.5 space-y-2.5 bg-amber-50/20 dark:bg-amber-950/10 transition-colors ${
-                    isSelected ? 'ring-1 ring-indigo-500' : ''
-                  }`}
-                >
-                  <div className="flex items-start gap-3 min-w-0">
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => toggleSelectId(folder.id)}
-                      className="mt-1 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                    />
-
-                    <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800 flex items-center justify-center font-bold text-sm shrink-0">
-                      <Folder size={16} />
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-bold text-sm text-slate-900 dark:text-slate-100 truncate">
-                          {folder.name}
-                        </span>
-                        <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
-                          FOLDER
-                        </span>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => toggleFolderExpanded(folder.id)}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 mt-1 rounded-md text-[11px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-800 transition"
-                      >
-                        <span>Contains {count} {count === 1 ? 'password' : 'passwords'}</span>
-                        {isExpanded ? <ChevronDown size={12} className="rotate-180" /> : <ChevronDown size={12} />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Expanded child credentials on Mobile */}
-                  {isExpanded && (
-                    <div className="pl-6 border-l-2 border-amber-300 dark:border-amber-600 py-1 space-y-1.5 animate-in fade-in duration-150">
-                      <div className="text-[11px] font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider">
-                        Passwords inside this folder:
-                      </div>
-                      {childPasswords.length > 0 ? (
-                        childPasswords.map((child) => (
-                          <div
-                            key={child.id}
-                            className="flex items-center justify-between gap-2 p-2 rounded-lg bg-white dark:bg-slate-750 border border-amber-200 dark:border-amber-900/50 text-xs"
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <Lock size={12} className="text-slate-400 shrink-0" />
-                              <span className="font-bold text-slate-900 dark:text-slate-100 truncate">
-                                {child.name}
-                              </span>
-                              {child.login && (
-                                <span className="text-slate-400 font-mono text-[11px] truncate">
-                                  ({child.login})
-                                </span>
-                              )}
-                            </div>
-                            <span className="text-[10px] text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded font-medium border border-emerald-200/80 dark:border-emerald-800 shrink-0">
-                              Auto-restores
-                            </span>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-xs text-slate-400 italic">
-                          No separate password entries found. Passwords will restore automatically with the folder.
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-100 dark:border-slate-700/60">
-                    <span className="text-[11px] text-slate-400 dark:text-slate-500">
-                      {formatDate(folder.deletedAt)}
-                    </span>
-
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => onRestoreFolder?.(folder)}
-                        className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-xs"
-                      >
-                        <RotateCcw size={12} />
-                        <span>Restore Folder</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleTriggerSinglePurge('folder', folder)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition"
-                        title={isSuperAdmin ? 'Delete folder permanently' : 'Request deletion'}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
           </div>
 
-          {/* Desktop View (>= md): High-Density Enterprise Table */}
+          {/* Desktop View (>= md): Solid, Well-Aligned Enterprise Table */}
           <div className="hidden md:block overflow-x-auto min-w-0">
-            <table className="w-full text-left border-collapse min-w-[760px]">
+            <table className="w-full text-left border-collapse table-fixed min-w-[760px]">
               <thead>
                 <tr className="border-b border-slate-200/80 dark:border-slate-700/80 text-[11px] font-bold text-slate-400 dark:text-slate-400 uppercase tracking-wider bg-slate-50/60 dark:bg-slate-750/40">
-                  <th className="py-3 px-4 w-10 text-center">
+                  <th className="py-3 px-4 w-12 text-center">
                     <input
                       type="checkbox"
                       checked={allVisibleSelected}
@@ -653,15 +654,183 @@ export default function TrashTableView({
                       title="Select all visible items"
                     />
                   </th>
-                  <th className="py-3 px-4 w-[34%]">ITEM & ACCOUNT</th>
+                  <th className="py-3 px-4 w-[36%]">ITEM & ACCOUNT</th>
                   <th className="py-3 px-4 w-[24%]">ORIGINAL LOCATION</th>
-                  <th className="py-3 px-4 w-[20%]">DELETED DATE</th>
+                  <th className="py-3 px-4 w-[18%]">DELETED DATE</th>
                   <th className="py-3 px-4 w-[22%] text-right pr-6">ACTIONS</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-750/70 text-xs">
-                {/* 1. Render Passwords */}
-                {visiblePasswords.map((item) => {
+                {combinedList.map((entry) => {
+                  if (entry.__itemKind === 'folder') {
+                    const folder = entry;
+                    const isExpanded = expandedFolderIds.has(folder.id);
+                    const childPasswords = passwordsByFolderId.get(folder.id) || [];
+                    const count = Math.max(folder._count?.passwords ?? 0, childPasswords.length);
+                    const isSelected = selectedIds.has(folder.id);
+
+                    return (
+                      <Fragment key={`folder-row-group-${folder.id}`}>
+                        <tr
+                          className={`hover:bg-amber-50/40 dark:hover:bg-amber-950/20 transition-colors group ${
+                            isSelected ? 'bg-indigo-50/40 dark:bg-indigo-950/20' : 'bg-amber-50/15 dark:bg-amber-950/10'
+                          }`}
+                        >
+                          {/* Col 1: Checkbox */}
+                          <td className="py-3 px-4 text-center">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleSelectId(folder.id)}
+                              className="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                            />
+                          </td>
+
+                          {/* Col 2: ITEM & ACCOUNT */}
+                          <td className="py-3 px-4 min-w-0">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <button
+                                type="button"
+                                onClick={() => toggleFolderExpanded(folder.id)}
+                                className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800 flex items-center justify-center font-bold text-sm shrink-0 cursor-pointer hover:bg-amber-200 dark:hover:bg-amber-900/60 transition shadow-2xs"
+                                title="Toggle contents inside this folder"
+                              >
+                                <Folder size={15} />
+                              </button>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span
+                                    className="font-bold text-sm text-slate-900 dark:text-slate-100 cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition truncate"
+                                    onClick={() => toggleFolderExpanded(folder.id)}
+                                    title={folder.name}
+                                  >
+                                    {folder.name}
+                                  </span>
+                                  <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800 shrink-0">
+                                    FOLDER
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleFolderExpanded(folder.id)}
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-800 hover:bg-indigo-100 transition cursor-pointer shrink-0"
+                                  >
+                                    <span>Contains {count} {count === 1 ? 'item' : 'items'}</span>
+                                    {isExpanded ? <ChevronDown size={11} className="rotate-180" /> : <ChevronDown size={11} />}
+                                  </button>
+                                </div>
+                                <div className="text-[11px] text-slate-400 dark:text-slate-500 truncate mt-0.5">
+                                  Restoring folder restores all items inside it
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Col 3: ORIGINAL LOCATION */}
+                          <td className="py-3 px-4 min-w-0">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200/70 dark:bg-slate-750 dark:text-slate-300 dark:border-slate-700 truncate max-w-full">
+                              {title} Root
+                            </span>
+                          </td>
+
+                          {/* Col 4: DELETED DATE */}
+                          <td className="py-3 px-4 whitespace-nowrap text-slate-600 dark:text-slate-300">
+                            <div className="font-medium text-slate-800 dark:text-slate-200">
+                              {formatDate(folder.deletedAt)}
+                            </div>
+                            {folder.deletedAt && (
+                              <div className="text-[11px] text-slate-400 dark:text-slate-500">
+                                {formatRelativeTime(folder.deletedAt)}
+                              </div>
+                            )}
+                          </td>
+
+                          {/* Col 5: ACTIONS */}
+                          <td className="py-3 px-4 text-right pr-6 whitespace-nowrap">
+                            <div className="inline-flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => onRestoreFolder?.(folder)}
+                                className="h-8 px-2.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/50 border border-emerald-200/80 dark:border-emerald-800 font-bold transition flex items-center gap-1 cursor-pointer text-xs"
+                                title="Restore folder and all items inside it"
+                              >
+                                <RotateCcw size={12} />
+                                <span>Restore</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleTriggerSinglePurge('folder', folder)}
+                                className="h-8 w-8 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 flex items-center justify-center transition cursor-pointer"
+                                title={isSuperAdmin ? 'Permanently delete folder' : 'Request permanent deletion'}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+
+                        {/* Expandable Child Row */}
+                        {isExpanded && (
+                          <tr className="bg-amber-50/30 dark:bg-amber-950/20 border-b border-amber-200/70 dark:border-amber-900/50">
+                            <td className="py-2.5 px-4 text-center"></td>
+                            <td colSpan={4} className="py-3 px-4">
+                              <div className="pl-4 sm:pl-6 border-l-2 border-amber-400 dark:border-amber-600 py-1 space-y-2">
+                                <div className="text-[11px] font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                                  <FolderOpen size={13} />
+                                  <span>Passwords inside "{folder.name}" ({childPasswords.length}):</span>
+                                </div>
+
+                                {childPasswords.length > 0 ? (
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                                    {childPasswords.map((child) => (
+                                      <div
+                                        key={child.id}
+                                        className="flex items-center justify-between gap-2 p-2 rounded-xl bg-white dark:bg-slate-750 border border-amber-200/80 dark:border-amber-900/50 text-xs shadow-2xs hover:border-indigo-300 transition"
+                                      >
+                                        <div className="flex items-center gap-2 min-w-0">
+                                          <ItemServiceIcon name={child.name} type={child.type} size="xs" />
+                                          <div className="min-w-0">
+                                            <div className="font-bold text-slate-900 dark:text-slate-100 truncate">
+                                              {child.name}
+                                            </div>
+                                            {child.login && (
+                                              <div className="text-[10px] text-slate-400 font-mono truncate">
+                                                {child.login}
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-1 shrink-0">
+                                          <button
+                                            type="button"
+                                            onClick={() => setPreviewItem(child)}
+                                            className="p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                                            title="Preview item details"
+                                          >
+                                            <Eye size={12} />
+                                          </button>
+                                          <span className="text-[9px] text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded font-medium border border-emerald-200/80 dark:border-emerald-800">
+                                            Auto-restores
+                                          </span>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <p className="text-xs text-slate-500 dark:text-slate-400 italic">
+                                    No individually tracked credentials. When restored, all folder contents are recovered.
+                                  </p>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    );
+                  }
+
+                  // Password item
+                  const item = entry;
                   const folderName = resolveFolderName(item);
                   const isParentInTrash = Boolean(item.folderId && trashedFolderIdSet.has(item.folderId));
                   const typeMeta = getItemTypeMeta(item.type);
@@ -669,11 +838,12 @@ export default function TrashTableView({
 
                   return (
                     <tr
-                      key={item.id}
+                      key={`pw-row-${item.id}`}
                       className={`hover:bg-slate-50/80 dark:hover:bg-slate-750/50 transition-colors group ${
                         isSelected ? 'bg-indigo-50/40 dark:bg-indigo-950/20' : ''
                       }`}
                     >
+                      {/* Col 1: Checkbox */}
                       <td className="py-3 px-4 text-center">
                         <input
                           type="checkbox"
@@ -683,16 +853,16 @@ export default function TrashTableView({
                         />
                       </td>
 
-                      {/* ITEM & ACCOUNT */}
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-3">
+                      {/* Col 2: ITEM & ACCOUNT */}
+                      <td className="py-3 px-4 min-w-0">
+                        <div className="flex items-center gap-3 min-w-0">
                           <ItemServiceIcon name={item.name} type={item.type} size="sm" />
-                          <div className="min-w-0">
+                          <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="font-bold text-sm text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors truncate">
                                 {item.name}
                               </span>
-                              <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800">
+                              <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800 shrink-0">
                                 {typeMeta?.label?.toUpperCase() || 'LOGIN'}
                               </span>
                             </div>
@@ -703,29 +873,29 @@ export default function TrashTableView({
                         </div>
                       </td>
 
-                      {/* ORIGINAL LOCATION */}
-                      <td className="py-3 px-4">
+                      {/* Col 3: ORIGINAL LOCATION */}
+                      <td className="py-3 px-4 min-w-0">
                         {folderName ? (
-                          <div className="space-y-0.5">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200/70 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60 max-w-[200px] truncate">
+                          <div className="flex items-center gap-1 flex-wrap">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200/70 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60 truncate max-w-[200px]">
                               <Folder size={12} className="shrink-0" />
                               <span className="truncate">{folderName}</span>
                             </span>
                             {isParentInTrash && (
-                              <div className="text-[10px] text-rose-500 dark:text-rose-400 font-medium">
-                                (Folder also in Trash)
-                              </div>
+                              <span className="text-[10px] text-rose-500 dark:text-rose-400 font-medium shrink-0">
+                                (Folder in Trash)
+                              </span>
                             )}
                           </div>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200/70 dark:bg-slate-750 dark:text-slate-300 dark:border-slate-700">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200/70 dark:bg-slate-750 dark:text-slate-300 dark:border-slate-700 truncate max-w-full">
                             {title} Root
                           </span>
                         )}
                       </td>
 
-                      {/* DELETED DATE */}
-                      <td className="py-3 px-4 text-slate-600 dark:text-slate-300">
+                      {/* Col 4: DELETED DATE */}
+                      <td className="py-3 px-4 whitespace-nowrap text-slate-600 dark:text-slate-300">
                         <div className="font-medium text-slate-800 dark:text-slate-200">
                           {formatDate(item.deletedAt)}
                         </div>
@@ -736,13 +906,13 @@ export default function TrashTableView({
                         )}
                       </td>
 
-                      {/* ACTIONS */}
-                      <td className="py-3 px-4 text-right pr-6">
+                      {/* Col 5: ACTIONS */}
+                      <td className="py-3 px-4 text-right pr-6 whitespace-nowrap">
                         <div className="inline-flex items-center gap-1.5">
                           <button
                             type="button"
                             onClick={() => setPreviewItem(item)}
-                            className="h-8 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-semibold transition cursor-pointer"
+                            className="h-8 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-semibold transition cursor-pointer text-xs"
                             title="Preview item details"
                           >
                             Preview
@@ -750,7 +920,7 @@ export default function TrashTableView({
                           <button
                             type="button"
                             onClick={() => onRestoreItem?.(item)}
-                            className="h-8 px-2.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/50 border border-emerald-200/80 dark:border-emerald-800 font-bold transition flex items-center gap-1 cursor-pointer"
+                            className="h-8 px-2.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/50 border border-emerald-200/80 dark:border-emerald-800 font-bold transition flex items-center gap-1 cursor-pointer text-xs"
                             title="Restore password to its original folder"
                           >
                             <RotateCcw size={12} />
@@ -759,7 +929,7 @@ export default function TrashTableView({
                           <button
                             type="button"
                             onClick={() => handleTriggerSinglePurge('password', item)}
-                            className="h-8 px-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition cursor-pointer"
+                            className="h-8 w-8 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 flex items-center justify-center transition cursor-pointer"
                             title={isSuperAdmin ? 'Permanently delete item' : 'Request permanent deletion'}
                           >
                             <Trash2 size={14} />
@@ -767,171 +937,6 @@ export default function TrashTableView({
                         </div>
                       </td>
                     </tr>
-                  );
-                })}
-
-                {/* 2. Render Folders */}
-                {visibleFolders.map((folder) => {
-                  const isExpanded = expandedFolderIds.has(folder.id);
-                  const childPasswords = passwordsByFolderId.get(folder.id) || [];
-                  const count = Math.max(folder._count?.passwords ?? 0, childPasswords.length);
-                  const isSelected = selectedIds.has(folder.id);
-
-                  return (
-                    <tbody key={`folder-group-${folder.id}`} className="border-t border-slate-100 dark:border-slate-750">
-                      <tr
-                        className={`bg-amber-50/20 dark:bg-amber-950/15 hover:bg-amber-50/50 dark:hover:bg-amber-950/30 transition-colors group ${
-                          isSelected ? 'ring-1 ring-indigo-500' : ''
-                        }`}
-                      >
-                        <td className="py-3 px-4 text-center">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => toggleSelectId(folder.id)}
-                            className="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                          />
-                        </td>
-
-                        {/* FOLDER NAME & BADGE */}
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-3">
-                            <button
-                              type="button"
-                              onClick={() => toggleFolderExpanded(folder.id)}
-                              className="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800 flex items-center justify-center font-bold text-sm shrink-0 cursor-pointer hover:bg-amber-200 dark:hover:bg-amber-900/60 transition"
-                              title="Click to view passwords inside this folder"
-                            >
-                              <Folder size={16} />
-                            </button>
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span
-                                  className="font-bold text-sm text-slate-900 dark:text-slate-100 cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition"
-                                  onClick={() => toggleFolderExpanded(folder.id)}
-                                >
-                                  {folder.name}
-                                </span>
-                                <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
-                                  FOLDER
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => toggleFolderExpanded(folder.id)}
-                                  className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition cursor-pointer flex items-center gap-1"
-                                >
-                                  <span>Contains {count} {count === 1 ? 'password' : 'passwords'}</span>
-                                  {isExpanded ? <ChevronDown size={11} className="rotate-180" /> : <ChevronDown size={11} />}
-                                </button>
-                              </div>
-                              <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
-                                Restoring this folder restores all passwords inside it automatically
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* ORIGINAL LOCATION */}
-                        <td className="py-3 px-4">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200/70 dark:bg-slate-750 dark:text-slate-300 dark:border-slate-700">
-                            {title} Root
-                          </span>
-                        </td>
-
-                        {/* DELETED DATE */}
-                        <td className="py-3 px-4 text-slate-600 dark:text-slate-300">
-                          <div className="font-medium text-slate-800 dark:text-slate-200">
-                            {formatDate(folder.deletedAt)}
-                          </div>
-                          {folder.deletedAt && (
-                            <div className="text-[11px] text-slate-400 dark:text-slate-500">
-                              {formatRelativeTime(folder.deletedAt)}
-                            </div>
-                          )}
-                        </td>
-
-                        {/* ACTIONS */}
-                        <td className="py-3 px-4 text-right pr-6">
-                          <div className="inline-flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => onRestoreFolder?.(folder)}
-                              className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition flex items-center gap-1 cursor-pointer shadow-xs"
-                              title="Restore folder and all contained passwords"
-                            >
-                              <RotateCcw size={12} />
-                              <span>Restore Folder</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleTriggerSinglePurge('folder', folder)}
-                              className="h-8 px-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition cursor-pointer"
-                              title={isSuperAdmin ? 'Permanently delete folder' : 'Request permanent deletion'}
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-
-                      {/* Expandable Child Row: Shows credentials inside this folder */}
-                      {isExpanded && (
-                        <tr className="bg-amber-50/40 dark:bg-amber-950/20 border-b border-amber-200/80 dark:border-amber-900/60">
-                          <td className="py-2.5 px-4"></td>
-                          <td colSpan="4" className="py-2.5 px-4">
-                            <div className="pl-6 border-l-2 border-amber-300 dark:border-amber-600 py-1 space-y-2">
-                              <div className="text-[11px] font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
-                                <FolderOpen size={13} />
-                                <span>Passwords inside this folder ({childPasswords.length}):</span>
-                              </div>
-
-                              {childPasswords.length > 0 ? (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                                  {childPasswords.map((child) => (
-                                    <div
-                                      key={child.id}
-                                      className="flex items-center justify-between gap-2 p-2 rounded-xl bg-white dark:bg-slate-750 border border-amber-200/80 dark:border-amber-900/50 text-xs shadow-2xs hover:border-indigo-300 transition"
-                                    >
-                                      <div className="flex items-center gap-2 min-w-0">
-                                        <ItemServiceIcon name={child.name} type={child.type} size="xs" />
-                                        <div className="min-w-0">
-                                          <div className="font-bold text-slate-900 dark:text-slate-100 truncate">
-                                            {child.name}
-                                          </div>
-                                          {child.login && (
-                                            <div className="text-[10px] text-slate-400 font-mono truncate">
-                                              {child.login}
-                                            </div>
-                                          )}
-                                        </div>
-                                      </div>
-
-                                      <div className="flex items-center gap-1 shrink-0">
-                                        <button
-                                          type="button"
-                                          onClick={() => setPreviewItem(child)}
-                                          className="p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-                                          title="Preview"
-                                        >
-                                          <Eye size={12} />
-                                        </button>
-                                        <span className="text-[9px] text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded font-medium border border-emerald-200/80 dark:border-emerald-800">
-                                          Auto-restores
-                                        </span>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <p className="text-xs text-slate-500 dark:text-slate-400 italic">
-                                  No individually tracked passwords found. When you restore this folder, all contents will be restored.
-                                </p>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
                   );
                 })}
               </tbody>
