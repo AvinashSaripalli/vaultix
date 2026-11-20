@@ -6,6 +6,7 @@ import AppLayout from '../../components/layout/AppLayout';
 import PasswordListPanel from '../../components/vault/PasswordListPanel';
 import PasswordDetailsPanel from '../../components/vault/PasswordDetailsPanel';
 import FolderItemsTableView from '../../components/vault/FolderItemsTableView';
+import TrashTableView from '../../components/vault/TrashTableView';
 import AddPasswordModal from '../../components/vault/AddPasswordModal';
 import EditPasswordModal from '../../components/vault/EditPasswordModal';
 import AddFolderModal from '../../components/vault/AddFolderModal';
@@ -94,8 +95,6 @@ function VaultPage() {
       { replace: true }
     );
   };
-  const [trashSearch, setTrashSearch] = useState('');
-  const [confirmPurge, setConfirmPurge] = useState({ open: false, item: null });
   const [policyOpen, setPolicyOpen] = useState(false);
   const [auditExportOpen, setAuditExportOpen] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
@@ -139,29 +138,9 @@ function VaultPage() {
     error,
   } = useSelector((state) => state.vault);
 
-  const [trashTab, setTrashTab] = useState('passwords'); // 'passwords' | 'folders'
-
   const trashItems = trashByVault[selectedVault?.id] || [];
   const folderTrashItems = folderTrashByVault[selectedVault?.id] || [];
   const totalTrashCount = trashItems.length + folderTrashItems.length;
-
-  const filteredTrash = useMemo(() => {
-    if (!trashSearch.trim()) return trashItems;
-    const q = trashSearch.toLowerCase();
-    return trashItems.filter((item) => {
-      const nameMatch = item.name?.toLowerCase().includes(q);
-      const loginMatch = item.login?.toLowerCase().includes(q);
-      const folderName = item.folder?.name || folders.find((f) => f.id === item.folderId)?.name;
-      const folderMatch = folderName?.toLowerCase().includes(q);
-      return nameMatch || loginMatch || folderMatch;
-    });
-  }, [trashItems, trashSearch, folders]);
-
-  const filteredFolderTrash = useMemo(() => {
-    if (!trashSearch.trim()) return folderTrashItems;
-    const q = trashSearch.toLowerCase();
-    return folderTrashItems.filter((f) => f.name?.toLowerCase().includes(q));
-  }, [folderTrashItems, trashSearch]);
 
   const selectedFolder = folders.find((item) => item.id === selectedFolderId);
 
@@ -780,45 +759,96 @@ function VaultPage() {
     }
   };
 
-  const handlePurgeTrashFolder = (folder) => {
-    setConfirmPurge({ open: true, item: folder, type: 'folder' });
-  };
-
-  const handlePurgeTrashItem = (item) => {
-    setConfirmPurge({ open: true, item, type: 'password' });
-  };
-
-  const executePurgeTrash = async () => {
-    if (!confirmPurge.item) return;
-    const item = confirmPurge.item;
-
-    if (confirmPurge.type === 'folder') {
-      const result = await dispatch(purgeFolder({ folderId: item.id, vaultId: selectedVault.id }));
-      if (purgeFolder.fulfilled.match(result)) {
-        if (result.payload?.approvalRequired) {
-          showToast(result.payload.message || 'Permanent purge request submitted for Super Admin approval', 'info');
-        } else {
-          dispatch(fetchVaultFolderTrash(selectedVault.id));
-          dispatch(fetchVaultTrash(selectedVault.id));
-          showToast(`Permanently deleted folder "${item.name}"`);
-        }
+  const handlePurgeTrashFolder = async (folder) => {
+    const result = await dispatch(purgeFolder({ folderId: folder.id, vaultId: selectedVault.id }));
+    if (purgeFolder.fulfilled.match(result)) {
+      if (result.payload?.approvalRequired) {
+        showToast(result.payload.message || 'Permanent purge request submitted for Super Admin approval', 'info');
       } else {
-        showToast(result.payload || 'Failed to permanently delete folder', 'error');
+        dispatch(fetchVaultFolderTrash(selectedVault.id));
+        dispatch(fetchVaultTrash(selectedVault.id));
+        showToast(`Permanently deleted folder "${folder.name}"`);
       }
     } else {
-      const result = await dispatch(purgePassword({ passwordId: item.id, vaultId: selectedVault.id }));
-      if (purgePassword.fulfilled.match(result)) {
-        if (result.payload?.approvalRequired) {
-          showToast(result.payload.message || 'Permanent purge request submitted for Super Admin approval', 'info');
-        } else {
-          dispatch(fetchVaultTrash(selectedVault.id));
-          showToast(`Permanently deleted "${item.name}"`);
-        }
+      showToast(result.payload || 'Failed to permanently delete folder', 'error');
+    }
+  };
+
+  const handlePurgeTrashItem = async (item) => {
+    const result = await dispatch(purgePassword({ passwordId: item.id, vaultId: selectedVault.id }));
+    if (purgePassword.fulfilled.match(result)) {
+      if (result.payload?.approvalRequired) {
+        showToast(result.payload.message || 'Permanent purge request submitted for Super Admin approval', 'info');
       } else {
-        showToast(result.payload || 'Failed to permanently delete item', 'error');
+        dispatch(fetchVaultTrash(selectedVault.id));
+        showToast(`Permanently deleted "${item.name}"`);
+      }
+    } else {
+      showToast(result.payload || 'Failed to permanently delete item', 'error');
+    }
+  };
+
+  const handleBatchRestore = async (items, foldersToRestore) => {
+    let successCount = 0;
+    for (const folder of foldersToRestore) {
+      const res = await dispatch(restoreFolder({ folderId: folder.id, vaultId: selectedVault.id }));
+      if (restoreFolder.fulfilled.match(res)) successCount++;
+    }
+    for (const item of items) {
+      const res = await dispatch(restorePassword({ passwordId: item.id, vaultId: selectedVault.id }));
+      if (restorePassword.fulfilled.match(res)) successCount++;
+    }
+    dispatch(fetchFoldersByVault(selectedVault.id));
+    dispatch(fetchPasswordsByVault(selectedVault.id));
+    dispatch(fetchVaultTrash(selectedVault.id));
+    dispatch(fetchVaultFolderTrash(selectedVault.id));
+    showToast(`Restored ${successCount} ${successCount === 1 ? 'item' : 'items'}`);
+  };
+
+  const handleBatchPurge = async (items, foldersToPurge) => {
+    let count = 0;
+    for (const item of items) {
+      const res = await dispatch(purgePassword({ passwordId: item.id, vaultId: selectedVault.id }));
+      if (purgePassword.fulfilled.match(res)) {
+        if (!res.payload?.approvalRequired) count++;
       }
     }
-    setConfirmPurge({ open: false, item: null, type: null });
+    for (const folder of foldersToPurge) {
+      const res = await dispatch(purgeFolder({ folderId: folder.id, vaultId: selectedVault.id }));
+      if (purgeFolder.fulfilled.match(res)) {
+        if (!res.payload?.approvalRequired) count++;
+      }
+    }
+    dispatch(fetchVaultTrash(selectedVault.id));
+    dispatch(fetchVaultFolderTrash(selectedVault.id));
+    if (user?.role === 'SUPER_ADMIN') {
+      showToast(`Permanently deleted ${count} ${count === 1 ? 'item' : 'items'}`);
+    } else {
+      showToast('Permanent deletion approval requests submitted to Super Admin', 'info');
+    }
+  };
+
+  const handleEmptyTrash = async () => {
+    let count = 0;
+    for (const item of trashItems) {
+      const res = await dispatch(purgePassword({ passwordId: item.id, vaultId: selectedVault.id }));
+      if (purgePassword.fulfilled.match(res)) {
+        if (!res.payload?.approvalRequired) count++;
+      }
+    }
+    for (const folder of folderTrashItems) {
+      const res = await dispatch(purgeFolder({ folderId: folder.id, vaultId: selectedVault.id }));
+      if (purgeFolder.fulfilled.match(res)) {
+        if (!res.payload?.approvalRequired) count++;
+      }
+    }
+    dispatch(fetchVaultTrash(selectedVault.id));
+    dispatch(fetchVaultFolderTrash(selectedVault.id));
+    if (user?.role === 'SUPER_ADMIN') {
+      showToast('Trash emptied permanently');
+    } else {
+      showToast('Permanent deletion approval requests submitted to Super Admin', 'info');
+    }
   };
 
   const handleAuditExport = async (format) => {
@@ -867,52 +897,27 @@ function VaultPage() {
 
   return (
     <AppLayout>
-      <div className="bg-white rounded-2xl border border-slate-200 dark:bg-slate-800 dark:border-slate-700 shadow-sm min-w-0">
-        <div className={`px-4 sm:px-6 lg:px-8 py-4 sm:py-5 border-b border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800 rounded-t-2xl ${selectedPasswordId ? 'hidden xl:block' : 'block'}`}>
-          {isTrashView ? (
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-rose-600 dark:text-rose-400">
-                    Company Vault
-                  </span>
-                  <span className="text-xs text-slate-400">•</span>
-                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 truncate">
-                    {selectedVault?.name || 'Vault'}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2.5 mt-1">
-                  <div className="w-8 h-8 rounded-xl bg-rose-100 dark:bg-rose-950/60 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0">
-                    <Trash2 size={18} />
-                  </div>
-                  <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-                    Trash
-                  </h1>
-                  {totalTrashCount > 0 && (
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">
-                      {totalTrashCount} {totalTrashCount === 1 ? 'deleted item' : 'deleted items'}
-                    </span>
-                  )}
-                </div>
-
-                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-                  Deleted passwords and folders in this vault can be restored or permanently removed.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setTrashOpen(false)}
-                  className="h-9 sm:h-10 inline-flex items-center justify-center gap-2 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-700 dark:hover:bg-slate-600 text-xs sm:text-sm font-semibold transition shadow-sm"
-                >
-                  <ArrowLeft size={16} />
-                  <span>Back to Vault</span>
-                </button>
-              </div>
-            </div>
-          ) : (
+      {isTrashView ? (
+        <TrashTableView
+          title={selectedVault?.name || 'Company Vault'}
+          trashItems={trashItems}
+          folderTrashItems={folderTrashItems}
+          isLoading={trashLoading || folderTrashLoading}
+          folders={folders}
+          onRestoreItem={handleRestoreTrashItem}
+          onPurgeItem={handlePurgeTrashItem}
+          onRestoreFolder={handleRestoreTrashFolder}
+          onPurgeFolder={handlePurgeTrashFolder}
+          onBatchRestore={handleBatchRestore}
+          onBatchPurge={handleBatchPurge}
+          onEmptyTrash={handleEmptyTrash}
+          onClose={() => setTrashOpen(false)}
+          isSuperAdmin={user?.role === 'SUPER_ADMIN'}
+          isCompanyVault={true}
+        />
+      ) : (
+        <div className="bg-white rounded-2xl border border-slate-200 dark:bg-slate-800 dark:border-slate-700 shadow-sm min-w-0">
+          <div className={`px-4 sm:px-6 lg:px-8 py-4 sm:py-5 border-b border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800 rounded-t-2xl ${selectedPasswordId ? 'hidden xl:block' : 'block'}`}>
             <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 ${selectedPasswordId ? 'hidden xl:flex' : 'flex'}`}>
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
@@ -1155,8 +1160,7 @@ function VaultPage() {
           )}
         </div>
       </div>
-    )}
-  </div>
+    </div>
 
         {(vaultsLoading || passwordsLoading) && (
           <div className="p-4 sm:p-8 text-slate-500 dark:text-slate-400">Loading vault...</div>
@@ -1194,333 +1198,7 @@ function VaultPage() {
           </div>
         )}
 
-        {!vaultsLoading && !passwordsLoading && !error && isTrashView && (
-          <div className="min-h-[500px] flex flex-col p-4 sm:p-6 lg:p-8">
-            {/* Trash Tabs */}
-            <div className="flex items-center gap-2 mb-5 border-b border-slate-200 dark:border-slate-700 pb-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setTrashTab('passwords');
-                  setTrashSearch('');
-                }}
-                className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition ${
-                  trashTab === 'passwords'
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-750'
-                }`}
-              >
-                <Lock size={15} />
-                <span>Passwords</span>
-                <span
-                  className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                    trashTab === 'passwords'
-                      ? 'bg-indigo-500 text-white'
-                      : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
-                  }`}
-                >
-                  {trashItems.length}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setTrashTab('folders');
-                  setTrashSearch('');
-                }}
-                className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition ${
-                  trashTab === 'folders'
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-750'
-                }`}
-              >
-                <Folder size={15} />
-                <span>Folders</span>
-                <span
-                  className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                    trashTab === 'folders'
-                      ? 'bg-indigo-500 text-white'
-                      : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
-                  }`}
-                >
-                  {folderTrashItems.length}
-                </span>
-              </button>
-            </div>
-
-            {/* Passwords Tab */}
-            {trashTab === 'passwords' && (
-              <>
-                {trashItems.length > 0 && (
-                  <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="relative flex-1 max-w-md">
-                      <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                      <input
-                        type="text"
-                        value={trashSearch}
-                        onChange={(e) => setTrashSearch(e.target.value)}
-                        placeholder="Search in trash by name, login, or folder..."
-                        className="w-full h-10 pl-9 pr-4 rounded-xl border border-slate-200 bg-slate-50/70 focus:bg-white text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition dark:bg-slate-750 dark:border-slate-700 dark:text-slate-100 dark:placeholder-slate-500"
-                      />
-                      {trashSearch && (
-                        <button
-                          type="button"
-                          onClick={() => setTrashSearch('')}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                        >
-                          Clear
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="text-xs text-slate-500 dark:text-slate-400">
-                      Showing {filteredTrash.length} of {trashItems.length} {trashItems.length === 1 ? 'item' : 'items'}
-                    </div>
-                  </div>
-                )}
-
-                {trashLoading && (
-                  <div className="flex-1 flex items-center justify-center p-12 text-slate-500 dark:text-slate-400 text-sm">
-                    Loading trash...
-                  </div>
-                )}
-
-                {!trashLoading && trashItems.length === 0 && (
-                  <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-slate-400 dark:text-slate-500">
-                    <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-750 flex items-center justify-center text-slate-400 mb-3 shadow-inner">
-                      <Trash2 size={28} />
-                    </div>
-                    <h3 className="text-base font-semibold text-slate-700 dark:text-slate-200 mb-1">
-                      No deleted passwords
-                    </h3>
-                    <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-sm mb-4">
-                      When you delete passwords, they will appear here so you can easily recover them anytime.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setTrashOpen(false)}
-                      className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200 text-xs font-semibold transition"
-                    >
-                      Return to Vault
-                    </button>
-                  </div>
-                )}
-
-                {!trashLoading && trashItems.length > 0 && filteredTrash.length === 0 && (
-                  <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-slate-400">
-                    <p className="text-sm">No items match "{trashSearch}"</p>
-                    <button
-                      type="button"
-                      onClick={() => setTrashSearch('')}
-                      className="mt-2 text-xs text-rose-600 dark:text-rose-400 hover:underline"
-                    >
-                      Clear search
-                    </button>
-                  </div>
-                )}
-
-                {!trashLoading && filteredTrash.length > 0 && (
-                  <div className="space-y-2.5 flex-1 overflow-y-auto">
-                    {filteredTrash.map((item) => {
-                      const folderName = item.folder?.name || folders.find((f) => f.id === item.folderId)?.name;
-                      return (
-                        <div
-                          key={item.id}
-                          className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white hover:bg-slate-50/70 dark:bg-slate-800 dark:hover:bg-slate-750/70 transition shadow-xs"
-                        >
-                          <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-700/60 flex items-center justify-center text-slate-500 dark:text-slate-400 shrink-0">
-                              <Lock size={18} />
-                            </div>
-
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">
-                                {item.name}
-                              </p>
-                              <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
-                                {item.login && (
-                                  <span className="truncate max-w-[200px]" title={item.login}>
-                                    {item.login}
-                                  </span>
-                                )}
-                                {folderName && (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200/80 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60">
-                                    <Folder size={11} className="text-amber-600 dark:text-amber-400 shrink-0" />
-                                    <span className="truncate max-w-[150px]">{folderName}</span>
-                                  </span>
-                                )}
-                                {item.deletedAt && (
-                                  <span className="text-[11px] text-slate-400 dark:text-slate-500">
-                                    Deleted {new Date(item.deletedAt).toLocaleDateString()}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                            <button
-                              type="button"
-                              onClick={() => handleRestoreTrashItem(item)}
-                              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/50 transition border border-emerald-200/70 dark:border-emerald-800"
-                              title="Restore password to its original folder"
-                            >
-                              <RotateCcw size={13} />
-                              Restore
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handlePurgeTrashItem(item)}
-                              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-900/50 transition border border-rose-200/70 dark:border-rose-800"
-                              title={user?.role === 'SUPER_ADMIN' ? 'Permanently erase from database' : 'Request permanent deletion from Super Admin'}
-                            >
-                              <Trash2 size={13} />
-                              {user?.role === 'SUPER_ADMIN' ? 'Delete permanently' : 'Request deletion'}
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* Folders Tab */}
-            {trashTab === 'folders' && (
-              <>
-                {folderTrashItems.length > 0 && (
-                  <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="relative flex-1 max-w-md">
-                      <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                      <input
-                        type="text"
-                        value={trashSearch}
-                        onChange={(e) => setTrashSearch(e.target.value)}
-                        placeholder="Search in trash by folder name..."
-                        className="w-full h-10 pl-9 pr-4 rounded-xl border border-slate-200 bg-slate-50/70 focus:bg-white text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition dark:bg-slate-750 dark:border-slate-700 dark:text-slate-100 dark:placeholder-slate-500"
-                      />
-                      {trashSearch && (
-                        <button
-                          type="button"
-                          onClick={() => setTrashSearch('')}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                        >
-                          Clear
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="text-xs text-slate-500 dark:text-slate-400">
-                      Showing {filteredFolderTrash.length} of {folderTrashItems.length} {folderTrashItems.length === 1 ? 'folder' : 'folders'}
-                    </div>
-                  </div>
-                )}
-
-                {folderTrashLoading && (
-                  <div className="flex-1 flex items-center justify-center p-12 text-slate-500 dark:text-slate-400 text-sm">
-                    Loading deleted folders...
-                  </div>
-                )}
-
-                {!folderTrashLoading && folderTrashItems.length === 0 && (
-                  <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-slate-400 dark:text-slate-500">
-                    <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-750 flex items-center justify-center text-slate-400 mb-3 shadow-inner">
-                      <Folder size={28} />
-                    </div>
-                    <h3 className="text-base font-semibold text-slate-700 dark:text-slate-200 mb-1">
-                      No deleted folders
-                    </h3>
-                    <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-sm mb-4">
-                      When you delete a folder, it will appear here along with its passwords so you can easily restore them anytime.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setTrashOpen(false)}
-                      className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200 text-xs font-semibold transition"
-                    >
-                      Return to Vault
-                    </button>
-                  </div>
-                )}
-
-                {!folderTrashLoading && folderTrashItems.length > 0 && filteredFolderTrash.length === 0 && (
-                  <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-slate-400">
-                    <p className="text-sm">No folders match "{trashSearch}"</p>
-                    <button
-                      type="button"
-                      onClick={() => setTrashSearch('')}
-                      className="mt-2 text-xs text-rose-600 dark:text-rose-400 hover:underline"
-                    >
-                      Clear search
-                    </button>
-                  </div>
-                )}
-
-                {!folderTrashLoading && filteredFolderTrash.length > 0 && (
-                  <div className="space-y-2.5 flex-1 overflow-y-auto">
-                    {filteredFolderTrash.map((folder) => {
-                      const count = folder._count?.passwords ?? 0;
-                      return (
-                        <div
-                          key={folder.id}
-                          className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white hover:bg-slate-50/70 dark:bg-slate-800 dark:hover:bg-slate-750/70 transition shadow-xs"
-                        >
-                          <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                            <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200/60 dark:border-amber-800/60 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
-                              <Folder size={18} />
-                            </div>
-
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">
-                                {folder.name}
-                              </p>
-                              <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-slate-650">
-                                  <Lock size={11} className="text-slate-400 shrink-0" />
-                                  <span>{count} {count === 1 ? 'password' : 'passwords'} inside</span>
-                                </span>
-                                {folder.deletedAt && (
-                                  <span className="text-[11px] text-slate-400 dark:text-slate-500">
-                                    Deleted {new Date(folder.deletedAt).toLocaleDateString()}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                            <button
-                              type="button"
-                              onClick={() => handleRestoreTrashFolder(folder)}
-                              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/50 transition border border-emerald-200/70 dark:border-emerald-800"
-                              title="Restore folder and all its passwords"
-                            >
-                              <RotateCcw size={13} />
-                              Restore
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handlePurgeTrashFolder(folder)}
-                              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-900/50 transition border border-rose-200/70 dark:border-rose-800"
-                              title={user?.role === 'SUPER_ADMIN' ? 'Permanently erase folder and all its passwords' : 'Request permanent deletion from Super Admin'}
-                            >
-                              <Trash2 size={13} />
-                              {user?.role === 'SUPER_ADMIN' ? 'Delete permanently' : 'Request deletion'}
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        )}
-
-        {!vaultsLoading && !passwordsLoading && !error && !isTrashView && (
+        {!vaultsLoading && !passwordsLoading && !error && (
           isFolderForbidden ? (
             <div className="min-h-[520px] flex items-center justify-center p-6 sm:p-12">
               <div className="max-w-md w-full bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/80 dark:border-slate-700 p-8 sm:p-10 shadow-xl shadow-slate-900/5 text-center flex flex-col items-center">
@@ -1567,6 +1245,7 @@ function VaultPage() {
           )
         )}
       </div>
+      )}
       
       <ShareFolderModal
         open={shareOpen}
@@ -1623,31 +1302,6 @@ function VaultPage() {
           setConfirmDelete(false);
         }}
         onCancel={() => setConfirmDelete(false)}
-      />
-
-      <ConfirmModal
-        open={confirmPurge.open}
-        title={
-          user?.role === 'SUPER_ADMIN'
-            ? confirmPurge.type === 'folder'
-              ? 'Permanently Delete Folder'
-              : 'Permanently Delete Password'
-            : confirmPurge.type === 'folder'
-              ? 'Request Folder Purge'
-              : 'Request Password Purge'
-        }
-        message={
-          user?.role === 'SUPER_ADMIN'
-            ? confirmPurge.type === 'folder'
-              ? `Are you sure you want to permanently delete folder "${confirmPurge.item?.name}" and all passwords inside it? This cannot be undone and will be permanently erased from the database.`
-              : `Are you sure you want to permanently delete "${confirmPurge.item?.name}"? This cannot be undone and will be permanently erased from the database.`
-            : confirmPurge.type === 'folder'
-              ? `Permanently deleting folders from a Company Vault requires Super Admin authorization. Confirming this will submit an approval request to the Super Admin. The folder will remain safely in Trash until approved.`
-              : `Permanently deleting passwords from a Company Vault requires Super Admin authorization. Confirming this will submit an approval request to the Super Admin. The password will remain safely in Trash until approved.`
-        }
-        confirmLabel={user?.role === 'SUPER_ADMIN' ? 'Delete permanently' : 'Submit Purge Request'}
-        onConfirm={executePurgeTrash}
-        onCancel={() => setConfirmPurge({ open: false, item: null, type: null })}
       />
 
       <VaultPolicyModal
