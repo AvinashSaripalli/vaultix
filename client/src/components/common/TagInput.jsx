@@ -7,6 +7,7 @@ import {
   getDefaultDepartmentForType,
   getQuickSuggestedTagsForType,
   getTagsForUrl,
+  getSmartSuggestedTags,
 } from '../../utils/departmentTags';
 
 function TagInput({
@@ -14,7 +15,10 @@ function TagInput({
   setTags,
   onChange,
   itemType,
+  title = '',
   url = '',
+  login = '',
+  folderName = '',
   suggestions: externalSuggestions,
 }) {
   const [input, setInput] = useState('');
@@ -49,14 +53,35 @@ function TagInput({
     return getTagsForUrl(url, existingVaultItems);
   }, [url, existingVaultItems]);
 
-  // Align category tab with URL match or itemType
+  // Multi-signal context-aware tag intelligence (Title, URL, Login, State Heuristics, Vault Memory)
+  const smartAnalysis = useMemo(() => {
+    return getSmartSuggestedTags({
+      title,
+      url,
+      login,
+      folderName,
+      itemType,
+      existingVaultItems,
+    });
+  }, [title, url, login, folderName, itemType, existingVaultItems]);
+
+  // Tags suggested by smart engine that aren't already selected
+  const unappliedSmartTags = useMemo(() => {
+    return smartAnalysis.allSuggestions.filter(
+      (s) => !tags.some((t) => t.toLowerCase() === s.toLowerCase())
+    );
+  }, [smartAnalysis.allSuggestions, tags]);
+
+  // Align category tab with smart suggestions, URL match or itemType
   useEffect(() => {
-    if (urlMatch.tags.length > 0) {
+    if (smartAnalysis.allSuggestions.length > 0) {
+      setActiveTab('smart');
+    } else if (urlMatch.tags.length > 0) {
       setActiveTab('url_match');
     } else if (itemType) {
       setActiveTab(getDefaultDepartmentForType(itemType));
     }
-  }, [urlMatch.domain, itemType]);
+  }, [smartAnalysis.allSuggestions.length, urlMatch.domain, itemType]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -111,12 +136,13 @@ function TagInput({
   // Combined master list of suggestions for search and browsing
   const masterSuggestions = useMemo(() => {
     const combined = [
+      ...smartAnalysis.allSuggestions,
       ...urlMatch.tags,
       ...existingVaultTags,
       ...(externalSuggestions || ALL_DEPARTMENT_TAGS),
     ];
     return Array.from(new Set(combined));
-  }, [urlMatch.tags, existingVaultTags, externalSuggestions]);
+  }, [smartAnalysis.allSuggestions, urlMatch.tags, existingVaultTags, externalSuggestions]);
 
   // Filtered list when user is typing in the search box
   const searchResults = useMemo(() => {
@@ -128,6 +154,9 @@ function TagInput({
 
   // Tags for the active tab inside the popover
   const currentTabTags = useMemo(() => {
+    if (activeTab === 'smart') {
+      return smartAnalysis.allSuggestions;
+    }
     if (activeTab === 'url_match' && urlMatch.tags.length > 0) {
       return urlMatch.tags;
     }
@@ -139,7 +168,7 @@ function TagInput({
     }
     const group = DEPARTMENT_TAG_GROUPS.find((g) => g.id === activeTab);
     return group ? group.tags : masterSuggestions;
-  }, [activeTab, urlMatch, existingVaultTags, masterSuggestions]);
+  }, [activeTab, smartAnalysis.allSuggestions, urlMatch, existingVaultTags, masterSuggestions]);
 
   const hasTypedExactMatch = tags.some((t) => t.toLowerCase() === input.trim().toLowerCase());
 
@@ -263,6 +292,20 @@ function TagInput({
               <div>
                 {/* Sleek Tabs Header (No ugly horizontal scrollbar) */}
                 <div className="flex items-center gap-1 p-2 bg-slate-50/80 dark:bg-slate-900/40 border-b border-slate-100 dark:border-slate-700 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                  {smartAnalysis.allSuggestions.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('smart')}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition flex items-center gap-1.5 ${
+                        activeTab === 'smart'
+                          ? 'bg-indigo-600 text-white shadow-xs'
+                          : 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40'
+                      }`}
+                    >
+                      <Sparkles size={11} className={activeTab === 'smart' ? 'text-amber-300' : 'text-amber-500'} />
+                      <span>Smart ({smartAnalysis.allSuggestions.length})</span>
+                    </button>
+                  )}
                   {urlMatch.tags.length > 0 && (
                     <button
                       type="button"
@@ -350,8 +393,44 @@ function TagInput({
         )}
       </div>
 
-      {/* Subtle 1-Line Quick Suggestions (URL Matched or Item Type Smart Suggestions) */}
-      {topQuickSuggestions.length > 0 && !openDropdown && (
+      {/* Smart Suggested Chips (Title, URL, State & Vault Memory Intelligence) */}
+      {unappliedSmartTags.length > 0 && !openDropdown && (
+        <div className="flex items-center gap-1.5 flex-wrap pt-1 text-xs">
+          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider shrink-0">
+            <Sparkles size={12} className="text-amber-500 shrink-0" />
+            {smartAnalysis.state ? `Smart Suggestions (${smartAnalysis.state}):` : 'Smart Suggestions:'}
+          </span>
+
+          {unappliedSmartTags.slice(0, 7).map((tag) => (
+            <button
+              key={tag}
+              type="button"
+              onClick={() => addTag(tag)}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/90 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/80 dark:text-indigo-300 dark:border-indigo-800/80 transition-all transform hover:-translate-y-0.5 active:translate-y-0 shadow-xs cursor-pointer"
+              title={`Add tag "${tag}"`}
+            >
+              <Plus size={11} className="text-indigo-500 dark:text-indigo-400" />
+              <span>{tag}</span>
+            </button>
+          ))}
+
+          {unappliedSmartTags.length > 7 && (
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('smart');
+                setOpenDropdown(true);
+              }}
+              className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-semibold ml-0.5 cursor-pointer"
+            >
+              +{unappliedSmartTags.length - 7} more ▾
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Fallback general quick suggestions when no smart tags are active */}
+      {unappliedSmartTags.length === 0 && topQuickSuggestions.length > 0 && !openDropdown && (
         <div className="flex items-center gap-1.5 flex-wrap pt-0.5 text-xs text-slate-500 dark:text-slate-400">
           {urlMatch.tags.length > 0 ? (
             <span className="flex items-center gap-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide">
@@ -368,7 +447,7 @@ function TagInput({
               key={tag}
               type="button"
               onClick={() => addTag(tag)}
-              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md transition text-xs font-normal border ${
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md transition text-xs font-normal border cursor-pointer ${
                 urlMatch.tags.length > 0
                   ? 'bg-indigo-50/80 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border-indigo-200/80 dark:border-indigo-800/80 hover:bg-indigo-100 hover:text-indigo-800'
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-transparent hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950 dark:hover:text-indigo-300 hover:border-indigo-300'
@@ -382,7 +461,7 @@ function TagInput({
           <button
             type="button"
             onClick={() => setOpenDropdown(true)}
-            className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-medium ml-1"
+            className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-medium ml-1 cursor-pointer"
           >
             More ▾
           </button>

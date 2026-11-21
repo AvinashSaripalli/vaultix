@@ -387,7 +387,10 @@ function ItemFormFields({
           setTags={(nextTags) => onChange('tags', nextTags)}
           onChange={(nextTags) => onChange('tags', nextTags)}
           itemType={currentType}
+          title={formData.name || ''}
           url={formData.url || formData.fields?.url || formData.fields?.baseUrl || ''}
+          login={formData.login || formData.fields?.username || formData.fields?.login || ''}
+          folderName={folders.find((f) => f.id === formData.folderId)?.name || ''}
           suggestions={suggestedTags}
         />
       </div>

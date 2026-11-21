@@ -173,13 +173,13 @@ export const getQuickSuggestedTagsForType = (itemType) => {
 export const DOMAIN_TAG_RULES = [
   // Indian Government, Tax & Compliance
   { pattern: /gst\.gov\.in/i, tags: ['GST / Tax', 'Compliance', 'Finance'] },
-  { pattern: /incometax\.gov\.in/i, tags: ['GST / Tax', 'Compliance', 'Finance'] },
-  { pattern: /tin-nsdl\.com/i, tags: ['GST / Tax', 'Compliance', 'Finance'] },
+  { pattern: /incometax\.gov\.in/i, tags: ['Income Tax', 'GST / Tax', 'Compliance', 'Finance'] },
+  { pattern: /tin-nsdl\.com|tdscpc\.gov\.in/i, tags: ['TDS', 'Income Tax', 'GST / Tax', 'Finance'] },
   { pattern: /mca\.gov\.in/i, tags: ['MCA-V3 / ROC', 'Compliance', 'Secretarial'] },
   { pattern: /rbi\.org\.in/i, tags: ['FEMA / RBI', 'Compliance'] },
-  { pattern: /dgft\.gov\.in/i, tags: ['FEMA / RBI', 'Compliance'] },
-  { pattern: /epfindia\.gov\.in/i, tags: ['Payroll', 'HR', 'Compliance'] },
-  { pattern: /esic\.gov\.in/i, tags: ['Payroll', 'HR', 'Compliance'] },
+  { pattern: /dgft\.gov\.in|icegate\.gov\.in/i, tags: ['Customs', 'FEMA / RBI', 'Compliance', 'Import Export'] },
+  { pattern: /epfindia\.gov\.in/i, tags: ['EPFO', 'Payroll', 'HR', 'Compliance'] },
+  { pattern: /esic\.gov\.in/i, tags: ['ESIC', 'Payroll', 'HR', 'Compliance'] },
 
   // Banking (Corporate & Retail)
   { pattern: /hdfcbank\.com/i, tags: ['Banking-Corporate', 'Finance'] },
@@ -237,6 +237,102 @@ export const DOMAIN_TAG_RULES = [
   { pattern: /slack\.com/i, tags: ['Communication / VoIP', 'Shared'] },
   { pattern: /zoom\.us/i, tags: ['Communication / VoIP'] },
 ];
+
+/**
+ * 36 Indian States and Union Territories with 2-letter codes & 2-digit GST prefix numbers.
+ */
+export const INDIAN_STATES_MAP = {
+  ap: { code: 'AP', name: 'Andhra Pradesh', gstPrefix: '37' },
+  ts: { code: 'TS', name: 'Telangana', gstPrefix: '36' },
+  tg: { code: 'TS', name: 'Telangana', gstPrefix: '36' },
+  ka: { code: 'KA', name: 'Karnataka', gstPrefix: '29' },
+  mh: { code: 'MH', name: 'Maharashtra', gstPrefix: '27' },
+  tn: { code: 'TN', name: 'Tamil Nadu', gstPrefix: '33' },
+  dl: { code: 'DL', name: 'Delhi', gstPrefix: '07' },
+  gj: { code: 'GJ', name: 'Gujarat', gstPrefix: '24' },
+  kl: { code: 'KL', name: 'Kerala', gstPrefix: '32' },
+  wb: { code: 'WB', name: 'West Bengal', gstPrefix: '19' },
+  up: { code: 'UP', name: 'Uttar Pradesh', gstPrefix: '09' },
+  hr: { code: 'HR', name: 'Haryana', gstPrefix: '06' },
+  rj: { code: 'RJ', name: 'Rajasthan', gstPrefix: '08' },
+  mp: { code: 'MP', name: 'Madhya Pradesh', gstPrefix: '23' },
+  pb: { code: 'PB', name: 'Punjab', gstPrefix: '03' },
+  or: { code: 'OD', name: 'Odisha', gstPrefix: '21' },
+  od: { code: 'OD', name: 'Odisha', gstPrefix: '21' },
+  ch: { code: 'CH', name: 'Chandigarh', gstPrefix: '04' },
+  ga: { code: 'GA', name: 'Goa', gstPrefix: '30' },
+  br: { code: 'BR', name: 'Bihar', gstPrefix: '10' },
+  jh: { code: 'JH', name: 'Jharkhand', gstPrefix: '20' },
+  as: { code: 'AS', name: 'Assam', gstPrefix: '18' },
+  uk: { code: 'UK', name: 'Uttarakhand', gstPrefix: '05' },
+  ut: { code: 'UK', name: 'Uttarakhand', gstPrefix: '05' },
+  hp: { code: 'HP', name: 'Himachal Pradesh', gstPrefix: '02' },
+  jk: { code: 'JK', name: 'Jammu & Kashmir', gstPrefix: '01' },
+  py: { code: 'PY', name: 'Puducherry', gstPrefix: '34' },
+  ct: { code: 'CG', name: 'Chhattisgarh', gstPrefix: '22' },
+  cg: { code: 'CG', name: 'Chhattisgarh', gstPrefix: '22' },
+};
+
+/**
+ * Detects Indian State from Title, URL, or Login (GSTIN prefix / suffix).
+ */
+export const detectStateFromInput = (title = '', url = '', login = '') => {
+  const cleanTitle = (title || '').trim();
+  const cleanLogin = (login || '').trim();
+  const cleanUrl = (url || '').trim().toLowerCase();
+
+  // 1. Check GSTIN pattern in Login (first 2 digits map to state GST prefix)
+  if (/^\d{2}[A-Z]{5}\d{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}/i.test(cleanLogin)) {
+    const gstPrefix = cleanLogin.slice(0, 2);
+    for (const info of Object.values(INDIAN_STATES_MAP)) {
+      if (info.gstPrefix === gstPrefix) {
+        return info;
+      }
+    }
+  }
+
+  // 2. Check Title with boundary separators (e.g. Einvoice_AP, Einvoice-AP, Einvoice AP, [AP], (AP), AP_Einvoice)
+  for (const [key, info] of Object.entries(INDIAN_STATES_MAP)) {
+    // Avoid short common words like 'as', 'or', 'in', 'to' unless explicitly delimited
+    const isCommonWord = ['as', 'or', 'in', 'to', 'at', 'is', 'on'].includes(key);
+
+    const patterns = [
+      new RegExp(`[\\b_\\-\\(\\)\\[\\]\\/\\\\]${key}[\\b_\\-\\(\\)\\[\\]\\/\\\\]`, 'i'),
+      new RegExp(`[\\b_\\-\\(\\)\\[\\]\\/\\\\]${key}$`, 'i'),
+      new RegExp(`^${key}[\\b_\\-\\(\\)\\[\\]\\/\\\\]`, 'i'),
+      new RegExp(`\\b${info.name.replace(/\s+/g, '\\s*')}\\b`, 'i'),
+    ];
+
+    if (!isCommonWord) {
+      patterns.push(new RegExp(`\\b${key}\\b`, 'i'));
+    }
+
+    if (patterns.some((re) => re.test(cleanTitle))) {
+      return info;
+    }
+  }
+
+  // 3. Check Substring inside Login when in tax/portal context (e.g., ibckap2013 -> contains "ap")
+  const isComplianceContext = /gst|invoice|eway|tax|vat|mca|pt/i.test(cleanTitle + cleanUrl);
+  if (isComplianceContext && cleanLogin.length >= 4) {
+    for (const [key, info] of Object.entries(INDIAN_STATES_MAP)) {
+      if (!['as', 'or', 'in', 'to', 'at', 'is', 'on'].includes(key)) {
+        if (cleanLogin.toLowerCase().includes(key)) {
+          return info;
+        }
+      }
+    }
+  }
+
+  // 4. Check URL domain / subdomain for state names (e.g., tg.gov.in, ap.gov.in, karnataka.gov.in)
+  for (const [key, info] of Object.entries(INDIAN_STATES_MAP)) {
+    if (cleanUrl.includes(`${key}.gov.in`) || cleanUrl.includes(`${info.name.toLowerCase().replace(/\s+/g, '')}.gov.in`)) {
+      return info;
+    }
+  }
+
+  return null;
+};
 
 /**
  * Extracts a clean domain and hostname from any URL string.
@@ -307,5 +403,204 @@ export const getTagsForUrl = (url, existingVaultItems = []) => {
   return {
     domain: host,
     tags: Array.from(detectedTags),
+  };
+};
+
+/**
+ * Resolves context-aware, composite smart tag suggestions based on:
+ * 1. Title / Name (e.g. Einvoice_AP, GST Portal TS, MCA Director Login)
+ * 2. Website URL / Host (e.g. einvoice1.gst.gov.in, mca.gov.in)
+ * 3. Login / Username (e.g. ibckap2013, GSTIN 37AAACB...)
+ * 4. Folder Name context (e.g. Aaroghya Distribution Private Limited)
+ * 5. State detection (AP, TS, KA, MH, TN, DL, etc. synthesized into 'GST AP', 'E-Invoice AP')
+ * 6. Historical Vault memory
+ */
+export const getSmartSuggestedTags = ({
+  title = '',
+  url = '',
+  login = '',
+  folderName = '',
+  itemType = '',
+  existingVaultItems = [],
+} = {}) => {
+  const host = extractHostname(url);
+  const cleanTitle = (title || '').trim();
+  const titleLower = cleanTitle.toLowerCase();
+  const cleanLogin = (login || '').trim();
+  const stateInfo = detectStateFromInput(cleanTitle, url, cleanLogin);
+
+  const smartTags = new Set();
+  const categoryTags = new Set();
+  const vaultMemoryTags = new Set();
+
+  // --- GST / E-Invoice / E-Waybill Engine ---
+  const isGstDomain = /(?:^|\.)(?:gst|einvoice\d*|ewaybillgst)\.gov\.in/i.test(host);
+  const isGstTitle = /\b(gst|gstr|einvoice|e-invoice|eway|e-waybill)\b/i.test(titleLower);
+
+  if (isGstDomain || isGstTitle) {
+    if (stateInfo) {
+      smartTags.add(`GST ${stateInfo.code}`);
+    }
+    const isEinvoice = /einvoice/i.test(titleLower) || /einvoice/i.test(host);
+    const isEway = /eway/i.test(titleLower) || /ewaybill/i.test(host);
+
+    if (isEinvoice) {
+      smartTags.add('E-Invoice');
+      if (stateInfo) smartTags.add(`E-Invoice ${stateInfo.code}`);
+    }
+    if (isEway) {
+      smartTags.add('E-Waybill');
+      if (stateInfo) smartTags.add(`E-Waybill ${stateInfo.code}`);
+    }
+    if (!isEinvoice && !isEway && !stateInfo) {
+      smartTags.add('GST');
+    }
+
+    categoryTags.add('GST / Tax');
+    categoryTags.add('Compliance');
+    categoryTags.add('Finance');
+  }
+
+  // --- Income Tax & TDS Engine ---
+  const isItDomain = /(?:incometax|tin-nsdl|tdscpc)\.(?:gov\.in|com)/i.test(host);
+  const isItTitle = /\b(itr|income\s*tax|tds|traces|form\s*16|form\s*26as)\b/i.test(titleLower);
+
+  if (isItDomain || isItTitle) {
+    if (/\b(tds|traces)\b/i.test(titleLower) || /tdscpc/i.test(host)) {
+      smartTags.add('TDS');
+    }
+    smartTags.add('Income Tax');
+    categoryTags.add('GST / Tax');
+    categoryTags.add('Tax Filing');
+    categoryTags.add('Compliance');
+    categoryTags.add('Finance');
+  }
+
+  // --- MCA & ROC Engine ---
+  const isMcaDomain = /mca\.gov\.in/i.test(host);
+  const isMcaTitle = /\b(mca|roc|v3\s*portal|din|director\s*kyc|form\s*mgt|dir-3)\b/i.test(titleLower);
+
+  if (isMcaDomain || isMcaTitle) {
+    if (stateInfo) {
+      smartTags.add(`ROC ${stateInfo.code}`);
+    }
+    if (/\b(director|din|kyc)\b/i.test(titleLower)) {
+      smartTags.add('Director-KYC');
+    }
+    smartTags.add('MCA-V3 / ROC');
+    categoryTags.add('Compliance');
+    categoryTags.add('Secretarial');
+  }
+
+  // --- Professional Tax (PT) Engine ---
+  const isPtTitle = /\b(pt|ptrc|ptec|professional\s*tax)\b/i.test(titleLower);
+  if (isPtTitle) {
+    if (stateInfo) {
+      smartTags.add(`PT ${stateInfo.code}`);
+    }
+    smartTags.add('Professional Tax');
+    categoryTags.add('Payroll');
+    categoryTags.add('Compliance');
+  }
+
+  // --- EPFO & ESIC Engine ---
+  const isEpfoDomain = /(?:epfindia|esic)\.gov\.in/i.test(host);
+  const isEpfoTitle = /\b(epfo|pf\b|uan|esic|shram\s*suvidha|provident\s*fund)\b/i.test(titleLower);
+
+  if (isEpfoDomain || isEpfoTitle) {
+    if (/esic/i.test(titleLower) || /esic/i.test(host)) {
+      smartTags.add('ESIC');
+    } else {
+      smartTags.add('EPFO');
+      if (stateInfo) smartTags.add(`PF ${stateInfo.code}`);
+    }
+    categoryTags.add('Payroll');
+    categoryTags.add('HR');
+    categoryTags.add('Compliance');
+  }
+
+  // --- Customs, DGFT, FEMA Engine ---
+  const isCustomsDomain = /(?:icegate|dgft)\.gov\.in|rbi\.org\.in/i.test(host);
+  const isCustomsTitle = /\b(icegate|dgft|customs|iec|fema|rbi|foreign\s*trade)\b/i.test(titleLower);
+
+  if (isCustomsDomain || isCustomsTitle) {
+    if (/icegate|customs/i.test(titleLower) || /icegate/i.test(host)) smartTags.add('Customs');
+    if (/dgft|iec/i.test(titleLower) || /dgft/i.test(host)) smartTags.add('DGFT');
+    if (/fema|rbi/i.test(titleLower) || /rbi/i.test(host)) smartTags.add('FEMA / RBI');
+    categoryTags.add('Compliance');
+    categoryTags.add('Import Export');
+  }
+
+  // --- Banking Engine ---
+  const isBankDomain = /hdfcbank|icicibank|onlinesbi|axisbank|kotak|indusind|yesbank|bankofbaroda|pnbindia/i.test(host);
+  const isBankTitle = /\b(bank|netbanking|corporate\s*banking|current\s*account)\b/i.test(titleLower);
+
+  if (isBankDomain || isBankTitle) {
+    smartTags.add('Banking-Corporate');
+    categoryTags.add('Finance');
+    categoryTags.add('Vendor-Payments');
+  }
+
+  // --- Cloud & DevOps Engine ---
+  const isCloudDomain = /aws\.amazon|amazonaws|azure|cloud\.google|digitalocean|hostinger|cloudflare|github|gitlab|vercel/i.test(host);
+  const isCloudTitle = /\b(aws|azure|gcp|devops|production|staging|database|kubernetes|docker|cloud)\b/i.test(titleLower);
+
+  if (isCloudDomain || isCloudTitle) {
+    smartTags.add('Cloud / AWS / GCP');
+    if (/prod/i.test(titleLower) || /prod/i.test(host)) smartTags.add('Production');
+    if (/staging|qa|test/i.test(titleLower) || /staging|qa|test/i.test(host)) smartTags.add('Staging / QA');
+    categoryTags.add('DevOps');
+  }
+
+  // --- Vault Memory: match existing items by domain, folder, or title keywords ---
+  if (Array.isArray(existingVaultItems) && existingVaultItems.length > 0) {
+    const cleanFolderName = (folderName || '').trim().toLowerCase();
+
+    existingVaultItems.forEach((item) => {
+      const itemUrl = item.url || item.fields?.url || item.fields?.baseUrl;
+      const itemTitle = (item.name || item.title || '').toLowerCase();
+      const itemHost = itemUrl ? extractHostname(itemUrl) : '';
+
+      // Match domain
+      const isDomainMatch = host && itemHost && (itemHost === host || host.endsWith(`.${itemHost}`) || itemHost.endsWith(`.${host}`));
+      // Match state if detected
+      const isStateMatch = stateInfo && itemTitle.includes(stateInfo.code.toLowerCase());
+
+      if (isDomainMatch || isStateMatch) {
+        (item.tags || []).forEach((t) => {
+          const name = typeof t === 'string' ? t : t?.tag?.name;
+          if (name && name.trim()) {
+            vaultMemoryTags.add(name.trim());
+          }
+        });
+      }
+    });
+  }
+
+  // Fallback to URL-based tags and item type defaults if no specific smart tags were generated
+  if (smartTags.size === 0) {
+    const urlTags = getTagsForUrl(url, existingVaultItems);
+    urlTags.tags.forEach((t) => smartTags.add(t));
+
+    if (stateInfo) {
+      smartTags.add(stateInfo.code);
+    }
+  }
+
+  // Build combined priority list
+  const combinedPriority = [
+    ...Array.from(smartTags),
+    ...Array.from(categoryTags),
+    ...Array.from(vaultMemoryTags),
+  ];
+
+  return {
+    domain: host,
+    state: stateInfo ? stateInfo.code : null,
+    stateName: stateInfo ? stateInfo.name : null,
+    smartTags: Array.from(smartTags),
+    categoryTags: Array.from(categoryTags),
+    vaultMemoryTags: Array.from(vaultMemoryTags),
+    allSuggestions: Array.from(new Set(combinedPriority)),
   };
 };
