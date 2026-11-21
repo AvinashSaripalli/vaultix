@@ -440,7 +440,30 @@ export const getSmartSuggestedTags = ({
   if (isGstDomain || isGstTitle) {
     if (stateInfo) {
       smartTags.add(`GST ${stateInfo.code}`);
+    } else {
+      // If user typed only "GST", provide instant 1-click state quick-picks + vault memory
+      const existingStateGstTags = new Set();
+      if (Array.isArray(existingVaultItems)) {
+        existingVaultItems.forEach((item) => {
+          (item.tags || []).forEach((t) => {
+            const name = typeof t === 'string' ? t : t?.tag?.name;
+            if (name && /^gst\s+[a-z]{2}$/i.test(name.trim())) {
+              existingStateGstTags.add(name.trim().toUpperCase());
+            }
+          });
+        });
+      }
+
+      // Add existing vault state GST tags first
+      existingStateGstTags.forEach((t) => smartTags.add(t));
+
+      // Default top economic/corporate states
+      const defaultTopStates = ['GST AP', 'GST TS', 'GST KA', 'GST MH', 'GST TN', 'GST DL'];
+      defaultTopStates.forEach((st) => smartTags.add(st));
+
+      smartTags.add('GST');
     }
+
     const isEinvoice = /einvoice/i.test(titleLower) || /einvoice/i.test(host);
     const isEway = /eway/i.test(titleLower) || /ewaybill/i.test(host);
 
@@ -451,9 +474,6 @@ export const getSmartSuggestedTags = ({
     if (isEway) {
       smartTags.add('E-Waybill');
       if (stateInfo) smartTags.add(`E-Waybill ${stateInfo.code}`);
-    }
-    if (!isEinvoice && !isEway && !stateInfo) {
-      smartTags.add('GST');
     }
 
     categoryTags.add('GST / Tax');
@@ -497,6 +517,8 @@ export const getSmartSuggestedTags = ({
   if (isPtTitle) {
     if (stateInfo) {
       smartTags.add(`PT ${stateInfo.code}`);
+    } else {
+      ['PT AP', 'PT TS', 'PT KA', 'PT MH'].forEach((st) => smartTags.add(st));
     }
     smartTags.add('Professional Tax');
     categoryTags.add('Payroll');
