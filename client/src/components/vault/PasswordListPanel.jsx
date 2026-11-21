@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Search, ChevronLeft, ChevronRight, Folder } from 'lucide-react';
 import {
   selectPassword,
   setSearchTerm,
+  setFolderPage,
 } from '../../features/vault/vaultSlice';
 import ItemTypeBadge from '../myVault/ItemTypeBadge';
 import ItemServiceIcon from '../common/ItemServiceIcon';
@@ -37,10 +38,9 @@ function PasswordListPanel() {
     searchTerm,
     selectedFolderId,
     folders = [],
+    folderPage = 1,
+    folderPageSize = 10,
   } = useSelector((state) => state.vault);
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
 
   const filteredPasswords = useMemo(() => {
     const q = searchTerm.toLowerCase();
@@ -77,16 +77,18 @@ function PasswordListPanel() {
     );
   }, [filteredPasswords]);
 
-  // Reset to page 1 whenever search query or folder selection changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, selectedFolderId]);
-
   const totalGroups = groupedPasswords.length;
-  const isAll = pageSize === 'all';
-  const effectivePageSize = isAll ? Math.max(totalGroups, 1) : Number(pageSize);
+  const isAll = folderPageSize === 'all';
+  const effectivePageSize = isAll ? Math.max(totalGroups, 1) : Number(folderPageSize);
   const totalPages = Math.ceil(totalGroups / effectivePageSize) || 1;
-  const validPage = Math.min(Math.max(currentPage, 1), totalPages);
+  const validPage = Math.min(Math.max(folderPage, 1), totalPages);
+
+  // Sync if validPage differs from stored folderPage
+  useEffect(() => {
+    if (validPage !== folderPage) {
+      dispatch(setFolderPage(validPage));
+    }
+  }, [validPage, folderPage, dispatch]);
 
   const startIndex = (validPage - 1) * effectivePageSize;
   const endIndex = isAll ? totalGroups : Math.min(startIndex + effectivePageSize, totalGroups);
@@ -95,29 +97,31 @@ function PasswordListPanel() {
     return groupedPasswords.slice(startIndex, endIndex);
   }, [groupedPasswords, startIndex, endIndex]);
 
+  // Ensure current page shows the selected password, or deselect if password was removed
   useEffect(() => {
-    if (!paginatedGroups.length) {
-      if (selectedPasswordId !== null) {
-        dispatch(selectPassword(null));
-      }
-      return;
-    }
-
-    // If no password is selected, stay on the unselected state (full-width table view)
     if (!selectedPasswordId) {
       return;
     }
 
-    const stillVisible = paginatedGroups.some((group) =>
+    if (!groupedPasswords.length) {
+      dispatch(selectPassword(null));
+      return;
+    }
+
+    const groupIndex = groupedPasswords.findIndex((group) =>
       group.items.some((item) => item.id === selectedPasswordId)
     );
 
-    // If current selected password is not on this page (or was deleted/restored), reset selection
-    if (!stillVisible) {
+    if (groupIndex === -1) {
+      // Selected password is no longer present in this folder/search query
       dispatch(selectPassword(null));
+    } else {
+      const targetPage = Math.floor(groupIndex / effectivePageSize) + 1;
+      if (validPage !== targetPage) {
+        dispatch(setFolderPage(targetPage));
+      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paginatedGroups, selectedFolderId, dispatch]);
+  }, [selectedPasswordId, groupedPasswords, effectivePageSize, validPage, dispatch]);
 
   return (
     <div className="bg-white p-3 sm:p-4 border-r border-slate-200 dark:bg-slate-800 dark:border-slate-700 flex flex-col justify-between min-h-[640px] min-w-0">
@@ -217,7 +221,7 @@ function PasswordListPanel() {
         <div className="pt-3 mt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-1 select-none">
           <button
             type="button"
-            onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+            onClick={() => dispatch(setFolderPage(Math.max(validPage - 1, 1)))}
             disabled={validPage === 1}
             aria-label="Previous page"
             title="Previous page"
@@ -245,7 +249,7 @@ function PasswordListPanel() {
                 <button
                   key={item}
                   type="button"
-                  onClick={() => setCurrentPage(item)}
+                  onClick={() => dispatch(setFolderPage(item))}
                   aria-label={`Page ${item}`}
                   aria-current={isActive ? 'page' : undefined}
                   className={`h-8 min-w-[32px] px-1.5 rounded-lg text-xs font-semibold transition shrink-0 flex items-center justify-center ${
@@ -262,7 +266,7 @@ function PasswordListPanel() {
 
           <button
             type="button"
-            onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+            onClick={() => dispatch(setFolderPage(Math.min(validPage + 1, totalPages)))}
             disabled={validPage === totalPages}
             aria-label="Next page"
             title="Next page"

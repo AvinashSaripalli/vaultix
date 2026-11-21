@@ -1,7 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Search, Folder, Lock, Plus, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
-import { selectPassword, setSearchTerm } from '../../features/vault/vaultSlice';
+import {
+  selectPassword,
+  setSearchTerm,
+  setFolderPage,
+  setFolderPageSize,
+} from '../../features/vault/vaultSlice';
 import ItemServiceIcon from '../common/ItemServiceIcon';
 import { hapticLight } from '../../utils/haptics';
 import { getItemTypeMeta } from '../../utils/itemTypes';
@@ -26,10 +31,9 @@ export default function FolderItemsTableView({ onAddPassword }) {
     searchTerm,
     selectedFolderId,
     folders = [],
+    folderPage = 1,
+    folderPageSize = 10,
   } = useSelector((state) => state.vault);
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
 
   const selectedFolder = folders.find((f) => f.id === selectedFolderId);
 
@@ -68,15 +72,18 @@ export default function FolderItemsTableView({ onAddPassword }) {
     );
   }, [filteredPasswords]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, selectedFolderId]);
-
   const totalGroups = groupedPasswords.length;
-  const isAll = pageSize === 'all';
-  const effectivePageSize = isAll ? Math.max(totalGroups, 1) : Number(pageSize);
+  const isAll = folderPageSize === 'all';
+  const effectivePageSize = isAll ? Math.max(totalGroups, 1) : Number(folderPageSize);
   const totalPages = Math.ceil(totalGroups / effectivePageSize) || 1;
-  const validPage = Math.min(Math.max(currentPage, 1), totalPages);
+  const validPage = Math.min(Math.max(folderPage, 1), totalPages);
+
+  // Sync validPage if it differs from stored folderPage
+  useEffect(() => {
+    if (validPage !== folderPage) {
+      dispatch(setFolderPage(validPage));
+    }
+  }, [validPage, folderPage, dispatch]);
 
   const startIndex = (validPage - 1) * effectivePageSize;
   const endIndex = isAll ? totalGroups : Math.min(startIndex + effectivePageSize, totalGroups);
@@ -119,10 +126,11 @@ export default function FolderItemsTableView({ onAddPassword }) {
             <div className="flex items-center gap-1.5">
               <span>Per page:</span>
               <select
-                value={pageSize}
+                value={folderPageSize}
                 onChange={(e) => {
-                  setPageSize(e.target.value === 'all' ? 'all' : Number(e.target.value));
-                  setCurrentPage(1);
+                  dispatch(
+                    setFolderPageSize(e.target.value === 'all' ? 'all' : Number(e.target.value))
+                  );
                 }}
                 className="h-8 rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs font-semibold text-slate-700 outline-none hover:border-slate-300 dark:border-slate-700 dark:bg-slate-700 dark:text-slate-200 cursor-pointer"
               >
@@ -375,7 +383,7 @@ export default function FolderItemsTableView({ onAddPassword }) {
           <button
             type="button"
             disabled={validPage <= 1}
-            onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+            onClick={() => dispatch(setFolderPage(Math.max(validPage - 1, 1)))}
             className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-700 font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-650 transition cursor-pointer"
           >
             <ChevronLeft size={14} />
@@ -396,7 +404,7 @@ export default function FolderItemsTableView({ onAddPassword }) {
                 <button
                   key={item}
                   type="button"
-                  onClick={() => setCurrentPage(item)}
+                  onClick={() => dispatch(setFolderPage(item))}
                   className={`w-7 h-7 rounded-lg text-xs font-semibold transition cursor-pointer ${
                     isActive
                       ? 'bg-indigo-600 text-white shadow-xs'
@@ -412,7 +420,7 @@ export default function FolderItemsTableView({ onAddPassword }) {
           <button
             type="button"
             disabled={validPage >= totalPages}
-            onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+            onClick={() => dispatch(setFolderPage(Math.min(validPage + 1, totalPages)))}
             className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-700 font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-650 transition cursor-pointer"
           >
             <span>Next</span>

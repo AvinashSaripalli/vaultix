@@ -391,6 +391,8 @@ const initialState = {
   activityLogs: [],
   selectedPasswordId: null,
   selectedFolderId: null,
+  folderPage: 1,
+  folderPageSize: 10,
 
   isAddPasswordModalOpen: false,
   isEditPasswordModalOpen: false,
@@ -438,13 +440,23 @@ const vaultSlice = createSlice({
       state.selectedFolderId = action.payload;
       state.selectedPasswordId = null;
       state.searchTerm = '';
+      state.folderPage = 1;
     },
     clearSelectedFolder: (state) => {
       state.selectedFolderId = null;
       state.selectedPasswordId = null;
+      state.folderPage = 1;
     },
     setSearchTerm: (state, action) => {
       state.searchTerm = action.payload;
+      state.folderPage = 1;
+    },
+    setFolderPage: (state, action) => {
+      state.folderPage = Math.max(1, Number(action.payload) || 1);
+    },
+    setFolderPageSize: (state, action) => {
+      state.folderPageSize = action.payload;
+      state.folderPage = 1;
     },
     toggleFolderCollapse: (state, action) => {
       const folderId = action.payload;
@@ -461,6 +473,8 @@ const vaultSlice = createSlice({
       state.activityLogs = [];
       state.selectedPasswordId = null;
       state.selectedFolderId = null;
+      state.folderPage = 1;
+      state.folderPageSize = 10;
       state.isAddPasswordModalOpen = false;
       state.isEditPasswordModalOpen = false;
       state.isAddFolderModalOpen = false;
@@ -496,6 +510,7 @@ const vaultSlice = createSlice({
       .addCase(fetchVaultBySlug.fulfilled, (state, action) => {
         state.vaultsLoading = false;
         state.selectedVault = action.payload;
+        state.folderPage = 1;
       })
       .addCase(fetchVaultBySlug.rejected, (state, action) => {
         state.vaultsLoading = false;
@@ -767,6 +782,8 @@ export const {
   selectFolder,
   clearSelectedFolder,
   setSearchTerm,
+  setFolderPage,
+  setFolderPageSize,
   toggleFolderCollapse,
   clearVaultError,
   clearVaultState,
