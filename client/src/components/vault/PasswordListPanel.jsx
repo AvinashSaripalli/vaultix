@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Search, ChevronLeft, ChevronRight, Folder } from 'lucide-react';
 import {
@@ -97,31 +97,42 @@ function PasswordListPanel() {
     return groupedPasswords.slice(startIndex, endIndex);
   }, [groupedPasswords, startIndex, endIndex]);
 
-  // Ensure current page shows the selected password, or deselect if password was removed
+  const lastSelectedIdRef = useRef(null);
+
+  // Auto-jump to page ONLY when selectedPasswordId changes to a newly selected item
   useEffect(() => {
     if (!selectedPasswordId) {
+      lastSelectedIdRef.current = null;
       return;
     }
 
-    if (!groupedPasswords.length) {
-      dispatch(selectPassword(null));
-      return;
-    }
+    if (selectedPasswordId !== lastSelectedIdRef.current) {
+      lastSelectedIdRef.current = selectedPasswordId;
 
-    const groupIndex = groupedPasswords.findIndex((group) =>
-      group.items.some((item) => item.id === selectedPasswordId)
-    );
+      if (!groupedPasswords.length) return;
 
-    if (groupIndex === -1) {
-      // Selected password is no longer present in this folder/search query
-      dispatch(selectPassword(null));
-    } else {
-      const targetPage = Math.floor(groupIndex / effectivePageSize) + 1;
-      if (validPage !== targetPage) {
-        dispatch(setFolderPage(targetPage));
+      const groupIndex = groupedPasswords.findIndex((group) =>
+        group.items.some((item) => item.id === selectedPasswordId)
+      );
+
+      if (groupIndex !== -1) {
+        const targetPage = Math.floor(groupIndex / effectivePageSize) + 1;
+        if (validPage !== targetPage) {
+          dispatch(setFolderPage(targetPage));
+        }
       }
     }
   }, [selectedPasswordId, groupedPasswords, effectivePageSize, validPage, dispatch]);
+
+  // If selected password no longer exists in passwords array (e.g. deleted/purged), deselect it
+  useEffect(() => {
+    if (!selectedPasswordId) return;
+
+    const exists = passwords.some((p) => p.id === selectedPasswordId);
+    if (!exists) {
+      dispatch(selectPassword(null));
+    }
+  }, [selectedPasswordId, passwords, dispatch]);
 
   return (
     <div className="bg-white p-3 sm:p-4 border-r border-slate-200 dark:bg-slate-800 dark:border-slate-700 flex flex-col justify-between min-h-[640px] min-w-0">
@@ -221,11 +232,14 @@ function PasswordListPanel() {
         <div className="pt-3 mt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-1 select-none">
           <button
             type="button"
-            onClick={() => dispatch(setFolderPage(Math.max(validPage - 1, 1)))}
+            onClick={() => {
+              hapticLight();
+              dispatch(setFolderPage(Math.max(validPage - 1, 1)));
+            }}
             disabled={validPage === 1}
             aria-label="Previous page"
             title="Previous page"
-            className="h-8 px-2 sm:px-2.5 rounded-lg border border-slate-200 dark:border-slate-700/80 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1 transition shrink-0"
+            className="h-8 px-2 sm:px-2.5 rounded-lg border border-slate-200 dark:border-slate-700/80 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1 transition shrink-0 cursor-pointer"
           >
             <ChevronLeft size={14} />
             <span className="hidden sm:inline">Prev</span>
@@ -249,10 +263,13 @@ function PasswordListPanel() {
                 <button
                   key={item}
                   type="button"
-                  onClick={() => dispatch(setFolderPage(item))}
+                  onClick={() => {
+                    hapticLight();
+                    dispatch(setFolderPage(item));
+                  }}
                   aria-label={`Page ${item}`}
                   aria-current={isActive ? 'page' : undefined}
-                  className={`h-8 min-w-[32px] px-1.5 rounded-lg text-xs font-semibold transition shrink-0 flex items-center justify-center ${
+                  className={`h-8 min-w-[32px] px-1.5 rounded-lg text-xs font-semibold transition shrink-0 flex items-center justify-center cursor-pointer ${
                     isActive
                       ? 'bg-indigo-600 text-white shadow-xs'
                       : 'border border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
@@ -266,11 +283,14 @@ function PasswordListPanel() {
 
           <button
             type="button"
-            onClick={() => dispatch(setFolderPage(Math.min(validPage + 1, totalPages)))}
+            onClick={() => {
+              hapticLight();
+              dispatch(setFolderPage(Math.min(validPage + 1, totalPages)));
+            }}
             disabled={validPage === totalPages}
             aria-label="Next page"
             title="Next page"
-            className="h-8 px-2 sm:px-2.5 rounded-lg border border-slate-200 dark:border-slate-700/80 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1 transition shrink-0"
+            className="h-8 px-2 sm:px-2.5 rounded-lg border border-slate-200 dark:border-slate-700/80 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1 transition shrink-0 cursor-pointer"
           >
             <span className="hidden sm:inline">Next</span>
             <ChevronRight size={14} />
