@@ -20,6 +20,8 @@ import {
   UserCheck,
   CheckCircle,
   Key,
+  Clock,
+  History,
 } from 'lucide-react';
 
 /**
@@ -254,11 +256,15 @@ export function formatItemAction(action, metadata = {}, log = null) {
     case 'UPDATE_PASSWORD': return 'Update Login';
     case 'DELETE_PASSWORD': return 'Delete Login';
     case 'RESTORE_PASSWORD': return 'Restore Login';
+    case 'RESTORE_PASSWORD_VERSION': return 'Restore Version';
     case 'VIEW_PASSWORD': return 'View Password';
+    case 'VIEW_PASSWORD_HISTORY': return 'View History';
     case 'COPY_PASSWORD': return 'Copy Password';
     case 'AUTOFILL_PASSWORD': return 'Autofill Login';
     case 'SHARE_PASSWORD': return 'Share Credential';
     case 'REVOKE_PASSWORD_SHARE': return 'Revoke Credential Share';
+    case 'MOVE_PASSWORD': return 'Move Credential';
+    case 'EXPORT_PASSWORDS': return 'Export Passwords';
     case 'CREATE_VAULT': return 'Create Vault';
     case 'UPDATE_VAULT': return 'Update Vault';
     case 'DELETE_VAULT': return 'Delete Vault';
@@ -285,7 +291,13 @@ export function formatItemAction(action, metadata = {}, log = null) {
     case 'APPROVE_REQUEST': return 'Approve Request';
     case 'REJECT_REQUEST': return 'Reject Request';
     case 'CANCEL_APPROVAL_REQUEST': return 'Cancel Approval Request';
-    default: return action?.replaceAll('_', ' ') || '-';
+    default:
+      return action
+        ? action
+            .split('_')
+            .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+            .join(' ')
+        : '-';
   }
 }
 
@@ -344,6 +356,10 @@ export function getActionIcon(action, itemType = 'LOGIN', fieldName = null) {
 
   if (action === 'AUTOFILL_PASSWORD') {
     return <Sparkles size={size} className="shrink-0" />;
+  }
+
+  if (action === 'VIEW_PASSWORD_HISTORY') {
+    return <History size={size} className="shrink-0" />;
   }
 
   if (action?.startsWith('COPY') || action === 'COPY_FIELD') {
