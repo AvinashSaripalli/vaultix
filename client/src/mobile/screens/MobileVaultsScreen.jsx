@@ -99,7 +99,11 @@ export default function MobileVaultsScreen({
       (p) =>
         p.name?.toLowerCase().includes(q) ||
         p.login?.toLowerCase().includes(q) ||
-        p.url?.toLowerCase().includes(q)
+        p.url?.toLowerCase().includes(q) ||
+        (p.tags || []).some((t) => {
+          const name = typeof t === 'string' ? t : t?.tag?.name || t?.name;
+          return name?.toLowerCase().includes(q);
+        })
     );
   }, [passwords, search, selectedFilter, activeFolderId]);
 
@@ -491,6 +495,27 @@ export default function MobileVaultsScreen({
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate max-w-[210px]">
                     {item.login || item.folder?.name || item.type || 'Login'}
                   </p>
+                  {item.tags && item.tags.length > 0 && (
+                    <div className="flex items-center gap-1 mt-1 flex-wrap">
+                      {item.tags.slice(0, 2).map((t, idx) => {
+                        const name = typeof t === 'string' ? t : t?.tag?.name || t?.name;
+                        if (!name) return null;
+                        return (
+                          <span
+                            key={idx}
+                            className="inline-flex items-center text-[9px] font-semibold px-1.5 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200/50 dark:border-indigo-800/50 max-w-[90px] truncate"
+                          >
+                            #{name}
+                          </span>
+                        );
+                      })}
+                      {item.tags.length > 2 && (
+                        <span className="text-[9px] font-semibold text-slate-400">
+                          +{item.tags.length - 2}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 

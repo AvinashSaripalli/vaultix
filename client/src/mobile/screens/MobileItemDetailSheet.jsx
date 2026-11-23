@@ -20,6 +20,7 @@ import {
   ChevronUp,
   Lock,
   Building2,
+  Tag,
 } from 'lucide-react';
 import ItemServiceIcon from '../../components/common/ItemServiceIcon';
 import { hapticMedium, hapticLight } from '../../utils/haptics';
@@ -89,6 +90,13 @@ export default function MobileItemDetailSheet({
     const raw = fields?.[CUSTOM_FIELDS_KEY] || item.customFields || item.encryptedCustomFields || [];
     return parseCustomFields(raw);
   }, [fields, item]);
+
+  const itemTags = useMemo(() => {
+    if (!item?.tags || !Array.isArray(item.tags)) return [];
+    return item.tags
+      .map((t) => (typeof t === 'string' ? t : t?.tag?.name || t?.name))
+      .filter(Boolean);
+  }, [item?.tags]);
 
   if (!item) return null;
 
@@ -578,6 +586,28 @@ export default function MobileItemDetailSheet({
             <p className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
               {decryptedNote || item.note || item.notes}
             </p>
+          </div>
+        )}
+
+        {/* Tags */}
+        {itemTags.length > 0 && (
+          <div className="rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 p-3.5 space-y-2 text-xs shadow-xs">
+            <div className="flex items-center gap-1.5 text-slate-400 dark:text-slate-500">
+              <Tag size={12} />
+              <span className="text-[10px] font-bold uppercase tracking-wider">
+                Tags
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {itemTags.map((t, idx) => (
+                <span
+                  key={idx}
+                  className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/60"
+                >
+                  #{t}
+                </span>
+              ))}
+            </div>
           </div>
         )}
 

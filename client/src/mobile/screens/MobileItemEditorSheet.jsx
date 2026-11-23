@@ -57,6 +57,7 @@ import {
   setSessionRsaPrivateKey,
   setSessionRsaPublicKey,
 } from '../../features/auth/authSlice';
+import TagInput from '../../components/common/TagInput';
 import { hapticMedium, hapticSuccess, hapticLight } from '../../utils/haptics';
 import api from '../../services/api';
 
@@ -110,6 +111,7 @@ export default function MobileItemEditorSheet({
   const [isSensitive, setIsSensitive] = useState(false);
   const [fields, setFields] = useState(emptyTypeFields('LOGIN'));
   const [customFields, setCustomFields] = useState([]);
+  const [tags, setTags] = useState([]);
 
   // UI Toggles
   const [showPassword, setShowPassword] = useState(false);
@@ -155,6 +157,11 @@ export default function MobileItemEditorSheet({
 
       const initialCustom = customRaw || item.customFields || item.encryptedCustomFields;
       setCustomFields(parseCustomFields(initialCustom || []));
+
+      const existingTags = (item.tags || [])
+        .map((t) => (typeof t === 'string' ? t : t?.tag?.name || t?.name))
+        .filter(Boolean);
+      setTags(existingTags);
 
       const initialPw = initialDecryptedPassword || item.decryptedPassword || item.password || '';
       const initialNt = initialDecryptedNote || item.decryptedNote || item.note || item.notes || '';
@@ -222,6 +229,7 @@ export default function MobileItemEditorSheet({
       setIsSensitive(false);
       setFields(emptyTypeFields('LOGIN'));
       setCustomFields([]);
+      setTags([]);
     }
   }, [
     isOpen,
@@ -366,6 +374,7 @@ export default function MobileItemEditorSheet({
           encryptedFields,
           wrappedKeys,
           folderId: targetFolderId,
+          tags,
           isSensitive,
           strengthScore,
           atRisk,
@@ -462,6 +471,7 @@ export default function MobileItemEditorSheet({
         url: isLogin ? url.trim() : '',
         vaultId: selectedVault?.id,
         folderId: folderId || null,
+        tags,
         isSensitive,
         strengthScore,
         atRisk,
@@ -956,6 +966,23 @@ export default function MobileItemEditorSheet({
                 </button>
               </div>
             ))}
+          </div>
+
+          {/* Tags Management */}
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 space-y-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block px-1">
+              Tags
+            </label>
+            <TagInput
+              tags={tags}
+              setTags={setTags}
+              onChange={setTags}
+              itemType={itemType}
+              title={name}
+              url={url}
+              login={login}
+              folderName={effectiveFolders.find((f) => f.id === folderId)?.name || ''}
+            />
           </div>
 
           {/* Security & Re-prompt Protection */}
