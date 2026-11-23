@@ -19,6 +19,15 @@ import {
   Bell,
   Sparkles,
   Globe,
+  Monitor,
+  Smartphone,
+  Laptop,
+  CheckCheck,
+  Copy,
+  Check,
+  MapPin,
+  ShieldCheck,
+  XCircle,
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import AppLayout from '../../components/layout/AppLayout';
@@ -89,39 +98,110 @@ function formatAction(action, metadata = {}, log = null) {
   return formatItemAction(action, metadata, log);
 }
 
+function parseUserAgent(ua = '') {
+  if (!ua) return { device: 'Desktop', browser: 'Web Browser', label: 'Web Browser', icon: 'monitor' };
+
+  let browser = 'Web Browser';
+  let device = 'Desktop';
+  let icon = 'monitor';
+
+  // Check device/OS
+  if (/android/i.test(ua)) {
+    device = 'Android';
+    icon = 'smartphone';
+  } else if (/ipad|iphone|ipod/i.test(ua)) {
+    device = 'iOS';
+    icon = 'smartphone';
+  } else if (/macintosh|mac os x/i.test(ua)) {
+    device = 'macOS';
+    icon = 'laptop';
+  } else if (/windows/i.test(ua)) {
+    device = 'Windows';
+    icon = 'monitor';
+  } else if (/linux/i.test(ua)) {
+    device = 'Linux';
+    icon = 'monitor';
+  }
+
+  // Check browser / client
+  if (/vaultix-mobile|vaultix mobile|capacitor/i.test(ua)) {
+    browser = 'Vaultix Mobile App';
+    icon = 'smartphone';
+  } else if (/vaultix-extension|chrome-extension/i.test(ua)) {
+    browser = 'Vaultix Extension';
+  } else if (/edg\//i.test(ua)) {
+    browser = 'Microsoft Edge';
+  } else if (/chrome|crios/i.test(ua)) {
+    browser = 'Google Chrome';
+  } else if (/firefox|fxios/i.test(ua)) {
+    browser = 'Mozilla Firefox';
+  } else if (/safari/i.test(ua) && !/chrome/i.test(ua)) {
+    browser = 'Apple Safari';
+  } else if (/postman/i.test(ua)) {
+    browser = 'Postman API';
+  }
+
+  return { device, browser, label: `${browser} • ${device}`, icon };
+}
+
+function renderDeviceIcon(iconType) {
+  if (iconType === 'smartphone') return <Smartphone size={14} className="text-slate-500 shrink-0" />;
+  if (iconType === 'laptop') return <Laptop size={14} className="text-slate-500 shrink-0" />;
+  return <Monitor size={14} className="text-slate-500 shrink-0" />;
+}
+
 function getUnreadItemIcon(type, meta) {
   if (type === 'LOGIN') {
+    const isSuccess = meta?.status === 'SUCCESS';
     return {
-      icon: <LogIn size={16} />,
-      className:
-        meta?.status === 'SUCCESS'
-          ? 'bg-blue-50 text-blue-600'
-          : 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400',
+      icon: <LogIn size={15} />,
+      className: isSuccess
+        ? 'bg-emerald-50 text-emerald-600 border-emerald-200/60 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/60'
+        : 'bg-rose-50 text-rose-600 border-rose-200/60 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800/60',
     };
   }
   if (type === 'ACTIVITY') {
     const action = meta?.action || '';
     if (action.includes('PASSWORD'))
-      return { icon: <KeyRound size={16} />, className: 'bg-amber-50 text-amber-600 dark:bg-amber-900/20' };
+      return {
+        icon: <KeyRound size={15} />,
+        className: 'bg-amber-50 text-amber-700 border-amber-200/60 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800/60',
+      };
     if (action.includes('FOLDER'))
-      return { icon: <Folder size={16} />, className: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400' };
+      return {
+        icon: <Folder size={15} />,
+        className: 'bg-indigo-50 text-indigo-700 border-indigo-200/60 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-800/60',
+      };
     if (action.includes('VAULT'))
-      return { icon: <Database size={16} />, className: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300' };
-    return { icon: <Activity size={16} />, className: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300' };
+      return {
+        icon: <Database size={15} />,
+        className: 'bg-purple-50 text-purple-700 border-purple-200/60 dark:bg-purple-950/40 dark:text-purple-400 dark:border-purple-800/60',
+      };
+    return {
+      icon: <Activity size={15} />,
+      className: 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
+    };
   }
   if (type === 'SHARE_PASSWORD' || type === 'SHARE_FOLDER' || type === 'SHARE_VAULT')
-    return { icon: <Share2 size={16} />, className: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400' };
+    return {
+      icon: <Share2 size={15} />,
+      className: 'bg-violet-50 text-violet-700 border-violet-200/60 dark:bg-violet-950/40 dark:text-violet-400 dark:border-violet-800/60',
+    };
   if (type === 'SECURITY' || type === 'WEAK_PASSWORD')
-    return { icon: <ShieldAlert size={16} />, className: 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400' };
-  if (type === 'PASSWORD')
-    return { icon: <KeyRound size={16} />, className: 'bg-amber-50 text-amber-600 dark:bg-amber-900/20' };
-  return { icon: <Bell size={16} />, className: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300' };
+    return {
+      icon: <ShieldAlert size={15} />,
+      className: 'bg-rose-50 text-rose-700 border-rose-200/60 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800/60',
+    };
+  return {
+    icon: <Bell size={15} />,
+    className: 'bg-sky-50 text-sky-700 border-sky-200/60 dark:bg-sky-950/40 dark:text-sky-400 dark:border-sky-800/60',
+  };
 }
 
 function getTypeBadge(type) {
-  if (type === 'LOGIN') return { label: 'Login', className: 'bg-blue-50 text-blue-700' };
-  if (type === 'ACTIVITY') return { label: 'Action', className: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300' };
-  return { label: 'Alert', className: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400' };
+  if (type === 'LOGIN') return { label: 'Login', className: 'bg-blue-50 text-blue-700 border border-blue-200/60 dark:bg-blue-950/40 dark:text-blue-400' };
+  if (type === 'ACTIVITY') return { label: 'Action', className: 'bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700' };
+  return { label: 'Alert', className: 'bg-indigo-50 text-indigo-700 border border-indigo-200/60 dark:bg-indigo-950/40 dark:text-indigo-400' };
 }
 
 function getDateGroup(dateStr) {
@@ -1226,133 +1306,273 @@ function ActivityLogPage() {
             )}
             {!loginLoading && (
               <>
-                {groupedLogin.map((group, gi) => (
-                  <div key={group.label}>
-                    {gi > 0 && (
-                      <div className="border-t-2 border-slate-200 dark:border-slate-700" />
-                    )}
-                    <div className="divide-y divide-slate-100 dark:divide-slate-700">
-                      {group.items.map((item) => (
-                        <div key={item.id}>
-                          <div
-                            onClick={() =>
-                              setExpandedLogin(
-                                expandedLogin === item.id ? null : item.id
-                              )
-                            }
-                            className="flex items-center gap-3 sm:gap-4 px-3.5 sm:px-6 py-3.5 sm:py-4 hover:bg-slate-50/70 cursor-pointer dark:hover:bg-slate-700/50"
+                {/* Desktop View Header (>= md) */}
+                <div className="hidden md:grid md:grid-cols-12 gap-4 px-6 py-3 border-b border-slate-200 bg-slate-50/70 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400">
+                  <div className="col-span-4">User</div>
+                  <div className="col-span-2">Status</div>
+                  <div className="col-span-3">Device & Browser</div>
+                  <div className="col-span-3 text-right">IP & Timestamp</div>
+                </div>
+
+                {/* Mobile View (< md) */}
+                <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-700/60">
+                  {paginatedLogin.map((item) => {
+                    const initials = getUserInitials(item.user?.fullName, item.user?.email);
+                    const avatarColor = getAvatarColorClass(item.user?.email || item.user?.fullName);
+                    const parsedUA = parseUserAgent(item.userAgent);
+                    const isSuccess = item.status === 'SUCCESS';
+                    const isExpanded = expandedLogin === item.id;
+                    const dateFormatted = formatFriendlyDate(item.createdAt);
+                    const timeFormatted = item.createdAt
+                      ? new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                      : '';
+
+                    return (
+                      <div key={item.id} className="p-4 transition hover:bg-slate-50/70 dark:hover:bg-slate-750/50">
+                        {/* Top: User info + Status badge */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className={`h-8 w-8 rounded-full border flex items-center justify-center text-xs font-bold shrink-0 ${avatarColor}`}>
+                              {initials}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold text-slate-900 truncate dark:text-white">
+                                {item.user?.fullName || 'User'}
+                              </p>
+                              <p className="text-[11px] text-slate-400 truncate dark:text-slate-500">
+                                {item.user?.email || '-'}
+                              </p>
+                            </div>
+                          </div>
+
+                          <span
+                            className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-semibold shrink-0 ${
+                              isSuccess
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/60'
+                                : 'bg-rose-50 text-rose-700 border border-rose-200/60 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800/60'
+                            }`}
                           >
-                            <div className="shrink-0">
-                              {expandedLogin === item.id ? (
-                                <ChevronDown
-                                  size={16}
-                                  className="text-slate-400 dark:text-slate-500"
-                                />
-                              ) : (
-                                <ChevronRight
-                                  size={16}
-                                  className="text-slate-400 dark:text-slate-500"
-                                />
-                              )}
+                            {isSuccess ? <CheckCircle2 size={12} /> : <ShieldAlert size={12} />}
+                            <span>{isSuccess ? 'Successful' : item.status || 'Failed'}</span>
+                          </span>
+                        </div>
+
+                        {/* Mid: Device & IP */}
+                        <div className="mt-2.5 flex flex-wrap items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-300 text-[11px] font-medium">
+                            {renderDeviceIcon(parsedUA.icon)}
+                            <span>{parsedUA.label}</span>
+                          </span>
+                          <span className="font-mono text-[11px] text-slate-500 dark:text-slate-400">
+                            {item.ipAddress || '-'}
+                          </span>
+                          {item.location && (
+                            <span className="text-[11px] text-slate-400 flex items-center gap-0.5">
+                              <MapPin size={11} /> {item.location}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Bottom: Date & Expand toggle */}
+                        <div className="mt-2.5 flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-100/80 dark:border-slate-700/40">
+                          <span>
+                            {timeFormatted} · {dateFormatted}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setExpandedLogin(isExpanded ? null : item.id)}
+                            className="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400 font-semibold hover:underline"
+                          >
+                            <span>{isExpanded ? 'Hide info' : 'Inspect'}</span>
+                            {isExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                          </button>
+                        </div>
+
+                        {/* Forensic Drawer for Mobile */}
+                        {isExpanded && (
+                          <div className="mt-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-700/80 text-xs space-y-2">
+                            <div>
+                              <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">User Agent String</span>
+                              <p className="font-mono text-[11px] text-slate-600 dark:text-slate-300 break-all bg-white dark:bg-slate-800 p-2 rounded-lg border border-slate-200/60 dark:border-slate-700">
+                                {item.userAgent || 'No user agent recorded'}
+                              </p>
                             </div>
-                            <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-xs font-semibold shrink-0">
-                              {item.user?.fullName?.charAt(0) || 'U'}
+                            <div className="flex justify-between text-[11px]">
+                              <span className="text-slate-400">Exact Timestamp</span>
+                              <span className="font-mono text-slate-700 dark:text-slate-300">
+                                {item.createdAt ? new Date(item.createdAt).toLocaleString() : '-'}
+                              </span>
                             </div>
-                            <div className="min-w-0 flex-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4 text-xs sm:text-sm items-center">
-                              <div className="min-w-0">
-                                <p className="font-medium text-slate-900 truncate dark:text-slate-100">
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Desktop View Rows (>= md) */}
+                <div className="hidden md:block divide-y divide-slate-100 dark:divide-slate-700/60">
+                  {paginatedLogin.map((item) => {
+                    const initials = getUserInitials(item.user?.fullName, item.user?.email);
+                    const avatarColor = getAvatarColorClass(item.user?.email || item.user?.fullName);
+                    const parsedUA = parseUserAgent(item.userAgent);
+                    const isSuccess = item.status === 'SUCCESS';
+                    const isExpanded = expandedLogin === item.id;
+                    const dateFormatted = formatFriendlyDate(item.createdAt);
+                    const timeFormatted = item.createdAt
+                      ? new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                      : '';
+
+                    return (
+                      <div key={item.id} className="transition">
+                        <div
+                          onClick={() => setExpandedLogin(isExpanded ? null : item.id)}
+                          className="grid grid-cols-12 gap-4 px-6 py-3.5 items-center hover:bg-slate-50/70 dark:hover:bg-slate-750/50 cursor-pointer"
+                        >
+                          {/* Col 1-4: User */}
+                          <div className="col-span-4 flex items-center gap-3 min-w-0">
+                            <div className={`h-8 w-8 rounded-full border flex items-center justify-center text-xs font-bold shrink-0 ${avatarColor}`}>
+                              {initials}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <p className="text-xs sm:text-sm font-semibold text-slate-900 truncate dark:text-white">
                                   {item.user?.fullName || 'User'}
                                 </p>
-                                <p className="text-[11px] text-slate-500 truncate sm:hidden dark:text-slate-400">
-                                  {item.user?.email || '-'}
-                                </p>
+                                {['SUPER_ADMIN', 'ADMIN'].includes(item.user?.role) && (
+                                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 border border-indigo-200/60 dark:bg-indigo-950/50 dark:text-indigo-300 shrink-0">
+                                    Admin
+                                  </span>
+                                )}
                               </div>
-                              <div className="text-slate-600 truncate hidden sm:block dark:text-slate-300">
+                              <p className="text-xs text-slate-400 truncate dark:text-slate-500">
                                 {item.user?.email || '-'}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Col 5-6: Status */}
+                          <div className="col-span-2">
+                            <span
+                              className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold ${
+                                isSuccess
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/60'
+                                  : 'bg-rose-50 text-rose-700 border border-rose-200/60 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800/60'
+                              }`}
+                            >
+                              {isSuccess ? <CheckCircle2 size={13} /> : <ShieldAlert size={13} />}
+                              <span>{isSuccess ? 'Successful' : item.status || 'Failed'}</span>
+                            </span>
+                          </div>
+
+                          {/* Col 7-9: Device & Browser */}
+                          <div className="col-span-3 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <div className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 shrink-0">
+                                {renderDeviceIcon(parsedUA.icon)}
                               </div>
-                              <div className="text-slate-600 text-xs hidden md:block dark:text-slate-300">
-                                {item.ipAddress || '-'}
-                              </div>
-                              <div>
-                                <span
-                                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] sm:text-xs font-semibold ${
-                                    item.status === 'SUCCESS'
-                                      ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400'
-                                      : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400'
-                                  }`}
-                                >
-                                  {item.status || '-'}
-                                </span>
-                              </div>
-                              <div className="text-slate-500 text-xs whitespace-nowrap text-right lg:text-left dark:text-slate-400">
-                                {item.createdAt
-                                  ? new Date(item.createdAt).toLocaleString()
-                                  : '-'}
+                              <div className="min-w-0">
+                                <p className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate">
+                                  {parsedUA.label}
+                                </p>
+                                <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">
+                                  {parsedUA.device}
+                                </p>
                               </div>
                             </div>
                           </div>
-                          {expandedLogin === item.id && (
-                            <div className="bg-slate-50 px-4 sm:px-6 py-4 border-t border-slate-100 dark:bg-slate-800/50 dark:border-slate-700">
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm sm:ml-9">
-                                <div>
-                                  <p className="text-xs text-slate-400 mb-1 dark:text-slate-500">
-                                    IP Address
-                                  </p>
-                                  <p className="text-slate-700 dark:text-slate-300">
-                                    {item.ipAddress || '-'}
-                                  </p>
+
+                          {/* Col 10-12: Origin & Timestamp */}
+                          <div className="col-span-3 flex items-center justify-between text-right">
+                            <div className="min-w-0 flex-1 pr-3">
+                              <p className="font-mono text-xs text-slate-700 dark:text-slate-300 truncate">
+                                {item.ipAddress || '-'}
+                              </p>
+                              <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                                {timeFormatted} · <span className="font-medium text-slate-600 dark:text-slate-400">{dateFormatted}</span>
+                              </p>
+                            </div>
+                            <div className="text-slate-400 dark:text-slate-500 shrink-0">
+                              {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Expanded Security Inspector Box */}
+                        {isExpanded && (
+                          <div className="bg-slate-50/80 px-6 py-4 border-t border-b border-slate-100 dark:bg-slate-800/60 dark:border-slate-700/80">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                              {/* Card 1: Auth Security */}
+                              <div className="rounded-xl border border-slate-200/80 bg-white p-3.5 dark:border-slate-700 dark:bg-slate-800 shadow-2xs">
+                                <div className="flex items-center gap-2 text-slate-400 mb-1.5">
+                                  <ShieldCheck size={14} className="text-indigo-500" />
+                                  <span className="text-[11px] font-bold uppercase tracking-wider">Authentication Verdict</span>
                                 </div>
-                                <div>
-                                  <p className="text-xs text-slate-400 mb-1 dark:text-slate-500">
-                                    Status
-                                  </p>
-                                  <span
-                                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                                      item.status === 'SUCCESS'
-                                        ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400'
-                                        : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400'
-                                    }`}
-                                  >
-                                    {item.status || '-'}
-                                  </span>
+                                <p className="font-semibold text-slate-800 dark:text-slate-200 mb-1">
+                                  {isSuccess ? 'Verified Session & Credentials' : 'Authentication Denied / Blocked'}
+                                </p>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                                  Timestamp: <span className="font-mono text-slate-700 dark:text-slate-300">{item.createdAt ? new Date(item.createdAt).toLocaleString() : '-'}</span>
+                                </p>
+                              </div>
+
+                              {/* Card 2: Network Origin */}
+                              <div className="rounded-xl border border-slate-200/80 bg-white p-3.5 dark:border-slate-700 dark:bg-slate-800 shadow-2xs">
+                                <div className="flex items-center gap-2 text-slate-400 mb-1.5">
+                                  <Globe size={14} className="text-blue-500" />
+                                  <span className="text-[11px] font-bold uppercase tracking-wider">Network Origin</span>
                                 </div>
-                                <div className="col-span-1 sm:col-span-2">
-                                  <p className="text-xs text-slate-400 mb-1 dark:text-slate-500">
-                                    Device / User Agent
-                                  </p>
-                                  <p className="text-slate-700 text-xs break-words dark:text-slate-300">
-                                    {item.userAgent || '-'}
-                                  </p>
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="font-mono font-bold text-slate-900 dark:text-white">{item.ipAddress || 'Unknown IP'}</span>
+                                  {item.ipAddress && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigator.clipboard.writeText(item.ipAddress);
+                                      }}
+                                      className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-[10px] font-semibold flex items-center gap-1"
+                                    >
+                                      <Copy size={11} /> Copy
+                                    </button>
+                                  )}
                                 </div>
-                                {item.location && (
-                                  <div className="col-span-1 sm:col-span-2">
-                                    <p className="text-xs text-slate-400 mb-1 dark:text-slate-500">
-                                      Location
-                                    </p>
-                                    <p className="text-slate-700 dark:text-slate-300">
-                                      {item.location}
-                                    </p>
-                                  </div>
-                                )}
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                  <MapPin size={11} /> {item.location || 'Local / Enterprise Subnet'}
+                                </p>
+                              </div>
+
+                              {/* Card 3: Client Fingerprint */}
+                              <div className="rounded-xl border border-slate-200/80 bg-white p-3.5 dark:border-slate-700 dark:bg-slate-800 shadow-2xs">
+                                <div className="flex items-center gap-2 text-slate-400 mb-1.5">
+                                  <Monitor size={14} className="text-emerald-500" />
+                                  <span className="text-[11px] font-bold uppercase tracking-wider">Client Fingerprint</span>
+                                </div>
+                                <p className="font-semibold text-slate-800 dark:text-slate-200 mb-1">
+                                  {parsedUA.browser} on {parsedUA.device}
+                                </p>
+                                <p className="font-mono text-[10px] text-slate-500 dark:text-slate-400 break-all leading-tight">
+                                  {item.userAgent || 'No user agent header provided'}
+                                </p>
                               </div>
                             </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
 
                 {!filteredLogin.length && (
                   <div className="py-14 text-center">
-                    <p className="text-slate-500 dark:text-slate-400">No login history found.</p>
+                    <p className="text-slate-500 dark:text-slate-400">No login history found matching your filters.</p>
                   </div>
                 )}
 
                 {filteredLogin.length > PAGE_SIZE && (
                   <div className="flex flex-col gap-3 sm:gap-4 border-t border-slate-200 px-4 sm:px-6 py-3.5 sm:py-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700">
                     <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 text-center sm:text-left">
-                      Page {currentPage} of {loginTotalPages}
+                      Page {currentPage} of {loginTotalPages} · {filteredLogin.length} total
                     </p>
                     <div className="flex flex-wrap items-center justify-center sm:justify-end gap-1.5 sm:gap-2">
                       <button
@@ -1391,39 +1611,46 @@ function ActivityLogPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-slate-200 bg-slate-50/50 dark:border-slate-700 dark:bg-slate-800/50">
               <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                 <p className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300">
-                  {filteredUnreadItems.length} item
-                  {filteredUnreadItems.length !== 1 ? 's' : ''}
+                  {filteredUnreadItems.length} item{filteredUnreadItems.length !== 1 ? 's' : ''}
                 </p>
                 <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400 dark:text-slate-500">
                   <span className="flex items-center gap-1">
-                    <span className="h-2 w-2 rounded-full bg-slate-300 inline-block" />
+                    <span className="h-2 w-2 rounded-full bg-slate-400 inline-block" />
                     {allActivityItems.filter((i) => i.type === 'ACTIVITY').length} actions
                   </span>
                   <span>·</span>
                   <span className="flex items-center gap-1">
-                    <span className="h-2 w-2 rounded-full bg-blue-400 inline-block" />
+                    <span className="h-2 w-2 rounded-full bg-blue-500 inline-block" />
                     {allActivityItems.filter((i) => i.type === 'LOGIN').length} logins
                   </span>
                   <span>·</span>
                   <span className="flex items-center gap-1">
-                    <span className="h-2 w-2 rounded-full bg-indigo-400 inline-block" />
+                    <span className="h-2 w-2 rounded-full bg-indigo-500 inline-block" />
                     {allActivityItems.filter((i) => i.type !== 'ACTIVITY' && i.type !== 'LOGIN').length} alerts
                   </span>
                 </div>
               </div>
-              <div className="flex items-center gap-3 shrink-0">
-                {totalUnreadCount > 0 && (
-                  <span className="h-5 min-w-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold inline-flex items-center justify-center">
-                    {totalUnreadCount > 99 ? '99+' : totalUnreadCount} unread
+              <div className="flex items-center gap-2.5 shrink-0">
+                {totalUnreadCount > 0 ? (
+                  <>
+                    <span className="h-6 px-2.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200/60 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800/60 text-xs font-bold inline-flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                      {totalUnreadCount > 99 ? '99+' : totalUnreadCount} unread
+                    </span>
+                    <button
+                      type="button"
+                      onClick={markAllRead}
+                      className="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl border border-indigo-200/80 bg-indigo-50/60 text-xs font-semibold text-indigo-700 hover:bg-indigo-100/70 dark:border-indigo-800/60 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-900/50 transition shadow-2xs"
+                    >
+                      <CheckCheck size={13} />
+                      <span>Mark all as read</span>
+                    </button>
+                  </>
+                ) : (
+                  <span className="h-6 px-2.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/60 text-xs font-semibold inline-flex items-center gap-1">
+                    <CheckCircle2 size={12} />
+                    All caught up
                   </span>
-                )}
-                {totalUnreadCount > 0 && (
-                  <button
-                    onClick={markAllRead}
-                    className="text-xs sm:text-sm font-semibold text-indigo-600 hover:text-indigo-700 transition dark:text-indigo-400"
-                  >
-                    Mark all read
-                  </button>
                 )}
               </div>
             </div>
@@ -1435,7 +1662,7 @@ function ActivityLogPage() {
             )}
 
             {!notifLoading && (
-              <div className="divide-y divide-slate-100 dark:divide-slate-700">
+              <div className="divide-y divide-slate-100 dark:divide-slate-700/60">
                 {paginatedUnread.map((item) => {
                   const { icon, className: iconClass } = getUnreadItemIcon(
                     item.type,
@@ -1446,51 +1673,76 @@ function ActivityLogPage() {
                   const isAlert =
                     item.type !== 'ACTIVITY' && item.type !== 'LOGIN';
                   const isUnread = !item.isRead;
+                  const dateFormatted = formatFriendlyDate(item.createdAt);
+                  const timeFormatted = item.createdAt
+                    ? new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    : '';
 
                   return (
                     <div
                       key={item.id}
                       onClick={() => isAlert && markAsRead(item)}
                       className={`flex items-start gap-3 sm:gap-4 px-4 sm:px-6 py-3.5 sm:py-4 transition ${
-                        isAlert ? 'hover:bg-slate-50 cursor-pointer dark:hover:bg-slate-700' : ''
-                      } ${isUnread ? 'bg-indigo-50/30 dark:bg-indigo-900/20' : ''}`}
+                        isAlert ? 'hover:bg-slate-50/80 cursor-pointer dark:hover:bg-slate-750/50' : 'hover:bg-slate-50/40 dark:hover:bg-slate-750/30'
+                      } ${isUnread ? 'bg-indigo-50/25 dark:bg-indigo-950/20' : ''}`}
                     >
-                      {/* Icon */}
+                      {/* Squircle Action Icon */}
                       <div
-                        className={`h-8 sm:h-9 w-8 sm:w-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${iconClass}`}
+                        className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 border ${iconClass}`}
                       >
                         {icon}
                       </div>
 
                       {/* Content */}
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {isUnread ? (
-                            <span className="h-2 w-2 rounded-full bg-indigo-600 shrink-0" />
-                          ) : isAlert ? (
-                            <CheckCircle2
-                              size={13}
-                              className="text-green-500 shrink-0"
-                            />
-                          ) : null}
-                          <p className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-slate-100">
-                            {item.title}
-                          </p>
-                          <span
-                            className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${badgeClass}`}
-                          >
-                            {badgeLabel}
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {isUnread && (
+                              <span className="h-2 w-2 rounded-full bg-indigo-600 dark:bg-indigo-400 shrink-0 ring-4 ring-indigo-100 dark:ring-indigo-950/60" />
+                            )}
+                            <p className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white">
+                              {item.title}
+                            </p>
+                            <span
+                              className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${badgeClass}`}
+                            >
+                              {badgeLabel}
+                            </span>
+                          </div>
+
+                          <span className="text-[11px] text-slate-400 dark:text-slate-500 whitespace-nowrap">
+                            {timeFormatted} · <span className="font-medium text-slate-600 dark:text-slate-400">{dateFormatted}</span>
                           </span>
                         </div>
+
                         {item.message && (
-                          <p className="text-xs text-slate-500 mt-1 truncate dark:text-slate-400">
+                          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 truncate">
                             {item.message}
                           </p>
                         )}
-                        <p className="text-[11px] text-slate-400 mt-1.5 dark:text-slate-500">
-                          {new Date(item.createdAt).toLocaleString()}
-                        </p>
+
+                        {item.meta?.actor && (
+                          <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 flex items-center gap-1">
+                            <span>by</span>
+                            <span className="font-medium text-slate-600 dark:text-slate-300">{item.meta.actor}</span>
+                          </p>
+                        )}
                       </div>
+
+                      {/* Quick mark read for alert */}
+                      {isAlert && isUnread && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            markAsRead(item);
+                          }}
+                          title="Mark as read"
+                          className="shrink-0 p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-slate-700 transition"
+                        >
+                          <Check size={14} />
+                        </button>
+                      )}
                     </div>
                   );
                 })}
