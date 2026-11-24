@@ -291,7 +291,7 @@ function renderEmail({
                 Zero-Knowledge Architecture &middot; End-to-End Encrypted with AES-256-GCM &amp; RSA-4096
               </p>
               <p class="footer-text" style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:10.5px;color:#94a3b8;line-height:1.5">
-                &copy; ${currentYear} Vaultix. All rights reserved. Do not reply to this automated mailbox.
+                &copy; ${currentYear} Vaultix. All rights reserved. For assistance, contact <a href="mailto:itsupport@knadvisors.pro" style="color:#2563eb;text-decoration:none;font-weight:600">itsupport@knadvisors.pro</a>.
               </p>
             </td>
           </tr>
