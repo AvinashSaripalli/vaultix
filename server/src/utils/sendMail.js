@@ -59,8 +59,11 @@ const transporter = createTransporter();
 const logoPath = path.join(__dirname, '../assets/vaultix-logo.png');
 
 const sendMail = async ({ to, subject, html, attachments = [] }) => {
-  const fromAddress = process.env.MAIL_FROM || '"Vaultix Support" <itsupport@knadvisors.pro>';
-  const replyToAddress = process.env.MAIL_REPLY_TO || 'itsupport@knadvisors.pro';
+  let fromAddress = (process.env.MAIL_FROM || 'itsupport@knadvisors.pro').trim();
+  if (!fromAddress.includes('<')) {
+    fromAddress = `"Vaultix Support" <${fromAddress}>`;
+  }
+  const replyToAddress = (process.env.MAIL_REPLY_TO || 'itsupport@knadvisors.pro').trim();
   
   const mailAttachments = [];
   if (fs.existsSync(logoPath)) {
