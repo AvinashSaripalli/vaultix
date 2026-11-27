@@ -935,6 +935,8 @@ const purgeFolder = async (req, res) => {
       return res.status(403).json({ message: 'Access denied' });
     }
 
+    const vaultType = folder.vault?.type || (await getVaultType(folder.vaultId));
+
     // Strict Super Admin Policy for Folder Purging in Company/Shared Vaults:
     // Only a SUPER_ADMIN can purge folders immediately.
     // Any other role (ADMIN or Member) requires Super Admin authorization.
@@ -1002,22 +1004,43 @@ const purgeFolder = async (req, res) => {
     }
 
     await prisma.$transaction(async (tx) => {
-      // 1. Delete all passwords in this folder
+      // Collect all child folders recursively if subfolders exist
+      const folderIdsToDelete = [folderId];
+      const queue = [folderId];
+      while (queue.length > 0) {
+        const cur = queue.shift();
+        const children = await tx.folder.findMany({
+          where: { parentId: cur },
+          select: { id: true },
+        });
+        for (const child of children) {
+          folderIdsToDelete.push(child.id);
+          queue.push(child.id);
+        }
+      }
+
+      // 1. Delete all passwords in this folder and any subfolders
       await tx.passwordEntry.deleteMany({
-        where: { folderId },
+        where: { folderId: { in: folderIdsToDelete } },
       });
 
       // 2. Delete permissions
       await tx.folderPermission.deleteMany({
-        where: { folderId },
+        where: { folderId: { in: folderIdsToDelete } },
       });
       await tx.departmentPermission.deleteMany({
-        where: { folderId },
+        where: { folderId: { in: folderIdsToDelete } },
       });
 
-      // 3. Delete the folder itself
-      await tx.folder.delete({
-        where: { id: folderId },
+      // 3. Clear parentId references before deleting to avoid self-referencing foreign key violations
+      await tx.folder.updateMany({
+        where: { id: { in: folderIdsToDelete } },
+        data: { parentId: null },
+      });
+
+      // 4. Delete the folder(s)
+      await tx.folder.deleteMany({
+        where: { id: { in: folderIdsToDelete } },
       });
 
       await tx.activityLog.create({

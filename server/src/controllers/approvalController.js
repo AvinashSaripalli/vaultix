@@ -335,10 +335,28 @@ const approveRequest = async (req, res) => {
       const targetFolderId = payload.folderId;
 
       if (targetFolderId) {
-        await prisma.passwordEntry.deleteMany({ where: { folderId: targetFolderId } });
-        await prisma.folderPermission.deleteMany({ where: { folderId: targetFolderId } });
-        await prisma.departmentPermission.deleteMany({ where: { folderId: targetFolderId } });
-        await prisma.folder.delete({ where: { id: targetFolderId } });
+        const folderIdsToDelete = [targetFolderId];
+        const queue = [targetFolderId];
+        while (queue.length > 0) {
+          const cur = queue.shift();
+          const children = await prisma.folder.findMany({
+            where: { parentId: cur },
+            select: { id: true },
+          });
+          for (const child of children) {
+            folderIdsToDelete.push(child.id);
+            queue.push(child.id);
+          }
+        }
+
+        await prisma.passwordEntry.deleteMany({ where: { folderId: { in: folderIdsToDelete } } });
+        await prisma.folderPermission.deleteMany({ where: { folderId: { in: folderIdsToDelete } } });
+        await prisma.departmentPermission.deleteMany({ where: { folderId: { in: folderIdsToDelete } } });
+        await prisma.folder.updateMany({
+          where: { id: { in: folderIdsToDelete } },
+          data: { parentId: null },
+        });
+        await prisma.folder.deleteMany({ where: { id: { in: folderIdsToDelete } } });
       } else if (targetPasswordId) {
         const subtreeIds = new Set([targetPasswordId]);
         let changed = true;
